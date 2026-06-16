@@ -189,7 +189,14 @@ function TeacherToday({ me, setTab }) {
 function TeacherAvailability({ me }) {
   const { mobile } = useVP();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const times = ['07:00', '08:00', '09:30', '11:00', '12:15', '14:00', '16:30', '18:00', '19:30'];
+  // Hourly slots from 7–8am through 9–10pm (start times 07:00 … 21:00).
+  const times = Array.from({ length: 15 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`);
+  const slotLabel = (t) => {
+    const h = parseInt(t, 10);
+    const fmt = (x) => ({ hr: ((x + 11) % 12) + 1, ap: x < 12 ? 'am' : 'pm' });
+    const a = fmt(h), b = fmt(h + 1);
+    return a.ap === b.ap ? `${a.hr}–${b.hr}${a.ap}` : `${a.hr}${a.ap}–${b.hr}${b.ap}`;
+  };
   const [loc, setLoc] = useState(me.locId);
   const [grids, setGrids] = useState(() => {
     const all = {};
@@ -223,14 +230,14 @@ function TeacherAvailability({ me }) {
         })}
       </div>
       <Card pad={mobile ? 12 : 18} style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: mobile ? 540 : 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+        <div style={{ minWidth: mobile ? 580 : 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '74px repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
             <div />
             {days.map(d => <div key={d} style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--taupe)' }}>{d}</div>)}
           </div>
           {times.map(t => (
-            <div key={t} style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--fg3)' }}>{t}</div>
+            <div key={t} style={{ display: 'grid', gridTemplateColumns: '74px repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 10.5, color: 'var(--fg3)', whiteSpace: 'nowrap' }}>{slotLabel(t)}</div>
               {days.map(d => { const k = d + t; const on = grid[k]; return (
                 <button key={k} className="tap" onClick={() => toggle(k)} style={{ height: 38, borderRadius: 9, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border-soft)'), background: on ? 'var(--accent)' : 'var(--ivory)', display: 'grid', placeItems: 'center' }}>
                   {on && <Icon n="check" size={13} color="#fff" sw={3} />}
