@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Icon, Eyebrow, Button, Avatar, Stars, Segmented } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS } from '../../data.js';
-import { locName } from '../../data.js';
+import { locName, teacherById } from '../../data.js';
+import { useSlots, openSlotsForDay } from '../../slots.js';
 
 // Drop image paths here to enable the hero carousel
 const HERO_PHOTOS = [
@@ -74,15 +75,8 @@ function BrowseTeacher({ t, onOpen }) {
   );
 }
 
-function buildAvailSimple(teacher, dayIdx) {
-  const seed = teacher.id.charCodeAt(1);
-  const times = ['07:00', '08:00', '09:30', '11:00', '12:15', '14:00', '16:30', '18:00', '19:30'];
-  return times.filter((_, i) => (seed + dayIdx * 3 + i * 5) % 7 > 1).map((tm, i) => ({
-    time: tm, open: (seed + dayIdx + i) % 10 > 3,
-  }));
-}
-
 export function ClientBrowse({ onGate, onOpen }) {
+  useSlots(); // reflect live slot availability
   const [seg, setSeg] = useState('Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
@@ -100,9 +94,12 @@ export function ClientBrowse({ onGate, onOpen }) {
     daysList.push({ dow: DOW[dt.getDay()], dom });
   }
   const goMonth = (delta) => { const next = monthOff + delta; if (next < 0 || next > 11) return; setMonthOff(next); setDay(0); };
-  const schedule = TEACHERS.flatMap(t =>
-    buildAvailSimple(t, (day + monthOff) % 7).filter(s => s.open).slice(0, 2).map(s => ({ t, time: s.time }))
-  ).sort((a, b) => a.time.localeCompare(b.time)).slice(0, 14);
+  const perTeacher = {};
+  const schedule = openSlotsForDay(day + monthOff)
+    .filter(s => { perTeacher[s.teacherId] = (perTeacher[s.teacherId] || 0) + 1; return perTeacher[s.teacherId] <= 2; })
+    .map(s => ({ t: teacherById(s.teacherId), time: s.time }))
+    .sort((a, b) => a.time.localeCompare(b.time))
+    .slice(0, 14);
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>

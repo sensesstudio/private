@@ -5,22 +5,6 @@ import { TEACHERS, LOCATIONS, GOALS, INJURIES, SCHEDULES, LEVELS } from '../../d
 import { locName } from '../../data.js';
 import { inputStyle, socialBtn, backLink } from '../../styles.js';
 
-export function buildAvail(teacher, bumpKey) {
-  const days = [];
-  const base = new Date('2026-06-16T00:00:00');
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const seed = teacher.id.charCodeAt(1);
-  const times = ['07:00', '08:00', '09:30', '11:00', '12:15', '14:00', '16:30', '18:00', '19:30'];
-  for (let d = 0; d < 7; d++) {
-    const date = new Date(base); date.setDate(base.getDate() + d);
-    const slots = times.filter((_, i) => (seed + d * 3 + i * 5) % 7 > 1).map((tm, i) => ({
-      time: tm, open: (seed + d + i) % 10 > 3,
-    }));
-    days.push({ key: d, dow: dayNames[date.getDay()], dom: date.getDate(), slots });
-  }
-  return days;
-}
-
 export function ClientNav({ tab, setTab }) {
   const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
   return (

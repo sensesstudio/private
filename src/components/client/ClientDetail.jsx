@@ -4,7 +4,8 @@ import { hkd } from '../shared/index.jsx';
 import { TEACHERS, GOALS, PROGRESS_LOG, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { metaItem, labelMini } from '../../styles.js';
-import { buildAvail, TeacherCard } from './ClientCore.jsx';
+import { TeacherCard } from './ClientCore.jsx';
+import { useSlots, daysForTeacher, takeRandomOpen } from '../../slots.js';
 import { inputStyle } from '../../styles.js';
 
 export function sortByMatch(arr) { return [...arr].sort((a, b) => b.match - a.match); }
@@ -221,28 +222,23 @@ export function ClientSearch({ onOpen, loading }) {
 
 export function TeacherDetail({ t, onClose, onBook }) {
   const { mobile } = useVP();
-  const [avail, setAvail] = useState(() => buildAvail(t, 0));
+  useSlots(); // re-render when slots are held / booked / released
   const [day, setDay] = useState(0);
   const [justBooked, setJustBooked] = useState(null);
 
+  // Real-time availability: a slot gets taken every few seconds.
   useEffect(() => {
     const iv = setInterval(() => {
-      setAvail(prev => {
-        const next = prev.map(d => ({ ...d, slots: d.slots.map(s => ({ ...s })) }));
-        const openOnes = [];
-        next.forEach((d, di) => d.slots.forEach((s, si) => { if (s.open) openOnes.push([di, si]); }));
-        if (openOnes.length > 2) {
-          const [di, si] = openOnes[Math.floor(Math.random() * openOnes.length)];
-          next[di].slots[si].open = false;
-          if (di === day) setJustBooked(si);
-          setTimeout(() => setJustBooked(null), 1600);
-        }
-        return next;
-      });
+      const taken = takeRandomOpen(t.id);
+      if (taken) {
+        setJustBooked(taken.id);
+        setTimeout(() => setJustBooked(null), 1600);
+      }
     }, 4200);
     return () => clearInterval(iv);
-  }, [day]);
+  }, [t.id]);
 
+  const avail = daysForTeacher(t.id);
   const d = avail[day];
 
   return (
@@ -313,7 +309,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
           </div>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -2px 14px', padding: '2px', scrollbarWidth: 'none' }} className="screen-scroll">
             {avail.map((dd, i) => {
-              const on = day === i; const free = dd.slots.filter(s => s.open).length;
+              const on = day === i; const free = dd.slots.filter(s => s.status === 'open').length;
               return (
                 <button key={i} className="tap" onClick={() => setDay(i)} style={{ flex: 'none', width: 52, textAlign: 'center', padding: '10px 0', borderRadius: 16, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'var(--ivory)' }}>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: on ? 'rgba(255,255,255,.85)' : 'var(--fg3)' }}>{dd.dow}</div>
@@ -324,17 +320,20 @@ export function TeacherDetail({ t, onClose, onBook }) {
             })}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 9 }}>
-            {d.slots.map((s, si) => (
-              <button key={si} className="tap" disabled={!s.open} onClick={() => onBook(t, d, s)} style={{
-                position: 'relative', cursor: s.open ? 'pointer' : 'not-allowed', minHeight: 46,
-                fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, borderRadius: 13,
-                border: '1px solid ' + (s.open ? 'var(--border)' : 'transparent'),
-                background: s.open ? 'var(--ivory)' : 'var(--sand)',
-                color: s.open ? 'var(--espresso)' : 'var(--fg3)',
-                textDecoration: s.open ? 'none' : 'line-through', opacity: s.open ? 1 : .6,
-                animation: justBooked === si ? 'flash .8s var(--ease)' : 'none',
-              }}>{s.time}</button>
-            ))}
+            {d.slots.map((s) => {
+              const open = s.status === 'open';
+              return (
+                <button key={s.id} className="tap" disabled={!open} onClick={() => onBook(t, d, s)} style={{
+                  position: 'relative', cursor: open ? 'pointer' : 'not-allowed', minHeight: 46,
+                  fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, borderRadius: 13,
+                  border: '1px solid ' + (open ? 'var(--border)' : 'transparent'),
+                  background: open ? 'var(--ivory)' : 'var(--sand)',
+                  color: open ? 'var(--espresso)' : 'var(--fg3)',
+                  textDecoration: open ? 'none' : 'line-through', opacity: open ? 1 : .6,
+                  animation: justBooked === s.id ? 'flash .8s var(--ease)' : 'none',
+                }}>{s.time}</button>
+              );
+            })}
             {d.slots.length === 0 && <div style={{ gridColumn: '1/-1', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', textAlign: 'center', padding: '16px 0' }}>No sessions this day — try another date.</div>}
           </div>
         </div>

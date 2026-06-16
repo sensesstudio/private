@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress } from '../shared/index.jsx';
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
+import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
-import { ClientNav, ClientLogin, Intake, buildAvail } from './ClientCore.jsx';
+import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
 import { ClientHome, ClientSearch, TeacherDetail, EmptyState, sortByMatch } from './ClientDetail.jsx';
 import { MatchBadge } from '../shared/index.jsx';
 
@@ -23,15 +24,29 @@ function PayOption({ id, method, setMethod, icon, label, note }) {
 }
 
 function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
+  useSlots(); // re-render as the held slot's state changes
   const [stage, setStage] = useState('review');
   const [pkg, setPkg] = useState('studio');
   const [method, setMethod] = useState('apple');
   const [format, setFormat] = useState('1:1');
   const [mode, setMode] = useState(credits > 0 ? 'credit' : 'buy');
-  const [held, setHeld] = useState(600);
+  const [, tick] = useState(0);
+  const bookedRef = useRef(false);
 
-  useState(() => { const i = setInterval(() => setHeld(h => h > 0 ? h - 1 : 0), 1000); return () => clearInterval(i); });
+  // Hold the slot for 10 minutes while the client decides; release it if they
+  // back out before booking.
+  useEffect(() => {
+    if (slot) holdSlot(slot.id);
+    return () => { if (slot && !bookedRef.current) releaseSlot(slot.id); };
+  }, [slot ? slot.id : null]);
 
+  // Tick once a second so the hold countdown re-renders.
+  useEffect(() => {
+    const i = setInterval(() => tick(n => n + 1), 1000);
+    return () => clearInterval(i);
+  }, []);
+
+  const held = holdSecondsLeft(slot ? (slotById(slot.id) || slot) : null);
   const slotTime = slot ? slot.time : '—';
   const dayLabel = day ? `${day.dow} ${day.dom} June` : '';
   const selectedPkg = PACKAGES.find(p => p.id === pkg);
@@ -41,8 +56,9 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
   const usedCredit = mode === 'credit';
   const mmss = `${Math.floor(held / 60)}:${String(held % 60).padStart(2, '0')}`;
 
-  const pay = () => { setStage('processing'); setTimeout(() => setStage('done'), 1900); };
-  const confirmCredit = () => { setStage('processing'); setTimeout(() => setStage('done'), 1400); };
+  const book = () => { if (slot) { bookSlot(slot.id); bookedRef.current = true; } };
+  const pay = () => { setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1900); };
+  const confirmCredit = () => { setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1400); };
 
   return (
     <div style={{ padding: '4px 22px 30px' }}>
