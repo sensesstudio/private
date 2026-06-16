@@ -136,7 +136,6 @@ function AdminDashboard({ setTab }) {
       <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 22 }}>
         <Stat icon="calendar-check" label="Bookings this month" value="486" sub="+9%" />
         <Stat icon="banknote" label="Revenue (June)" value={hkd(768000)} sub="+6%" />
-        <Stat icon="ticket" label="Credits outstanding · liability" value="1,284" tone="sand" />
         <Stat icon="users" label="Active teachers" value="24" sub="+3" tone="sand" />
         <Stat icon="user" label="Active clients" value="312" sub="+18" tone="sand" />
       </div>
