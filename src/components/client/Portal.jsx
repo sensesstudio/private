@@ -3,7 +3,8 @@ import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveP
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
-import { saveClientProfile, isDeclarationComplete } from '../../clientStore.js';
+import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore } from '../../clientStore.js';
+import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
@@ -24,8 +25,9 @@ function PayOption({ id, method, setMethod, icon, label, note }) {
   );
 }
 
-function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarationOk = true, onCompleteDeclaration }) {
+function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarationOk = true, onCompleteDeclaration, waiverOk = true, onSignWaiver }) {
   useSlots(); // re-render as the held slot's state changes
+  const ready = declarationOk && waiverOk;
   const [stage, setStage] = useState('review');
   const [pkg, setPkg] = useState('studio');
   const [method, setMethod] = useState('apple');
@@ -60,8 +62,8 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
   const book = () => { if (slot) { bookSlot(slot.id); bookedRef.current = true; } };
   // Payment is allowed without the declaration, but the booking only confirms
   // once the health declaration is complete.
-  const pay = () => { setStage('processing'); setTimeout(() => { if (declarationOk) { book(); setStage('done'); } else { setStage('declare'); } }, 1900); };
-  const confirmCredit = () => { if (!declarationOk) return; setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1400); };
+  const pay = () => { setStage('processing'); setTimeout(() => { if (ready) { book(); setStage('done'); } else { setStage('declare'); } }, 1900); };
+  const confirmCredit = () => { if (!ready) return; setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1400); };
 
   return (
     <div style={{ padding: '4px 22px 30px' }}>
@@ -74,11 +76,14 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
       {stage === 'review' && (
         <>
           <h2 style={sheetTitle}>Confirm your session</h2>
-          {!declarationOk && (
+          {!ready && (
             <div style={{ background: 'rgba(185,117,91,.12)', border: '1px solid var(--terracotta)', borderRadius: 14, padding: '13px 14px', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)', marginBottom: 7 }}><Icon n="shield-alert" size={15} color="var(--terracotta)" /> Health declaration required</div>
-              <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--espresso)', margin: '0 0 10px', lineHeight: 1.5 }}>Please complete your quick health declaration before confirming this session. You can still pay for a package now.</p>
-              <Button variant="dark" full onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)', marginBottom: 7 }}><Icon n="shield-alert" size={15} color="var(--terracotta)" /> Required before booking</div>
+              <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--espresso)', margin: '0 0 10px', lineHeight: 1.5 }}>Please complete the following before confirming this session. You can still pay for a package now.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {!declarationOk && <Button variant="dark" full onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>}
+                {!waiverOk && <Button variant="dark" full onClick={onSignWaiver} iconRight="arrow-right">Read &amp; sign liability waiver</Button>}
+              </div>
             </div>
           )}
           <div style={{ display: 'flex', gap: 13, alignItems: 'center', background: 'var(--ivory)', borderRadius: 18, padding: 14, border: '1px solid var(--border-soft)', marginBottom: 16 }}>
@@ -122,7 +127,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)' }}>This session uses 1 credit · {Math.max(0, credits - 1)} will remain</div>
                 </div>
               </div>
-              <Button variant="accent" full size="lg" disabled={!declarationOk} onClick={confirmCredit} iconRight="arrow-right">Confirm with 1 credit</Button>
+              <Button variant="accent" full size="lg" disabled={!ready} onClick={confirmCredit} iconRight="arrow-right">Confirm with 1 credit</Button>
               <button className="tap" onClick={() => setMode('buy')} style={linkBtn}>Buy a package instead</button>
             </>
           ) : (
@@ -200,8 +205,11 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
         <div style={{ textAlign: 'center', padding: '24px 0 14px' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-tint)', display: 'grid', placeItems: 'center', margin: '0 auto 18px' }}><Icon n="shield-alert" size={30} color="var(--accent)" /></div>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 24, color: 'var(--espresso)', margin: '0 0 8px' }}>One more step</h2>
-          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--taupe)', margin: '0 0 22px', lineHeight: 1.5 }}>Your payment went through. Complete a quick health declaration to confirm your session — it keeps you safe on the mat.</p>
-          <Button variant="accent" full size="lg" onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>
+          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--taupe)', margin: '0 0 22px', lineHeight: 1.5 }}>Your payment went through. Complete the following to confirm your session — it keeps you safe on the mat.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {!declarationOk && <Button variant="accent" full size="lg" onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>}
+            {!waiverOk && <Button variant="accent" full size="lg" onClick={onSignWaiver} iconRight="arrow-right">Read &amp; sign liability waiver</Button>}
+          </div>
           <button className="tap" onClick={onClose} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--taupe)' }}>Later</button>
         </div>
       )}
@@ -417,7 +425,80 @@ function PaymentPackages({ onClose, credits = 7 }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7 }) {
+function WaiverSheet({ onClose, onSigned, signed }) {
+  const [read, setRead] = useState(!!signed);
+  const [agreed, setAgreed] = useState(false);
+  const [name, setName] = useState('');
+  const onScroll = (e) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) setRead(true);
+  };
+  const today = new Date().toLocaleDateString('en-HK', { day: 'numeric', month: 'long', year: 'numeric' });
+  const canSign = read && agreed && name.trim().length >= 2;
+  const submit = () => { if (canSign) onSigned({ name: name.trim(), date: new Date().toISOString(), agreed: true }); };
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 95, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 18, color: 'var(--espresso)', lineHeight: 1.1 }}>{WAIVER_TITLE}</div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>Senses Studio · please read in full</div>
+        </div>
+      </div>
+
+      {signed && (
+        <div style={{ flex: 'none', margin: '12px 18px 0', display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(138,144,121,.14)', borderRadius: 12, padding: '11px 13px' }}>
+          <Icon n="badge-check" size={18} color="var(--sage)" />
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--espresso)' }}>Signed by <b>{signed.name}</b> on {new Date(signed.date).toLocaleDateString('en-HK', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        </div>
+      )}
+
+      <div className="screen-scroll" onScroll={onScroll} style={{ flex: 1, minHeight: 0, padding: '14px 20px 22px' }}>
+        {WAIVER_SECTIONS.map((s, i) => (
+          <div key={i} style={{ marginBottom: 18 }}>
+            {s.h && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 8px' }}>{s.h}</div>}
+            {(s.paras || []).map((p, j) => <p key={j} style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.6, color: 'var(--espresso)', margin: '0 0 9px' }}>{p}</p>)}
+            {(s.bullets || []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, margin: '2px 0 9px' }}>
+                {s.bullets.map((b, j) => (
+                  <div key={j} style={{ display: 'flex', gap: 8 }}>
+                    <span style={{ flex: 'none', width: 5, height: 5, borderRadius: 999, background: 'var(--accent)', marginTop: 7 }} />
+                    <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.55, color: 'var(--espresso)' }}>{b}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {s.after && <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.6, color: 'var(--espresso)', margin: 0 }}>{s.after}</p>}
+          </div>
+        ))}
+        <div style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11.5, color: read ? 'var(--sage)' : 'var(--fg3)', padding: '6px 0 2px' }}>
+          {read ? '✓ You’ve reached the end of the waiver' : '↓ Scroll to the end to continue'}
+        </div>
+      </div>
+
+      {!signed && (
+        <div style={{ flex: 'none', borderTop: '1px solid var(--border)', background: 'var(--cream)', padding: '14px 20px calc(16px + env(safe-area-inset-bottom))', boxShadow: '0 -10px 20px -8px rgba(58,50,44,.12)' }}>
+          <button className="tap" disabled={!read} onClick={() => read && setAgreed(a => !a)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: read ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'flex-start', gap: 11, opacity: read ? 1 : .5, marginBottom: 12 }}>
+            <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 6, border: '1.5px solid ' + (agreed ? 'var(--accent)' : 'var(--linen)'), background: agreed ? 'var(--accent)' : 'transparent', display: 'grid', placeItems: 'center', marginTop: 1 }}>{agreed && <Icon n="check" size={13} color="#fff" sw={3} />}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, lineHeight: 1.5, color: 'var(--espresso)' }}>I have carefully read, understood, and agree to this Waiver and Release of Liability, and I am signing it voluntarily.</span>
+          </button>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Type your full legal name to sign" style={{ ...inputStyle, marginBottom: name.trim() ? 8 : 12 }} />
+          {name.trim() && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, margin: '0 2px 12px', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+              <span style={{ fontFamily: 'var(--font-script)', fontSize: 30, color: 'var(--espresso)', lineHeight: 1 }}>{name.trim()}</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', flex: 'none' }}>{today}</span>
+            </div>
+          )}
+          <Button variant="accent" full size="lg" disabled={!canSign} onClick={submit} iconRight="check">Agree &amp; sign</Button>
+          {!canSign && <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--fg3)', margin: '9px 0 0' }}>{!read ? 'Scroll to the end, then tick and sign.' : !agreed ? 'Tick the box to agree.' : 'Type your full name to sign.'}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
@@ -454,6 +535,13 @@ function ClientProfile({ onRestart, answers, credits = 7 }) {
       )}
 
       <div style={{ background: 'var(--ivory)', borderRadius: 20, overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onWaiver} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: '1px solid var(--border-soft)' }}>
+          <Icon n="shield-check" size={18} color="var(--accent)" />
+          <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--accent)' }}>Liability waiver</span>
+          {waiver && waiver.agreed
+            ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
+            : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
+        </button>
         {[['user-round', 'About me', onRestart], ['clipboard-list', 'Progress log', () => setShowLog(true)], ['credit-card', 'Payment & packages', () => setShowPay(true)], ['settings', 'Preferences', null], ['log-out', 'Sign out', null]].map(([ic, l, fn], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
@@ -514,6 +602,10 @@ export function ClientPortal() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [extraBookings, setExtraBookings] = useState([]);
   const [credits, setCredits] = useState(7);
+  const [showWaiver, setShowWaiver] = useState(false);
+  useClientStore();
+  const profile = getClientProfile('c1');
+  const waiverOk = !!(profile && profile.waiver && profile.waiver.agreed);
 
   const openDetail = t => setDetail(t);
   const startBooking = (t, day, slot) => { if (!slot) return; setBooking({ t, day, slot }); };
@@ -555,7 +647,7 @@ export function ClientPortal() {
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
     Pricing: <ClientPricing onBook={goSearch} />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} />,
   };
 
   return (
@@ -566,7 +658,7 @@ export function ClientPortal() {
         </div>
       )}
       <Sheet open={!!booking} onClose={() => setBooking(null)}>
-        {booking && <BookingFlow {...booking} credits={credits} declarationOk={isDeclarationComplete(answers)} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onClose={() => setBooking(null)} onConfirmed={info => {
+        {booking && <BookingFlow {...booking} credits={credits} declarationOk={isDeclarationComplete(answers)} waiverOk={waiverOk} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onSignWaiver={() => setShowWaiver(true)} onClose={() => setBooking(null)} onConfirmed={info => {
           setCredits(c => info.usedCredit ? Math.max(0, c - 1) : c + (info.addCredits || 0) - 1);
           setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, status: 'confirmed' }, ...b]);
           setBooking(null); setDetail(null); setTab('Bookings');
@@ -575,6 +667,7 @@ export function ClientPortal() {
       <Sheet open={!!rating} onClose={() => setRating(null)} maxH="80%">
         {rating && <RatingSheet t={rating} onClose={() => setRating(null)} />}
       </Sheet>
+      {showWaiver && <WaiverSheet signed={profile && profile.waiver} onClose={() => setShowWaiver(false)} onSigned={rec => { saveClientProfile('c1', { waiver: rec }); setShowWaiver(false); }} />}
     </>}>
       <div key={tab} style={{ minHeight: '100%' }}>{screens[tab]}</div>
     </PhoneFrame>
