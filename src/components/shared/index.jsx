@@ -151,7 +151,8 @@ export function Segmented({ options, value, onChange, style = {} }) {
           <button key={v} className="tap" onClick={() => onChange(v)} style={{
             border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)',
             fontWeight: on ? 600 : 500, fontSize: 11.5, letterSpacing: '.06em',
-            padding: '9px 16px', borderRadius: 999, minHeight: 38,
+            padding: '9px 12px', borderRadius: 999, minHeight: 38,
+            flex: 1, textAlign: 'center', whiteSpace: 'nowrap',
             background: on ? 'var(--ivory)' : 'transparent',
             color: on ? 'var(--espresso)' : 'var(--taupe)',
             boxShadow: on ? 'var(--shadow-sm)' : 'none', transition: 'all .25s var(--ease)',

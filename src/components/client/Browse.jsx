@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, Eyebrow, Button, Avatar, Stars, Segmented, useVP } from '../shared/index.jsx';
+import { Icon, Eyebrow, Avatar, Stars, Segmented, useVP } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
@@ -106,7 +106,7 @@ export function ClientBrowse({ onGate, onOpen }) {
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 4px' }}>
         <img src="assets/logo5-trim.png" alt="Senses Studio" style={{ height: 26 }} />
-        <button className="tap" onClick={onGate} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--taupe)', minHeight: 40, padding: '0 4px' }}>Sign in</button>
+        <button className="tap card-hover" onClick={onGate} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 18px', minHeight: 40, boxShadow: 'var(--shadow-md)' }}>Sign in</button>
       </div>
 
       <div style={{ flex: 'none', padding: '8px 20px 0' }}>
@@ -213,11 +213,6 @@ export function ClientBrowse({ onGate, onOpen }) {
             </div>
           </div>
         )}
-      </div>
-
-      <div style={{ position: 'sticky', bottom: 0, flex: 'none', padding: '12px 20px calc(16px + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg, rgba(245,239,234,0), var(--cream) 35%)', borderTop: '1px solid var(--border-soft)' }}>
-        <Button variant="accent" full size="lg" onClick={onGate} iconRight="arrow-right">Find my instructor</Button>
-        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '9px 0 0' }}>Free to browse · create an account when you book</p>
       </div>
     </div>
   );
