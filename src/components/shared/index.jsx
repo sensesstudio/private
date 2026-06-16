@@ -163,43 +163,10 @@ export function Segmented({ options, value, onChange, style = {} }) {
 }
 
 export function PhoneFrame({ children, navBar }) {
-  const { mobile } = useVP();
-
-  const Clock = () => {
-    const [t] = useState('9:41');
-    return <span style={{ fontFamily: '-apple-system, system-ui', fontWeight: 600, fontSize: 14.5, color: 'var(--espresso)' }}>{t}</span>;
-  };
-
-  const StatusBar = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: mobile ? '14px 26px 6px' : '14px 28px 4px', flex: 'none' }}>
-      <Clock />
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', color: 'var(--espresso)' }}>
-        <Icon n="signal" size={15} sw={2.4} />
-        <Icon n="wifi" size={15} sw={2} />
-        <Icon n="battery-full" size={18} sw={1.6} />
-      </div>
-    </div>
-  );
-
-  if (mobile) {
-    return (
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--cream)' }}>
-        <div className="screen-scroll" style={{ flex: 1, minHeight: 0, position: 'relative' }}>{children}</div>
-        {navBar}
-      </div>
-    );
-  }
-
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'auto', display: 'grid', placeItems: 'center', padding: '32px 24px', background: '#ece3d7' }} className="screen-scroll">
-      <div style={{ width: 402, height: 844, borderRadius: 52, background: '#fff', position: 'relative', boxShadow: '0 50px 90px -20px rgba(58,50,44,.4), 0 0 0 11px #1d1916, 0 0 0 12px #2a2521', overflow: 'hidden', flex: 'none' }}>
-        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', width: 116, height: 33, borderRadius: 22, background: '#15110e', zIndex: 60 }} />
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--cream)' }}>
-          <div style={{ flex: 'none', paddingTop: 4 }}><StatusBar /></div>
-          <div className="screen-scroll" style={{ flex: 1, minHeight: 0, position: 'relative' }}>{children}</div>
-          {navBar}
-        </div>
-      </div>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--cream)' }}>
+      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, position: 'relative' }}>{children}</div>
+      {navBar}
     </div>
   );
 }
