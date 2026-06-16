@@ -3,7 +3,7 @@ import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveP
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
-import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus } from '../../clientStore.js';
+import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
@@ -221,7 +221,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 28, color: 'var(--espresso)', margin: '0 0 8px' }}>You're booked</h2>
           <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14.5, color: 'var(--taupe)', margin: '0 0 4px', lineHeight: 1.5 }}>{t.name} · {fmtLabel} · {dayLabel} · {slotTime}</p>
           <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 26px' }}>{locName(t.locId)} studio · {usedCredit ? `${Math.max(0, credits - 1)} credits remaining.` : 'pack added to your account.'} Calendar invite sent to your email.</p>
-          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, usedCredit, addCredits })}>View my bookings</Button>
+          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, usedCredit, addCredits, pkgName: selectedPkg.name, amount })}>View my bookings</Button>
           <button className="tap" onClick={onClose} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--taupe)' }}>Done</button>
         </div>
       )}
@@ -362,8 +362,12 @@ const PAYMENTS = [
 ];
 
 function PaymentPackages({ onClose, credits = 7 }) {
+  useClientStore();
+  const prof = getClientProfile('c1') || {};
+  const liveCredits = typeof prof.credits === 'number' ? prof.credits : credits;
+  const payments = [...(prof.payments || []), ...PAYMENTS];
   const total = 10;
-  const pct = Math.min(100, Math.round((credits / total) * 100));
+  const pct = Math.min(100, Math.round((liveCredits / total) * 100));
   const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' });
   const sectionLabel = { fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '22px 0 10px' };
   return (
@@ -380,7 +384,7 @@ function PaymentPackages({ onClose, credits = 7 }) {
         <div style={{ borderRadius: 20, background: 'var(--espresso)', color: 'var(--cream)', padding: '20px 20px 18px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--blush)' }}>10-class pack · credits</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 0 2px' }}>
-            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 36, lineHeight: 1 }}>{credits}</span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 36, lineHeight: 1 }}>{liveCredits}</span>
             <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, opacity: .8 }}>of {total} credits remaining</span>
           </div>
           <div style={{ height: 6, background: 'rgba(250,247,243,.2)', borderRadius: 999, overflow: 'hidden', margin: '12px 0 4px' }}>
@@ -406,8 +410,8 @@ function PaymentPackages({ onClose, credits = 7 }) {
 
         <div style={sectionLabel}>Payment history</div>
         <div style={{ background: 'var(--ivory)', borderRadius: 18, border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
-          {PAYMENTS.map((p, i) => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < PAYMENTS.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+          {payments.map((p, i) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < payments.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{p.desc}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 2 }}>{fmtDate(p.date)} · {p.method} · +{p.credits} credit{p.credits === 1 ? '' : 's'}</div>
@@ -665,7 +669,12 @@ export function ClientPortal() {
       )}
       <Sheet open={!!booking} onClose={() => setBooking(null)}>
         {booking && <BookingFlow {...booking} credits={credits} declarationOk={isDeclarationComplete(answers)} waiverOk={waiverOk} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onSignWaiver={() => setShowWaiver(true)} onClose={() => setBooking(null)} onConfirmed={info => {
-          setCredits(c => info.usedCredit ? Math.max(0, c - 1) : c + (info.addCredits || 0) - 1);
+          const next = info.usedCredit ? Math.max(0, credits - 1) : credits + (info.addCredits || 0) - 1;
+          setCredits(next);
+          setClientCredits('c1', next); // sync balance to admin
+          if (!info.usedCredit && info.amount) {
+            recordPayment('c1', { id: 'pay' + Date.now(), date: new Date().toISOString().slice(0, 10), desc: info.pkgName, credits: info.addCredits || 0, amount: info.amount, method: 'Visa ···· 8842' });
+          }
           setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, status: 'confirmed' }, ...b]);
           setBooking(null); setDetail(null); setTab('Bookings');
         }} />}

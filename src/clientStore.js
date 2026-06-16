@@ -20,6 +20,17 @@ export function getClientProfile(cId) {
   return store[cId] || null;
 }
 
+// Record a package purchase / payment for a client (prepended, newest first).
+export function recordPayment(cId, entry) {
+  const cur = getClientProfile(cId) || {};
+  saveClientProfile(cId, { payments: [entry, ...(cur.payments || [])] });
+}
+
+// Persist the client's current credit balance so the admin sees it.
+export function setClientCredits(cId, credits) {
+  saveClientProfile(cId, { credits });
+}
+
 // Subscribe a component to any change in the client store.
 export function useClientStore() {
   const [, force] = useState(0);
