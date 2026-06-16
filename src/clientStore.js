@@ -41,3 +41,22 @@ export function isDeclarationComplete(a = {}) {
   if (a.pregnant === 'yes' && a.surgery === 'yes' && a.doctorClearance !== 'yes' && a.doctorClearance !== 'no') return false;
   return true;
 }
+
+// Overall "About me" / intake completion across the meaningful fields
+// (injury and free-text notes are optional and excluded).
+// Returns 'completed' | 'partial' | 'none'.
+export function intakeStatus(a = {}) {
+  const checks = [
+    isDeclarationComplete(a),
+    (a.goals || []).length > 0,
+    !!a.age,
+    !!a.level,
+    (a.languages || []).length > 0,
+    (a.schedule || []).length > 0,
+    !!a.location,
+  ];
+  const done = checks.filter(Boolean).length;
+  if (done === 0) return 'none';
+  if (done === checks.length) return 'completed';
+  return 'partial';
+}

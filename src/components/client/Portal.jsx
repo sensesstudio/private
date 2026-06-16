@@ -3,7 +3,7 @@ import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveP
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
-import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore } from '../../clientStore.js';
+import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus } from '../../clientStore.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
@@ -501,6 +501,12 @@ function WaiverSheet({ onClose, onSigned, signed }) {
 function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
+  const status = intakeStatus(answers);
+  const aboutPill = status === 'completed'
+    ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Completed</Pill>
+    : status === 'partial'
+    ? <Pill color="#9a7b3c" bg="rgba(201,178,124,.22)">Partially completed</Pill>
+    : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Not started</Pill>;
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
   const total = 10;
   const pct = Math.min(100, Math.round((credits / total) * 100));
@@ -542,11 +548,11 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart], ['clipboard-list', 'Progress log', () => setShowLog(true)], ['credit-card', 'Payment & packages', () => setShowPay(true)], ['settings', 'Preferences', null], ['log-out', 'Sign out', null]].map(([ic, l, fn], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', null, null], ['log-out', 'Sign out', null, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
-            <Icon n="chevron-right" size={16} color="var(--clay)" />
+            {badge || <Icon n="chevron-right" size={16} color="var(--clay)" />}
           </button>
         ))}
       </div>
