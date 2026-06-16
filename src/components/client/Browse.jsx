@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, Eyebrow, Button, Avatar, Stars, Segmented } from '../shared/index.jsx';
+import { Icon, Eyebrow, Button, Avatar, Stars, Segmented, useVP } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
@@ -50,26 +50,26 @@ const SESSION_TYPES = [
 ];
 
 function BrowseTeacher({ t, onOpen }) {
+  const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
   return (
-    <div className="tap card-hover" onClick={() => onOpen(t)} style={{ background: 'var(--ivory)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-soft)' }}>
-      <div style={{ padding: 14, display: 'flex', gap: 13 }}>
-        <Avatar t={t} size={62} radius={16} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 18, color: 'var(--espresso)', margin: 0, lineHeight: 1.1 }}>{t.name}</h3>
-          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{t.headline}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, flexWrap: 'wrap' }}>
-            <Stars value={t.rating} reviews={t.reviews} size={12} />
-            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon n="map-pin" size={12} /> {locName(t.locId)}</span>
+    <div className="tap card-hover" onClick={() => onOpen(t)} style={{ background: 'var(--ivory)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: 13, display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Avatar t={t} size={46} radius={13} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15.5, color: 'var(--espresso)', margin: 0, lineHeight: 1.15, ...ell }}>{t.name}</h3>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--taupe)', marginTop: 2, ...ell }}>{t.headline}</div>
           </div>
         </div>
-        <div style={{ textAlign: 'right', flex: 'none' }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)' }}>{hkd(t.rate)}</div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10.5, color: 'var(--fg3)' }}>/hour</div>
+        <Stars value={t.rating} reviews={t.reviews} size={12} />
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, ...ell }}><Icon n="map-pin" size={12} /> {locName(t.locId)}</span>
+          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', flex: 'none' }}>{hkd(t.rate)}<span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10.5, color: 'var(--fg3)' }}>/hr</span></span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 14px', borderTop: '1px solid var(--border-soft)', background: 'var(--cream)' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11.5, color: 'var(--accent)' }}><span className="live-dot" /> {t.soon}</span>
-        <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, color: 'var(--taupe)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>View <Icon n="arrow-right" size={12} color="var(--taupe)" /></span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, padding: '9px 13px', borderTop: '1px solid var(--border-soft)', background: 'var(--cream)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--accent)', minWidth: 0, ...ell }}><span className="live-dot" style={{ flex: 'none' }} /> {t.soon}</span>
+        <Icon n="arrow-right" size={13} color="var(--taupe)" style={{ flex: 'none' }} />
       </div>
     </div>
   );
@@ -77,6 +77,7 @@ function BrowseTeacher({ t, onOpen }) {
 
 export function ClientBrowse({ onGate, onOpen }) {
   useSlots(); // reflect live slot availability
+  const { mobile } = useVP();
   const [seg, setSeg] = useState('Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
@@ -128,7 +129,7 @@ export function ClientBrowse({ onGate, onOpen }) {
 
       <div style={{ flex: 1, padding: '14px 20px 16px' }}>
         {seg === 'Teachers' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
             {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
           </div>
         )}
