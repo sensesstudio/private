@@ -163,11 +163,12 @@ export function Segmented({ options, value, onChange, style = {} }) {
   );
 }
 
-export function PhoneFrame({ children, navBar }) {
+export function PhoneFrame({ children, navBar, overlay }) {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--cream)' }}>
       <div className="screen-scroll" style={{ flex: 1, minHeight: 0, position: 'relative' }}>{children}</div>
       {navBar}
+      {overlay}
     </div>
   );
 }

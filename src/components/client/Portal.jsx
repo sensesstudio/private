@@ -429,13 +429,12 @@ export function ClientPortal() {
 
   if (stage === 'browse') {
     return (
-      <PhoneFrame>
+      <PhoneFrame overlay={detail && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll">
+          <TeacherDetail t={detail} onClose={() => setDetail(null)} onBook={() => { setDetail(null); setStage('login'); }} />
+        </div>
+      )}>
         <ClientBrowse onGate={() => setStage('login')} onOpen={openDetail} />
-        {detail && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll">
-            <TeacherDetail t={detail} onClose={() => setDetail(null)} onBook={() => { setDetail(null); setStage('login'); }} />
-          </div>
-        )}
       </PhoneFrame>
     );
   }
@@ -455,15 +454,12 @@ export function ClientPortal() {
   };
 
   return (
-    <PhoneFrame navBar={<ClientNav tab={tab} setTab={setTab} />}>
-      <div key={tab} style={{ minHeight: '100%' }}>{screens[tab]}</div>
-
+    <PhoneFrame navBar={<ClientNav tab={tab} setTab={setTab} />} overlay={<>
       {detail && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll">
           <TeacherDetail t={detail} onClose={() => setDetail(null)} onBook={startBooking} />
         </div>
       )}
-
       <Sheet open={!!booking} onClose={() => setBooking(null)}>
         {booking && <BookingFlow {...booking} credits={credits} onClose={() => setBooking(null)} onConfirmed={info => {
           setCredits(c => info.usedCredit ? Math.max(0, c - 1) : c + (info.addCredits || 0) - 1);
@@ -471,10 +467,11 @@ export function ClientPortal() {
           setBooking(null); setDetail(null); setTab('Bookings');
         }} />}
       </Sheet>
-
       <Sheet open={!!rating} onClose={() => setRating(null)} maxH="80%">
         {rating && <RatingSheet t={rating} onClose={() => setRating(null)} />}
       </Sheet>
+    </>}>
+      <div key={tab} style={{ minHeight: '100%' }}>{screens[tab]}</div>
     </PhoneFrame>
   );
 }

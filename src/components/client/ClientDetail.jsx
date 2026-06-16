@@ -339,7 +339,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
         </div>
       </div>
 
-      <div style={{ position: 'sticky', bottom: 0, flex: 'none', padding: '10px 20px calc(16px + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg, rgba(245,239,234,0), var(--cream) 35%)', borderTop: '1px solid var(--border-soft)' }}>
+      <div style={{ position: 'sticky', bottom: 0, flex: 'none', padding: '12px 20px calc(16px + env(safe-area-inset-bottom))', background: 'var(--cream)', borderTop: '1px solid var(--border)', boxShadow: '0 -10px 20px -8px rgba(58,50,44,.12)' }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 9, fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--accent)' }}>
             <Icon n="zap" size={13} color="var(--accent)" /> Confirmed instantly — no waiting for approval
@@ -349,7 +349,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
               <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 22, color: 'var(--espresso)', lineHeight: 1 }}>{hkd(t.rate)}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)' }}>per private hour</div>
             </div>
-            <Button variant="accent" size="lg" full onClick={() => onBook(t, d, d.slots.find(s => s.open))} iconRight="arrow-right">Book a session</Button>
+            <Button variant="accent" size="lg" full onClick={() => onBook(t, d, d.slots.find(s => s.status === 'open'))} iconRight="arrow-right">Book a session</Button>
           </div>
         </div>
       </div>
