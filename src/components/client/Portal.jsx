@@ -327,8 +327,79 @@ function ProgressLog({ onClose }) {
   );
 }
 
+const PAYMENTS = [
+  { id: 'pay3', date: '2026-05-02', desc: '10-class pack', credits: 10, amount: 9000, method: 'Visa ···· 8842' },
+  { id: 'pay2', date: '2026-01-15', desc: '5-class pack', credits: 5, amount: 4750, method: 'Apple Pay' },
+  { id: 'pay1', date: '2024-01-10', desc: 'First session', credits: 1, amount: 900, method: 'Visa ···· 8842' },
+];
+
+function PaymentPackages({ onClose, credits = 7 }) {
+  const total = 10;
+  const pct = Math.min(100, Math.round((credits / total) * 100));
+  const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' });
+  const sectionLabel = { fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '22px 0 10px' };
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+        <div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1 }}>Payment &amp; packages</div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>Credits, card on file &amp; receipts</div>
+        </div>
+      </div>
+      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '6px 18px 28px' }}>
+        <div style={sectionLabel}>Active package</div>
+        <div style={{ borderRadius: 20, background: 'var(--espresso)', color: 'var(--cream)', padding: '20px 20px 18px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--blush)' }}>10-class pack · credits</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 0 2px' }}>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 36, lineHeight: 1 }}>{credits}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, opacity: .8 }}>of {total} credits remaining</span>
+          </div>
+          <div style={{ height: 6, background: 'rgba(250,247,243,.2)', borderRadius: 999, overflow: 'hidden', margin: '12px 0 4px' }}>
+            <div style={{ width: pct + '%', height: '100%', background: 'var(--accent)', borderRadius: 999 }} />
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, opacity: .7 }}>Valid through Dec 2026 · use at any studio</div>
+        </div>
+
+        <div style={sectionLabel}>Payment method</div>
+        <div style={{ background: 'var(--ivory)', borderRadius: 18, border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+            <span style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sand)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon n="credit-card" size={20} color="var(--espresso)" /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>Visa ···· 8842</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)' }}>Expires 09 / 27</div>
+            </div>
+            <button className="tap" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--accent)', flex: 'none' }}>Update</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 13, paddingTop: 13, borderTop: '1px solid var(--border-soft)', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>
+            <Icon n="lock" size={13} color="var(--accent)" /> Card stored securely by Stripe — we never see your full number.
+          </div>
+        </div>
+
+        <div style={sectionLabel}>Payment history</div>
+        <div style={{ background: 'var(--ivory)', borderRadius: 18, border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+          {PAYMENTS.map((p, i) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < PAYMENTS.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{p.desc}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 2 }}>{fmtDate(p.date)} · {p.method} · +{p.credits} credit{p.credits === 1 ? '' : 's'}</div>
+              </div>
+              <div style={{ textAlign: 'right', flex: 'none' }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)' }}>{hkd(p.amount)}</div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)' }}><Icon n="check" size={10} color="var(--accent)" sw={3} /> Paid</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '16px 0 0' }}>Receipts are emailed automatically · payments processed by Stripe</p>
+      </div>
+    </div>
+  );
+}
+
 function ClientProfile({ onRestart, answers, credits = 7 }) {
   const [showLog, setShowLog] = useState(false);
+  const [showPay, setShowPay] = useState(false);
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
   const total = 10;
   const pct = Math.min(100, Math.round((credits / total) * 100));
@@ -363,15 +434,16 @@ function ClientProfile({ onRestart, answers, credits = 7 }) {
       )}
 
       <div style={{ background: 'var(--ivory)', borderRadius: 20, overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
-        {[['user-round', 'About me', onRestart], ['clipboard-list', 'Progress log', () => setShowLog(true)], ['credit-card', 'Payment & packages', null], ['bell', 'Notifications', null], ['heart', 'Saved instructors', null], ['settings', 'Preferences', null], ['log-out', 'Sign out', null]].map(([ic, l, fn], i, a) => (
+        {[['user-round', 'About me', onRestart], ['clipboard-list', 'Progress log', () => setShowLog(true)], ['credit-card', 'Payment & packages', () => setShowPay(true)], ['settings', 'Preferences', null], ['log-out', 'Sign out', null]].map(([ic, l, fn], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
-            <Icon n={ic} size={18} color={i <= 1 ? 'var(--accent)' : 'var(--taupe)'} />
-            <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 1 ? 500 : 400, fontSize: 14, color: i <= 1 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
+            <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
+            <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
             <Icon n="chevron-right" size={16} color="var(--clay)" />
           </button>
         ))}
       </div>
       {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
+      {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
     </div>
   );
 }
@@ -428,13 +500,26 @@ export function ClientPortal() {
   const goSearch = () => { setTab('Search'); setSearchLoading(true); setTimeout(() => setSearchLoading(false), 900); };
 
   if (stage === 'browse') {
+    const gate = () => setStage('login');
+    const gateScreen = (icon, title) => (
+      <EmptyState icon={icon} title={title}
+        body="Create a free account to see this — browsing stays free, sign in only when you're ready."
+        action={<Button variant="accent" size="lg" onClick={gate} iconRight="arrow-right" style={{ marginTop: 18 }}>Sign in / Sign up</Button>} />
+    );
+    const publicScreens = {
+      Home: <ClientBrowse onGate={gate} onOpen={openDetail} />,
+      Search: <ClientBrowse onGate={gate} onOpen={openDetail} />,
+      Pricing: <ClientPricing onBook={gate} />,
+      Bookings: gateScreen('calendar-check', 'Sign in to see bookings'),
+      Profile: gateScreen('user', 'Sign in to view your profile'),
+    };
     return (
-      <PhoneFrame overlay={detail && (
+      <PhoneFrame navBar={<ClientNav tab={tab} setTab={setTab} />} overlay={detail && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll">
           <TeacherDetail t={detail} onClose={() => setDetail(null)} onBook={() => { setDetail(null); setStage('login'); }} />
         </div>
       )}>
-        <ClientBrowse onGate={() => setStage('login')} onOpen={openDetail} />
+        <div key={tab} style={{ minHeight: '100%' }}>{publicScreens[tab]}</div>
       </PhoneFrame>
     );
   }
