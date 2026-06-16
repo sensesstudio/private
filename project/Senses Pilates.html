@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Senses Pilates — Private instructor matching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_ds/senses-studio-design-system-19693b0b-f319-459f-afd1-cfe19a79391b/colors_and_type.css">
+<link rel="stylesheet" href="_ds/senses-studio-design-system-19693b0b-f319-459f-afd1-cfe19a79391b/ui_kits/app/app-theme.css">
+<style>
+  :root{
+    --accent: #8a9079;
+    --accent-tint: rgba(138,144,121,0.15);
+    --chrome-h: 54px;
+  }
+  *{ -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; height:100%; background:#1d1916; }
+  body{ font-family:var(--font-sans); color:var(--ink); overscroll-behavior:none; display:flex; flex-direction:column; }
+  #chrome{
+    flex:none; height:var(--chrome-h); z-index:500;
+    background:var(--espresso); display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; box-sizing:border-box;
+  }
+  #portal-root{
+    flex:1; min-height:0; position:relative; background:var(--cream); overflow:hidden;
+  }
+  .screen-scroll{ overflow:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .screen-scroll::-webkit-scrollbar{ display:none; }
+
+  input, textarea{ font-family:var(--font-sans); }
+  input:focus, textarea:focus{ border-color:var(--accent) !important; box-shadow:0 0 0 3px var(--accent-tint); }
+  input::placeholder, textarea::placeholder{ color:var(--fg3); opacity:.8; }
+
+  .tap{ transition:transform .18s var(--ease), box-shadow .25s var(--ease), background .2s var(--ease); }
+  .tap:active{ transform:scale(.97); }
+  @media (hover:hover){ .card-hover:hover{ box-shadow:var(--shadow-md); transform:translateY(-2px); } }
+
+  .skel{ background:linear-gradient(90deg,var(--sand) 25%,#f1e9df 50%,var(--sand) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; }
+  .live-dot{ width:7px; height:7px; border-radius:999px; background:var(--accent); display:inline-block; box-shadow:0 0 0 0 var(--accent-tint); animation:pulse 1.8s infinite; }
+  .spin-slow{ animation:spin 1s linear infinite; }
+
+  @keyframes shimmer{ to{ background-position:-200% 0; } }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(138,144,121,.5);} 70%{ box-shadow:0 0 0 8px rgba(138,144,121,0);} 100%{ box-shadow:0 0 0 0 rgba(138,144,121,0);} }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  @keyframes fade-in{ from{opacity:0;} to{opacity:1;} }
+  @keyframes sheet-up{ from{transform:translateY(100%);} to{transform:translateY(0);} }
+  @keyframes slide-in{ from{transform:translateX(100%);} to{transform:translateX(0);} }
+  @keyframes rise{ from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes pop{ 0%{transform:scale(.6); opacity:0;} 60%{transform:scale(1.08);} 100%{transform:scale(1); opacity:1;} }
+  @keyframes flash{ 0%{background:var(--accent-tint);} 100%{background:var(--sand);} }
+
+  .reduce-motion *, .reduce-motion *::before{ animation:none !important; transition:none !important; }
+  .hide-mobile{ display:inline; }
+  @media (max-width:759px){ .hide-mobile{ display:none !important; } }
+
+  /* chrome portal switch */
+  .pswitch{ display:flex; gap:2px; background:rgba(250,247,243,.12); border-radius:999px; padding:3px; }
+  .pswitch button{ border:none; cursor:pointer; background:transparent; color:rgba(245,239,234,.65);
+    font-family:var(--font-sans); font-weight:500; font-size:11.5px; letter-spacing:.06em;
+    padding:7px 14px; border-radius:999px; min-height:34px; display:inline-flex; align-items:center; gap:7px; transition:all .25s var(--ease); }
+  .pswitch button.on{ background:var(--cream); color:var(--espresso); font-weight:600; }
+  @media (max-width:480px){ .pswitch button{ padding:7px 12px; } .pswitch .plabel{ display:none; } }
+  image-slot{ --is-bg: var(--sand); }
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#8a9079"/>
+    <text x="50" y="68" font-family="Georgia, serif" font-size="56" fill="#f5efea" text-anchor="middle" font-style="italic">S</text>
+  </svg>
+</template>
+
+<div id="chrome">
+  <div style="display:flex; align-items:center; gap:11px;">
+    <img src="assets/submark-brown-trim.png" alt="" style="height:26px; filter:brightness(0) invert(1); opacity:.92;">
+    <div class="hide-mobile" style="line-height:1;">
+      <div style="font-family:var(--font-serif); font-weight:600; font-size:15px; color:var(--cream);">Senses Pilates</div>
+      <div style="font-family:var(--font-sans); font-weight:400; font-size:8.5px; letter-spacing:.22em; text-transform:uppercase; color:rgba(245,239,234,.5); margin-top:2px;">Body Strong · Mind Calm</div>
+    </div>
+  </div>
+  <div id="switch-mount"></div>
+</div>
+
+<div id="portal-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="image-slot.js"></script>
+<script src="_ds/senses-studio-design-system-19693b0b-f319-459f-afd1-cfe19a79391b/_ds_bundle.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="client.jsx"></script>
+<script type="text/babel" src="clientDetail.jsx"></script>
+<script type="text/babel" src="clientBrowse.jsx"></script>
+<script type="text/babel" src="clientFlow.jsx"></script>
+<script type="text/babel" src="teacher.jsx"></script>
+<script type="text/babel" src="admin.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#c79b8e",
+  "calm": false
+}/*EDITMODE-END*/;
+
+const PORTALS = [
+  { id: 'client',  label: 'Client',  icon: 'smartphone' },
+  { id: 'teacher', label: 'Teacher', icon: 'flower-2' },
+  { id: 'admin',   label: 'Admin',   icon: 'layout-dashboard' },
+];
+const COMP = { client: () => <ClientPortal/>, teacher: () => <TeacherPortal/>, admin: () => <AdminPortal/> };
+const readHash = () => { const h = (location.hash || '#client').replace('#','').split('/')[0]; return COMP[h] ? h : 'client'; };
+
+// chrome switch (rendered into the dark bar)
+function PortalSwitch({ portal, setPortal }) {
+  useEffect(() => { window.lucide && window.lucide.createIcons(); });
+  return (
+    <div className="pswitch">
+      {PORTALS.map(p => (
+        <button key={p.id} className={portal === p.id ? 'on' : ''} onClick={() => setPortal(p.id)}>
+          <i data-lucide={p.icon} style={{ width: 15, height: 15, strokeWidth: 1.8 }}></i>
+          <span className="plabel">{p.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [portal, setPortal] = useState(readHash());
+
+  useEffect(() => {
+    const on = () => setPortal(readHash());
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  const go = (id) => { location.hash = id; setPortal(id); };
+
+  // apply tweaks to :root
+  useEffect(() => {
+    const hex = t.accent.replace('#','');
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    document.documentElement.style.setProperty('--accent', t.accent);
+    document.documentElement.style.setProperty('--accent-tint', `rgba(${r},${g},${b},0.15)`);
+  }, [t.accent]);
+  useEffect(() => { document.documentElement.classList.toggle('reduce-motion', !!t.calm); }, [t.calm]);
+  useEffect(() => { window.lucide && window.lucide.createIcons(); });
+
+  const Portal = COMP[portal];
+  return (
+    <React.Fragment>
+      {ReactDOM.createPortal(<PortalSwitch portal={portal} setPortal={go} />, document.getElementById('switch-mount'))}
+      <div key={portal} style={{ position: 'absolute', inset: 0 }}><Portal/></div>
+      <TweaksPanel>
+        <TweakSection label="Brand accent" />
+        <TweakColor label="Accent" value={t.accent}
+          options={['#8a9079', '#b9755b', '#c79b8e']}
+          onChange={(v) => setTweak('accent', v)} />
+        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', padding: '2px 2px 6px', lineHeight: 1.5 }}>Sage · Clay terracotta · Dusty rose. The cream &amp; taupe base stays constant.</div>
+        <TweakSection label="Feel" />
+        <TweakToggle label="Calm (reduce motion)" value={t.calm} onChange={(v) => setTweak('calm', v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+ReactDOM.createRoot(document.getElementById('portal-root')).render(<App />);
+</script>
+</body>
+</html>

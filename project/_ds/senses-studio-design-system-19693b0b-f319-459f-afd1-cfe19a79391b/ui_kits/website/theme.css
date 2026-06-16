@@ -1,0 +1,40 @@
+/* Senses Studio — website UI kit theme (paths relative to ui_kits/website/) */
+@font-face{font-family:"Eyesome Script";src:url("../../fonts/EyesomeScript.otf") format("opentype");}
+@font-face{font-family:"Eyesome Serif";src:url("../../fonts/EyesomeRegular.otf") format("opentype");font-style:normal;}
+@font-face{font-family:"Eyesome Serif";src:url("../../fonts/EyesomeItalic.otf") format("opentype");font-style:italic;}
+
+:root{
+  --cream:#f5efea; --ivory:#faf7f3; --sand:#ece2d6; --linen:#e3d6c6; --clay:#c9b29c;
+  --taupe:#66554b; --taupe-soft:#8a7869; --espresso:#3a322c; --ink:#232323;
+  --terracotta:#b9755b; --rose:#c79b8e; --blush:#e7cfc6; --almond:#e0d2bf; --sage:#8a9079;
+  --fg3:#9a8a7c; --border:#e3d6c6; --border-soft:rgba(102,85,75,.16);
+  --font-script:"Eyesome Script",cursive;
+  --font-logo:"Eyesome Serif",Georgia,serif;
+  --font-serif:"Cormorant Garamond",Georgia,serif;
+  --font-body:"Cormorant Garamond",Georgia,serif;
+  --font-sans:"Montserrat",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;}
+
+/* primitives */
+.eyebrow{font-family:var(--font-sans);font-weight:500;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--taupe);}
+.serif{font-family:var(--font-serif);font-weight:400;color:var(--espresso);line-height:1.06;}
+.script{font-family:var(--font-script);color:var(--ink);line-height:.9;}
+.btn{font-family:var(--font-sans);font-weight:500;font-size:12px;letter-spacing:.18em;text-transform:uppercase;border-radius:999px;padding:15px 32px;border:1px solid transparent;cursor:pointer;transition:all .35s var(--ease);display:inline-flex;align-items:center;gap:10px;text-decoration:none;}
+.btn-primary{background:var(--taupe);color:var(--ivory);}
+.btn-primary:hover{background:var(--espresso);}
+.btn-primary:active{transform:scale(.98);}
+.btn-outline{background:transparent;color:var(--espresso);border-color:var(--taupe);}
+.btn-outline:hover{background:var(--taupe);color:var(--ivory);}
+.btn-ghost{background:transparent;color:var(--taupe);padding:15px 8px;}
+.btn-ghost span{border-bottom:1px solid var(--clay);padding-bottom:3px;transition:border-color .35s;}
+.btn-ghost:hover span{border-color:var(--taupe);}
+.container{max-width:1200px;margin:0 auto;padding:0 40px;}
+.ph{position:relative;background:linear-gradient(135deg,var(--almond),var(--clay));overflow:hidden;}
+.ph::after{content:attr(data-label);position:absolute;left:14px;bottom:12px;font-family:var(--font-sans);font-weight:500;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(58,50,44,.5);}
+.ph-rose{background:linear-gradient(135deg,var(--blush),var(--rose));}
+.ph-sage{background:linear-gradient(150deg,var(--sand),var(--sage));}
+.ph-taupe{background:linear-gradient(150deg,var(--clay),var(--taupe));}
