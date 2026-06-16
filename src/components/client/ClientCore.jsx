@@ -134,6 +134,21 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
   });
   const setOne = (key, val) => setAnswers(a => ({ ...a, [key]: val }));
 
+  const MEDIUMS = [
+    { id: 'en', label: 'English' },
+    { id: 'yue', label: 'Cantonese' },
+    { id: 'zh', label: 'Mandarin' },
+    { id: 'none', label: 'No preference' },
+  ];
+  // Multi-select; "No preference" is exclusive of the specific languages.
+  const toggleMedium = (val) => setAnswers(a => {
+    const cur = a.languages || [];
+    if (val === 'none') return { ...a, languages: cur.includes('none') ? [] : ['none'] };
+    const next = cur.includes(val) ? cur.filter(x => x !== val) : [...cur.filter(x => x !== 'none'), val];
+    return { ...a, languages: next };
+  });
+  const langChosen = (answers.languages || []).length > 0;
+
   const steps = [
     { key: 'health', title: 'A quick health declaration', sub: 'Required for your safety — it helps your instructor adapt every session.',
       render: () => (
@@ -159,6 +174,13 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
       render: () => <div style={tileGrid()}>{['Under 25', '25–34', '35–44', '45–54', '55+'].map(a => <OptionTile key={a} label={a} on={answers.age === a} onClick={() => setOne('age', a)} />)}</div> },
     { key: 'level', title: 'Where are you in your practice?', sub: 'So we pair you with the right pace and patience.',
       render: () => <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{LEVELS.map(l => <OptionTile key={l.id} label={l.label} note={l.note} on={answers.level === l.id} onClick={() => setOne('level', l.id)} />)}</div> },
+    { key: 'languages', title: 'Preferred teaching language', sub: 'Pick any that work for you — choose at least one. We’ll match instructors who teach in them.',
+      render: () => (
+        <div>
+          <div style={tileGrid()}>{MEDIUMS.map(m => <OptionTile key={m.id} label={m.label} multi on={(answers.languages || []).includes(m.id)} onClick={() => toggleMedium(m.id)} />)}</div>
+          {!langChosen && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--terracotta)' }}><Icon n="info" size={13} color="var(--terracotta)" /> Please select at least one.</div>}
+        </div>
+      ) },
     { key: 'injury', title: 'Anything we should hold gently?', sub: 'Injuries or sensitivities help us match a specialist. Optional.',
       render: () => <div style={tileGrid()}>{INJURIES.map(i => <OptionTile key={i} label={i} multi on={(answers.injury || []).includes(i)} onClick={() => toggle('injury', i)} />)}</div> },
     { key: 'schedule', title: 'When do you like to move?', sub: "We'll surface instructors who are open then.",
@@ -203,7 +225,8 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
             </div>
           ))}
         </div>
-        <Button variant="accent" full size="lg" onClick={finish} iconRight="sparkles" style={{ marginTop: 28 }}>See my matches</Button>
+        <Button variant="accent" full size="lg" disabled={!langChosen} onClick={finish} iconRight="sparkles" style={{ marginTop: 28 }}>See my matches</Button>
+        {!langChosen && <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', margin: '10px 0 0' }}>Select a preferred teaching language to continue.</p>}
       </div>
     </div>
   );
