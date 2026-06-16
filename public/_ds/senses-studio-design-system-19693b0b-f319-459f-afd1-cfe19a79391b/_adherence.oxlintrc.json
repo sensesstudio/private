@@ -1,0 +1,189 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "ui_kits/app/**",
+              "ui_kits/website/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Eyesome Script|Eyesome Serif|Emitha|Cormorant Garamond|Allura))/i]",
+        "message": "Font not provided by the design system. Available: Eyesome Script, Eyesome Serif, Emitha, Cormorant Garamond, Allura."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {},
+    "tokens": [
+      "--accent",
+      "--accent-fg",
+      "--almond",
+      "--bg",
+      "--blush",
+      "--border",
+      "--border-soft",
+      "--clay",
+      "--cream",
+      "--dur",
+      "--ease",
+      "--espresso",
+      "--fg1",
+      "--fg2",
+      "--fg3",
+      "--font-body",
+      "--font-logo",
+      "--font-sans",
+      "--font-script",
+      "--font-serif",
+      "--font-serif-body",
+      "--ink",
+      "--ivory",
+      "--ivory-2",
+      "--linen",
+      "--r-lg",
+      "--r-md",
+      "--r-pill",
+      "--r-sm",
+      "--r-xl",
+      "--r-xs",
+      "--rose",
+      "--s-1",
+      "--s-10",
+      "--s-2",
+      "--s-3",
+      "--s-4",
+      "--s-5",
+      "--s-6",
+      "--s-7",
+      "--s-8",
+      "--s-9",
+      "--sage",
+      "--sand",
+      "--shadow-lg",
+      "--shadow-md",
+      "--shadow-sm",
+      "--surface",
+      "--surface-alt",
+      "--t-body",
+      "--t-body-lg",
+      "--t-display",
+      "--t-eyebrow",
+      "--t-h1",
+      "--t-h2",
+      "--t-h3",
+      "--t-h4",
+      "--t-small",
+      "--taupe",
+      "--taupe-soft",
+      "--terracotta"
+    ],
+    "tokenKinds": {
+      "--cream": "color",
+      "--ivory": "color",
+      "--ivory-2": "color",
+      "--sand": "color",
+      "--linen": "color",
+      "--clay": "color",
+      "--taupe": "color",
+      "--taupe-soft": "color",
+      "--espresso": "color",
+      "--ink": "color",
+      "--terracotta": "color",
+      "--rose": "color",
+      "--blush": "color",
+      "--almond": "color",
+      "--sage": "color",
+      "--bg": "color",
+      "--surface": "color",
+      "--surface-alt": "color",
+      "--fg1": "color",
+      "--fg2": "color",
+      "--fg3": "color",
+      "--border": "color",
+      "--border-soft": "color",
+      "--accent": "color",
+      "--accent-fg": "color",
+      "--font-script": "font",
+      "--font-logo": "font",
+      "--font-serif": "font",
+      "--font-serif-body": "font",
+      "--font-sans": "font",
+      "--t-display": "other",
+      "--t-h1": "other",
+      "--t-h2": "spacing",
+      "--t-h3": "spacing",
+      "--t-h4": "spacing",
+      "--t-body-lg": "spacing",
+      "--t-body": "spacing",
+      "--t-small": "spacing",
+      "--t-eyebrow": "spacing",
+      "--r-xs": "spacing",
+      "--r-sm": "spacing",
+      "--r-md": "spacing",
+      "--r-lg": "spacing",
+      "--r-xl": "spacing",
+      "--r-pill": "spacing",
+      "--s-1": "spacing",
+      "--s-2": "spacing",
+      "--s-3": "spacing",
+      "--s-4": "spacing",
+      "--s-5": "spacing",
+      "--s-6": "spacing",
+      "--s-7": "spacing",
+      "--s-8": "spacing",
+      "--s-9": "spacing",
+      "--s-10": "spacing",
+      "--shadow-sm": "shadow",
+      "--shadow-md": "shadow",
+      "--shadow-lg": "shadow",
+      "--ease": "other",
+      "--dur": "other",
+      "--font-body": "font"
+    },
+    "fontFamilies": [
+      "Allura",
+      "Cormorant Garamond",
+      "Emitha",
+      "Eyesome Script",
+      "Eyesome Serif"
+    ]
+  }
+}

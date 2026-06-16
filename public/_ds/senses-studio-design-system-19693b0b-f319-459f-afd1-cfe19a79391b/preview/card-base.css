@@ -1,0 +1,30 @@
+/* Shared base for design-system preview cards (paths relative to /preview) */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Allura&display=swap");
+@font-face { font-family:"Emitha"; src:url("../fonts/Emitha.otf") format("opentype"), url("../fonts/Emitha.ttf") format("truetype"); }
+@font-face { font-family:"Eyesome Script"; src:url("../fonts/EyesomeScript.otf") format("opentype"); }
+@font-face { font-family:"Eyesome Serif"; src:url("../fonts/EyesomeRegular.otf") format("opentype"); font-style:normal; }
+@font-face { font-family:"Eyesome Serif"; src:url("../fonts/EyesomeItalic.otf") format("opentype"); font-style:italic; }
+
+:root{
+  --cream:#f5efea; --ivory:#faf7f3; --ivory-2:#f6f4f0; --sand:#ece2d6;
+  --linen:#e3d6c6; --clay:#c9b29c; --taupe:#66554b; --taupe-soft:#8a7869;
+  --espresso:#3a322c; --ink:#232323; --terracotta:#b9755b; --sage:#8a9079;
+  --rose:#c79b8e; --blush:#e7cfc6; --almond:#e0d2bf;
+  --fg3:#9a8a7c;
+  --font-script:"Eyesome Script",cursive;
+  --font-logo:"Eyesome Serif",Georgia,serif;
+  --font-serif:"Cormorant Garamond",Georgia,serif;
+  --font-serif-body:"Cormorant Garamond",Georgia,serif;
+  --font-sans:"Montserrat",system-ui,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  background:var(--cream);
+  font-family:var(--font-sans);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding:22px 26px;
+}
+.lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg3);font-weight:500;}
+.mono{font-family:ui-monospace,Menlo,monospace;}

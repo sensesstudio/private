@@ -1,0 +1,151 @@
+/* ============================================================
+   SENSES STUDIO — Colors & Type
+   Yoga + Pilates · elegant, warm, earthy
+   Import this file, then use the CSS variables below.
+   ============================================================ */
+
+/* ---------- Fonts ---------- */
+/* Brand display family: "Eyesome" (Script + Didone-style serif). */
+@font-face {
+  font-family: "Eyesome Script";
+  src: url("fonts/EyesomeScript.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Eyesome Serif";
+  src: url("fonts/EyesomeRegular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Eyesome Serif";
+  src: url("fonts/EyesomeItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+/* UI / body / labels companion fonts (NOT in the brand package — substituted).
+   The "YOGA + PILATES" tagline is a light, letter-spaced geometric sans;
+   Montserrat is the closest free match and is the primary UI/label/body sans.
+   Cormorant Garamond is offered as an elegant serif-body alternative for long
+   copy and pull quotes. Load both from Google Fonts in each document:
+   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"> */
+
+:root {
+  /* ---------- Color · Foundations ---------- */
+  --cream:        #f5efea;  /* KEY brand background */
+  --ivory:        #faf7f3;  /* lighter surface / cards */
+  --ivory-2:      #f6f4f0;  /* alt warm white (brown-set bg) */
+  --sand:         #ece2d6;  /* warm sand — hairlines, fills */
+  --linen:        #e3d6c6;  /* deeper sand — borders, dividers */
+  --clay:         #c9b29c;  /* muted clay — quiet accents */
+
+  /* ---------- Color · Earth tones + soft blush ---------- */
+  --taupe:        #66554b;  /* PRIMARY brand brown (logo brown) */
+  --taupe-soft:   #8a7869;  /* lighter taupe — secondary text on dark */
+  --espresso:     #3a322c;  /* deep brown — headings on light */
+  --ink:          #232323;  /* warm near-black — body / logo black */
+  --terracotta:   #b9755b;  /* warm clay-terracotta — sparing accent */
+  --rose:         #c79b8e;  /* dusty rose — soft accent */
+  --blush:        #e7cfc6;  /* soft blush pink — quiet fills, surfaces */
+  --almond:       #e0d2bf;  /* warm beige — fills, dividers */
+  --sage:         #8a9079;  /* muted olive-sage — sparing accent */
+
+  /* ---------- Semantic ---------- */
+  --bg:           var(--cream);
+  --surface:      var(--ivory);
+  --surface-alt:  var(--sand);
+  --fg1:          var(--ink);       /* primary text */
+  --fg2:          var(--taupe);     /* secondary text */
+  --fg3:          #9a8a7c;          /* tertiary / captions */
+  --border:       var(--linen);
+  --border-soft:  rgba(102,85,75,.16);
+  --accent:       var(--taupe);     /* primary actions */
+  --accent-fg:    var(--ivory);     /* text on accent */
+
+  /* ---------- Type families ---------- */
+  --font-script:    "Eyesome Script", cursive;                            /* signature accent */
+  --font-logo:      "Eyesome Serif", "Cormorant Garamond", Georgia, serif; /* LOGO wordmark only */
+  --font-serif:     "Cormorant Garamond", Georgia, serif;                  /* headings & display */
+  --font-serif-body:"Cormorant Garamond", Georgia, serif;                  /* editorial body */
+  --font-sans:      "Montserrat", system-ui, sans-serif;                   /* UI / labels / body */
+
+  /* ---------- Type scale (fluid-ready px) ---------- */
+  --t-display:   clamp(3rem, 6vw, 5.5rem);   /* hero script / serif */
+  --t-h1:        clamp(2.4rem, 4.4vw, 3.6rem);
+  --t-h2:        2.25rem;
+  --t-h3:        1.6rem;
+  --t-h4:        1.25rem;
+  --t-body-lg:   1.1875rem;
+  --t-body:      1.0625rem;
+  --t-small:     0.9375rem;
+  --t-eyebrow:   0.78rem;
+
+  /* ---------- Radius (rounded, soft curves) ---------- */
+  --r-xs:  6px;
+  --r-sm:  12px;
+  --r-md:  20px;
+  --r-lg:  32px;
+  --r-xl:  48px;
+  --r-pill: 999px;
+
+  /* ---------- Spacing (8pt base) ---------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+  --s-9: 96px; --s-10: 128px;
+
+  /* ---------- Shadows (soft, warm, diffuse) ---------- */
+  --shadow-sm: 0 1px 3px rgba(58,50,44,.06), 0 1px 2px rgba(58,50,44,.04);
+  --shadow-md: 0 6px 24px rgba(58,50,44,.08);
+  --shadow-lg: 0 18px 50px rgba(58,50,44,.12);
+
+  /* ---------- Motion ---------- */
+  --ease: cubic-bezier(.22,.61,.36,1);   /* gentle ease-out */
+  --dur:  .45s;
+}
+
+/* ============================================================
+   Semantic element styles — opt-in helpers
+   ============================================================ */
+.ss-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  line-height: .95;
+  color: var(--fg1);
+}
+.ss-h1, .ss-h2, .ss-h3, .ss-h4 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: var(--espresso);
+  line-height: 1.08;
+  letter-spacing: .005em;
+}
+.ss-h1 { font-size: var(--t-h1); }
+.ss-h2 { font-size: var(--t-h2); }
+.ss-h3 { font-size: var(--t-h3); }
+.ss-h4 { font-size: var(--t-h4); }
+
+.ss-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--t-eyebrow);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+.ss-body {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: var(--t-body);
+  line-height: 1.7;
+  color: var(--fg1);
+}
+.ss-small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--t-small);
+  line-height: 1.6;
+  color: var(--fg2);
+}
