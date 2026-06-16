@@ -81,7 +81,13 @@ export function ClientBrowse({ onGate, onOpen }) {
   const [seg, setSeg] = useState('Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
-  const teachers = [...TEACHERS].sort((a, b) => b.match - a.match);
+  const [sort, setSort] = useState('match');
+  const teachers = [...TEACHERS].sort((a, b) => {
+    if (sort === 'name') return a.name.localeCompare(b.name);
+    if (sort === 'rating') return b.rating - a.rating;
+    if (sort === 'price') return a.rate - b.rate;
+    return b.match - a.match;
+  });
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const baseMonth = 5, baseYear = 2026;
@@ -129,9 +135,23 @@ export function ClientBrowse({ onGate, onOpen }) {
 
       <div style={{ flex: 1, padding: '14px 20px 16px' }}>
         {seg === 'Teachers' && (
-          <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
-            {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
-          </div>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)' }}>{teachers.length} instructors</span>
+              <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <select value={sort} onChange={e => setSort(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 34px 9px 14px', boxShadow: 'var(--shadow-sm)' }}>
+                  <option value="match">Top match</option>
+                  <option value="name">Name A–Z</option>
+                  <option value="rating">Top rated</option>
+                  <option value="price">Price: low to high</option>
+                </select>
+                <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, pointerEvents: 'none' }} />
+              </label>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
+              {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
+            </div>
+          </>
         )}
 
         {seg === 'Needs' && (
