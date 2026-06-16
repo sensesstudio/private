@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Icon, Eyebrow, Button, Avatar, Card, Pill, Segmented, Modal, useVP, useLiveProgress, downloadCSV } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
-import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, APPLICANTS, REVENUE, PROGRESS_LOG } from '../../data.js';
+import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, APPLICANTS, REVENUE, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
+import { useClientStore, getClientProfile } from '../../clientStore.js';
 import { tdStyle } from '../../styles.js';
 import { EmptyState } from '../client/ClientDetail.jsx';
 
@@ -192,22 +193,29 @@ function AdminDashboard({ setTab }) {
   );
 }
 
-function clientAbout(c) {
+function clientAbout(c, ov) {
   const ages = { c1: '25–34', c2: '35–44', c3: '45–54', c4: '25–34', c5: '25–34', c6: '35–44', c7: 'Under 25', c8: '45–54', c9: '35–44', c10: '25–34' };
   const levels = { c1: 'Some experience', c3: 'Experienced', c9: 'Experienced' };
-  const pregnant = c.id === 'c5' ? '2nd trimester (13–26 wks)' : 'No';
   const notes = {
     c1: "I'd love to feel stronger and finally move past my lower-back niggle. Hoping to build a calm, consistent routine.",
     c2: 'Want to build real strength and feel more capable in everyday life.',
     c5: 'Staying safe and mobile through pregnancy — gentle is good.',
   };
+  const lvl = { new: 'New to pilates', some: 'Some experience', exp: 'Experienced' };
+  const langMap = { en: 'English', yue: 'Cantonese', zh: 'Mandarin', none: 'No preference' };
+  const pregFallback = c.id === 'c5' ? '2nd trimester (13–26 wks)' : 'No';
+  const surgFallback = c.id === 'c8' ? 'Yes — knee, 8 months ago' : 'No';
+  const both = ov && ov.pregnant === 'yes' && ov.surgery === 'yes';
   return {
-    age: ages[c.id] || '25–34',
-    level: levels[c.id] || 'Some experience',
-    goal: c.goal,
-    pregnant,
-    surgery: c.id === 'c8' ? 'Yes — knee, 8 months ago' : 'No',
-    note: notes[c.id] || '—',
+    age: (ov && ov.age) || ages[c.id] || '25–34',
+    level: ov && ov.level ? (lvl[ov.level] || ov.level) : (levels[c.id] || 'Some experience'),
+    goal: ov && ov.goals && ov.goals.length ? ov.goals.map(id => (GOALS.find(g => g.id === id) || {}).label).filter(Boolean).join(', ') : c.goal,
+    pregnant: ov && ov.pregnant ? (ov.pregnant === 'yes' ? (ov.pregnancyWeeks || 'Yes') : 'No') : pregFallback,
+    surgery: ov && ov.surgery ? (ov.surgery === 'yes' ? 'Yes — within last 12 months' : 'No') : surgFallback,
+    doctor: both ? (ov.doctorClearance === 'yes' ? 'Yes — cleared by doctor' : ov.doctorClearance === 'no' ? 'No — not cleared' : 'Awaiting confirmation') : null,
+    languages: ov && ov.languages && ov.languages.length ? ov.languages.map(id => langMap[id] || id).join(', ') : null,
+    note: (ov && ov.notes) || notes[c.id] || '—',
+    updated: !!ov,
   };
 }
 
@@ -230,7 +238,8 @@ function AdminClients() {
     return [...liveOwn, ...fromBookings];
   };
 
-  const about = sel ? clientAbout(sel) : null;
+  useClientStore();
+  const about = sel ? clientAbout(sel, getClientProfile(sel.id)) : null;
   const prog = progressFor(sel);
 
   return (
@@ -281,7 +290,8 @@ function AdminClients() {
             <div className="screen-scroll" style={{ maxHeight: '52vh', overflowY: 'auto', padding: '18px 24px 26px' }}>
               {view === 'About' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {[['target', 'Primary goal', about.goal], ['user', 'Age range', about.age], ['gauge', 'Experience', about.level], ['flower-2', 'Pregnant', about.pregnant], ['stethoscope', 'Recent surgery', about.surgery]].map(([ic, k, v]) => (
+                  {about.updated && <div style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', background: 'var(--accent-tint)', padding: '5px 10px', borderRadius: 999 }}><Icon n="badge-check" size={12} color="var(--accent)" /> Updated by client</div>}
+                  {[['target', 'Primary goal', about.goal], ['user', 'Age range', about.age], ['gauge', 'Experience', about.level], ['flower-2', 'Pregnant', about.pregnant], ['stethoscope', 'Recent surgery', about.surgery], ...(about.doctor ? [['heart-pulse', 'Doctor cleared to exercise', about.doctor]] : []), ...(about.languages ? [['languages', 'Preferred language', about.languages]] : [])].map(([ic, k, v]) => (
                     <div key={k} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                       <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--sand)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon n={ic} size={16} color="var(--taupe)" /></span>
                       <div>

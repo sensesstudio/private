@@ -4,6 +4,7 @@ import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS, GOALS, INJURIES, SCHEDULES, LEVELS } from '../../data.js';
 import { locName } from '../../data.js';
 import { inputStyle, socialBtn, backLink } from '../../styles.js';
+import { isDeclarationComplete } from '../../clientStore.js';
 
 export function ClientNav({ tab, setTab }) {
   const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
@@ -22,7 +23,7 @@ export function ClientNav({ tab, setTab }) {
   );
 }
 
-export function ClientLogin({ onBegin, onSignIn, onBack }) {
+export function ClientLogin({ onBrowse, onSignIn, onBack }) {
   const { mobile } = useVP();
   const [email, setEmail] = useState('');
   return (
@@ -55,7 +56,7 @@ export function ClientLogin({ onBegin, onSignIn, onBack }) {
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)' }}>New here</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
-          <Button variant="accent" full size="lg" onClick={onBegin} iconRight="arrow-right">Find my instructor</Button>
+          <Button variant="accent" full size="lg" onClick={onBrowse} icon="calendar-days" iconRight="arrow-right">Browse our schedule</Button>
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             <button className="tap" onClick={onSignIn} style={socialBtn}><Icon n="apple" size={17} /> Apple</button>
             <button className="tap" onClick={onSignIn} style={socialBtn}><span style={{ fontWeight: 700, fontFamily: 'var(--font-serif)' }}>G</span> Google</button>
@@ -148,6 +149,8 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
     return { ...a, languages: next };
   });
   const langChosen = (answers.languages || []).length > 0;
+  const declOk = isDeclarationComplete(answers);
+  const canSubmit = langChosen && declOk;
 
   const steps = [
     { key: 'health', title: 'A quick health declaration', sub: 'Required for your safety — it helps your instructor adapt every session.',
@@ -166,6 +169,12 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
             </div>
           )}
           <YesNo label="Any recent surgery?" note="Within the last 12 months" value={answers.surgery} onChange={v => setOne('surgery', v)} />
+          {answers.pregnant === 'yes' && answers.surgery === 'yes' && (
+            <YesNo label="Has a doctor cleared you to exercise?" note="Required when pregnant and post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
+          )}
+          {!isDeclarationComplete(answers) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--terracotta)' }}><Icon n="info" size={13} color="var(--terracotta)" /> Please answer the health declaration — it's required.</div>
+          )}
         </div>
       ) },
     { key: 'goals', title: 'What brings you to the mat?', sub: "Choose all that feel true — we'll weight your matches around them.",
@@ -225,8 +234,8 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
             </div>
           ))}
         </div>
-        <Button variant="accent" full size="lg" disabled={!langChosen} onClick={finish} iconRight="sparkles" style={{ marginTop: 28 }}>See my matches</Button>
-        {!langChosen && <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', margin: '10px 0 0' }}>Select a preferred teaching language to continue.</p>}
+        <Button variant="accent" full size="lg" disabled={!canSubmit} onClick={finish} iconRight="sparkles" style={{ marginTop: 28 }}>See my matches</Button>
+        {!canSubmit && <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', margin: '10px 0 0' }}>{!declOk ? 'Complete the health declaration to continue.' : 'Select a preferred teaching language to continue.'}</p>}
       </div>
     </div>
   );

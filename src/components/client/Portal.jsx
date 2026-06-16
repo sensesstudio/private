@@ -3,6 +3,7 @@ import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveP
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
+import { saveClientProfile, isDeclarationComplete } from '../../clientStore.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
@@ -23,7 +24,7 @@ function PayOption({ id, method, setMethod, icon, label, note }) {
   );
 }
 
-function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
+function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarationOk = true, onCompleteDeclaration }) {
   useSlots(); // re-render as the held slot's state changes
   const [stage, setStage] = useState('review');
   const [pkg, setPkg] = useState('studio');
@@ -57,8 +58,10 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
   const mmss = `${Math.floor(held / 60)}:${String(held % 60).padStart(2, '0')}`;
 
   const book = () => { if (slot) { bookSlot(slot.id); bookedRef.current = true; } };
-  const pay = () => { setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1900); };
-  const confirmCredit = () => { setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1400); };
+  // Payment is allowed without the declaration, but the booking only confirms
+  // once the health declaration is complete.
+  const pay = () => { setStage('processing'); setTimeout(() => { if (declarationOk) { book(); setStage('done'); } else { setStage('declare'); } }, 1900); };
+  const confirmCredit = () => { if (!declarationOk) return; setStage('processing'); setTimeout(() => { book(); setStage('done'); }, 1400); };
 
   return (
     <div style={{ padding: '4px 22px 30px' }}>
@@ -71,6 +74,13 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
       {stage === 'review' && (
         <>
           <h2 style={sheetTitle}>Confirm your session</h2>
+          {!declarationOk && (
+            <div style={{ background: 'rgba(185,117,91,.12)', border: '1px solid var(--terracotta)', borderRadius: 14, padding: '13px 14px', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)', marginBottom: 7 }}><Icon n="shield-alert" size={15} color="var(--terracotta)" /> Health declaration required</div>
+              <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--espresso)', margin: '0 0 10px', lineHeight: 1.5 }}>Please complete your quick health declaration before confirming this session. You can still pay for a package now.</p>
+              <Button variant="dark" full onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 13, alignItems: 'center', background: 'var(--ivory)', borderRadius: 18, padding: 14, border: '1px solid var(--border-soft)', marginBottom: 16 }}>
             <Avatar t={t} size={54} radius={14} />
             <div style={{ flex: 1 }}>
@@ -112,7 +122,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)' }}>This session uses 1 credit · {Math.max(0, credits - 1)} will remain</div>
                 </div>
               </div>
-              <Button variant="accent" full size="lg" onClick={confirmCredit} iconRight="arrow-right">Confirm with 1 credit</Button>
+              <Button variant="accent" full size="lg" disabled={!declarationOk} onClick={confirmCredit} iconRight="arrow-right">Confirm with 1 credit</Button>
               <button className="tap" onClick={() => setMode('buy')} style={linkBtn}>Buy a package instead</button>
             </>
           ) : (
@@ -183,6 +193,16 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed }) {
           <div className="spin-slow" style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid var(--sand)', borderTopColor: 'var(--accent)', margin: '0 auto 22px' }} />
           <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--espresso)' }}>Processing payment…</div>
           <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', marginTop: 6 }}>One breath. Almost there.</div>
+        </div>
+      )}
+
+      {stage === 'declare' && (
+        <div style={{ textAlign: 'center', padding: '24px 0 14px' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-tint)', display: 'grid', placeItems: 'center', margin: '0 auto 18px' }}><Icon n="shield-alert" size={30} color="var(--accent)" /></div>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 24, color: 'var(--espresso)', margin: '0 0 8px' }}>One more step</h2>
+          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--taupe)', margin: '0 0 22px', lineHeight: 1.5 }}>Your payment went through. Complete a quick health declaration to confirm your session — it keeps you safe on the mat.</p>
+          <Button variant="accent" full size="lg" onClick={onCompleteDeclaration} iconRight="arrow-right">Complete health declaration</Button>
+          <button className="tap" onClick={onClose} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--taupe)' }}>Later</button>
         </div>
       )}
 
@@ -524,10 +544,10 @@ export function ClientPortal() {
     );
   }
   if (stage === 'login') {
-    return <PhoneFrame><ClientLogin onBack={() => setStage('browse')} onBegin={() => setStage('intake')} onSignIn={() => setStage('app')} /></PhoneFrame>;
+    return <PhoneFrame><ClientLogin onBack={() => setStage('browse')} onBrowse={() => { setTab('Home'); setStage('browse'); }} onSignIn={() => setStage('app')} /></PhoneFrame>;
   }
   if (stage === 'intake') {
-    return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { setStage('app'); setTab('Home'); }} /></PhoneFrame>;
+    return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { saveClientProfile('c1', answers); setStage('app'); setTab('Home'); }} /></PhoneFrame>;
   }
 
   const screens = {
@@ -546,7 +566,7 @@ export function ClientPortal() {
         </div>
       )}
       <Sheet open={!!booking} onClose={() => setBooking(null)}>
-        {booking && <BookingFlow {...booking} credits={credits} onClose={() => setBooking(null)} onConfirmed={info => {
+        {booking && <BookingFlow {...booking} credits={credits} declarationOk={isDeclarationComplete(answers)} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onClose={() => setBooking(null)} onConfirmed={info => {
           setCredits(c => info.usedCredit ? Math.max(0, c - 1) : c + (info.addCredits || 0) - 1);
           setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, status: 'confirmed' }, ...b]);
           setBooking(null); setDetail(null); setTab('Bookings');
