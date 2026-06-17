@@ -4,6 +4,7 @@ import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS } from '../
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
 import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
+import { useStudios } from '../../supabase/useReference.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
@@ -567,13 +568,19 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
 }
 
 function ClientLocations() {
+  const { studios, live } = useStudios();
   return (
     <div style={{ padding: '8px 20px 28px' }}>
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Locations</h1>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 4px' }}>Five studios across Hong Kong · your credits work at all of them.</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: 0, lineHeight: 1.7 }}>全港五間工作室 · 套票通用。</p>
+      {live && (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', background: 'var(--accent-tint)', padding: '5px 11px', borderRadius: 999 }}>
+          <span className="live-dot" /> Live from database
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
-        {LOCATIONS.map(l => (
+        {studios.map(l => (
           <div key={l.id} style={{ background: 'var(--ivory)', borderRadius: 20, padding: '16px 18px', border: '1.5px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', flex: 'none' }}>
