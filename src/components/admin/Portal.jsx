@@ -3,7 +3,7 @@ import { Icon, Eyebrow, Button, Avatar, Card, Pill, Segmented, Modal, useVP, use
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, APPLICANTS, REVENUE, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
-import { useClientStore, getClientProfile } from '../../clientStore.js';
+import { useClientStore, getClientProfile, pregnancyFromEDD } from '../../clientStore.js';
 import { tdStyle } from '../../styles.js';
 import { EmptyState } from '../client/ClientDetail.jsx';
 
@@ -210,7 +210,7 @@ function clientAbout(c, ov) {
     age: (ov && ov.age) || ages[c.id] || '25–34',
     level: ov && ov.level ? (lvl[ov.level] || ov.level) : (levels[c.id] || 'Some experience'),
     goal: ov && ov.goals && ov.goals.length ? ov.goals.map(id => (GOALS.find(g => g.id === id) || {}).label).filter(Boolean).join(', ') : c.goal,
-    pregnant: ov && ov.pregnant ? (ov.pregnant === 'yes' ? (ov.pregnancyWeeks || 'Yes') : 'No') : pregFallback,
+    pregnant: ov && ov.pregnant ? (ov.pregnant === 'yes' ? (() => { const p = pregnancyFromEDD(ov.edd); return p ? `Due ${p.dueLabel} · ≈${p.weeks} wks (${p.trimester})` : 'Yes'; })() : 'No') : pregFallback,
     surgery: ov && ov.surgery ? (ov.surgery === 'yes' ? 'Yes — within last 12 months' : 'No') : surgFallback,
     doctor: needsDoctor ? (ov.doctorClearance === 'yes' ? 'Yes — cleared by doctor' : ov.doctorClearance === 'no' ? 'No — not cleared' : 'Awaiting confirmation') : null,
     languages: ov && ov.languages && ov.languages.length ? ov.languages.map(id => langMap[id] || id).join(', ') : null,

@@ -58,7 +58,7 @@ create table client_profiles (
   notes               text,
   -- health declaration
   pregnant            boolean,
-  pregnancy_weeks     text,
+  edd                 date,   -- estimated due date (trimester is derived, never stored)
   recent_surgery      boolean,
   doctor_cleared      boolean,
   -- liability waiver

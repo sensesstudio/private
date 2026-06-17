@@ -42,13 +42,28 @@ export function useClientStore() {
   return store;
 }
 
+// Derive current gestational age + trimester from an estimated due date (EDD),
+// so the client enters the due date once and never has to update a trimester.
+// EDD is an ISO date string (yyyy-mm-dd). Returns null if missing/invalid.
+export function pregnancyFromEDD(edd) {
+  if (!edd) return null;
+  const due = new Date(edd + 'T00:00:00');
+  if (isNaN(due.getTime())) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const daysToDue = Math.round((due - today) / 86400000);
+  const weeks = Math.max(0, Math.min(42, Math.round(40 - daysToDue / 7))); // 40-week term
+  const trimester = weeks <= 12 ? '1st trimester' : weeks <= 26 ? '2nd trimester' : '3rd trimester';
+  const dueLabel = due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return { weeks, trimester, daysToDue, dueLabel };
+}
+
 // The health declaration is complete only when pregnant + surgery are answered,
-// a trimester is chosen if pregnant, and a doctor clearance is given when the
-// client is either pregnant or post-surgery.
+// an estimated due date is given if pregnant, and a doctor clearance is given
+// when the client is either pregnant or post-surgery.
 export function isDeclarationComplete(a = {}) {
   if (a.pregnant !== 'yes' && a.pregnant !== 'no') return false;
   if (a.surgery !== 'yes' && a.surgery !== 'no') return false;
-  if (a.pregnant === 'yes' && !a.pregnancyWeeks) return false;
+  if (a.pregnant === 'yes' && !pregnancyFromEDD(a.edd)) return false;
   if ((a.pregnant === 'yes' || a.surgery === 'yes') && a.doctorClearance !== 'yes' && a.doctorClearance !== 'no') return false;
   return true;
 }

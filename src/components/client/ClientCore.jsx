@@ -4,7 +4,7 @@ import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS, GOALS, INJURIES, SCHEDULES, LEVELS } from '../../data.js';
 import { locName } from '../../data.js';
 import { inputStyle, socialBtn, backLink } from '../../styles.js';
-import { isDeclarationComplete } from '../../clientStore.js';
+import { isDeclarationComplete, pregnancyFromEDD } from '../../clientStore.js';
 
 export function ClientNav({ tab, setTab }) {
   const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
@@ -157,17 +157,21 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
       render: () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <YesNo label="Are you pregnant?" note="Including recently postnatal" value={answers.pregnant} onChange={v => setOne('pregnant', v)} />
-          {answers.pregnant === 'yes' && (
-            <div style={{ background: 'var(--accent-tint)', borderRadius: 16, padding: '15px 16px' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13.5, color: 'var(--espresso)', marginBottom: 11 }}>How many weeks along?</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['1st trimester (1–12 wks)', '2nd trimester (13–26 wks)', '3rd trimester (27+ wks)'].map(w => {
-                  const on = answers.pregnancyWeeks === w;
-                  return <button key={w} className="tap" onClick={() => setOne('pregnancyWeeks', w)} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, padding: '10px 14px', minHeight: 42, borderRadius: 999, border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'var(--ivory)', color: on ? '#fff' : 'var(--taupe)' }}>{w}</button>;
-                })}
+          {answers.pregnant === 'yes' && (() => {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const iso = d => d.toISOString().slice(0, 10);
+            const maxDate = new Date(today.getTime() + 287 * 86400000); // ~41 weeks ahead
+            const preg = pregnancyFromEDD(answers.edd);
+            return (
+              <div style={{ background: 'var(--accent-tint)', borderRadius: 16, padding: '15px 16px' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13.5, color: 'var(--espresso)', marginBottom: 4 }}>Estimated due date</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', marginBottom: 11 }}>Enter it once — we’ll keep your trimester up to date for your instructor.</div>
+                <input type="date" value={answers.edd || ''} min={iso(today)} max={iso(maxDate)} onChange={e => setOne('edd', e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, padding: '12px 14px', minHeight: 46, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--ivory)', color: 'var(--espresso)' }} />
+                {preg && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--taupe)', marginTop: 9 }}>≈ {preg.weeks} weeks · {preg.trimester}</div>}
               </div>
-            </div>
-          )}
+            );
+          })()}
           <YesNo label="Any recent surgery?" note="Within the last 12 months" value={answers.surgery} onChange={v => setOne('surgery', v)} />
           {(answers.pregnant === 'yes' || answers.surgery === 'yes') && (
             <YesNo label="Has a doctor cleared you to exercise?" note="Required if pregnant or post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
