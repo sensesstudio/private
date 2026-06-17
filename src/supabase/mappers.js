@@ -15,7 +15,10 @@ export function answersToClientRow(a = {}) {
   set('level', a.level);
   set('injuries', a.injury);
   set('schedule_prefs', a.schedule);
-  set('preferred_studio_id', a.location);
+  if ('location' in a) {
+    const list = Array.isArray(a.location) ? a.location : (a.location ? [a.location] : []);
+    row.preferred_studio_ids = list.filter(id => id && id !== 'any'); // 'any' = no preference -> empty
+  }
   set('languages', a.languages);
   set('notes', a.notes);
   if ('pregnant' in a) row.pregnant = yn(a.pregnant);
@@ -34,7 +37,7 @@ export function clientRowToAnswers(r) {
     level: r.level || undefined,
     injury: r.injuries || [],
     schedule: r.schedule_prefs || [],
-    location: r.preferred_studio_id || undefined,
+    location: r.preferred_studio_ids || [],
     languages: r.languages || [],
     notes: r.notes || '',
     pregnant: fromBool(r.pregnant),

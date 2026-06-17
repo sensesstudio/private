@@ -79,7 +79,7 @@ export function intakeStatus(a = {}) {
     !!a.level,
     (a.languages || []).length > 0,
     (a.schedule || []).length > 0,
-    !!a.location,
+    (Array.isArray(a.location) ? a.location.length > 0 : !!a.location),
   ];
   const done = checks.filter(Boolean).length;
   if (done === 0) return 'none';

@@ -198,13 +198,20 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
       render: () => <div style={tileGrid()}>{INJURIES.map(i => <OptionTile key={i} label={i} multi on={(answers.injury || []).includes(i)} onClick={() => toggle('injury', i)} />)}</div> },
     { key: 'schedule', title: 'When do you like to move?', sub: "We'll surface instructors who are open then.",
       render: () => <div style={tileGrid()}>{SCHEDULES.map(s => <OptionTile key={s.id} label={s.label} note={s.note} multi on={(answers.schedule || []).includes(s.id)} onClick={() => toggle('schedule', s.id)} />)}</div> },
-    { key: 'location', title: 'Which studio is closest to your life?', sub: 'Five neighbourhoods across Hong Kong.',
-      render: () => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {LOCATIONS.map(l => <OptionTile key={l.id} label={l.name} note={l.blurb} icon={l.sea ? 'waves' : 'map-pin'} on={answers.location === l.id} onClick={() => setOne('location', l.id)} />)}
-          <OptionTile label="No preference" note="Show me everyone" on={answers.location === 'any'} onClick={() => setOne('location', 'any')} />
-        </div>
-      ) },
+    { key: 'location', title: 'Which studios suit your life?', sub: 'Pick one or more — five neighbourhoods across Hong Kong.',
+      render: () => {
+        const sel = Array.isArray(answers.location) ? answers.location : (answers.location ? [answers.location] : []);
+        const toggleStudio = (id) => {
+          const base = sel.filter(x => x !== 'any');
+          setOne('location', base.includes(id) ? base.filter(x => x !== id) : [...base, id]);
+        };
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {LOCATIONS.map(l => <OptionTile key={l.id} label={l.name} note={l.address} icon={l.sea ? 'waves' : 'map-pin'} multi on={sel.includes(l.id)} onClick={() => toggleStudio(l.id)} />)}
+            <OptionTile label="No preference" note="Show me teachers across all studios" multi on={sel.includes('any')} onClick={() => setOne('location', sel.includes('any') ? [] : ['any'])} />
+          </div>
+        );
+      } },
     { key: 'notes', title: 'In your own words', sub: "Anything else about your goals or what you're hoping for? Optional.",
       render: () => {
         const words = (answers.notes || '').trim() ? (answers.notes || '').trim().split(/\s+/).length : 0;

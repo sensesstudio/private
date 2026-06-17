@@ -23,11 +23,12 @@ create table profiles (
 );
 
 create table studios (
-  id    text primary key,
-  name  text not null,
-  blurb text,
-  note  text,
-  sea   boolean not null default false
+  id      text primary key,
+  name    text not null,
+  blurb   text,
+  note    text,
+  address text,
+  sea     boolean not null default false
 );
 
 create table teacher_profiles (
@@ -53,7 +54,7 @@ create table client_profiles (
   level               text,
   injuries            text[] not null default '{}',
   schedule_prefs      text[] not null default '{}',
-  preferred_studio_id text references studios(id),
+  preferred_studio_ids text[] not null default '{}',  -- one or more studios; empty = no preference
   languages           text[] not null default '{}',
   notes               text,
   -- health declaration
