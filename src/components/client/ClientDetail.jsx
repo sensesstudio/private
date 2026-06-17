@@ -56,6 +56,10 @@ export function ClientHome({ onOpen, goSearch, answers }) {
   const latest = log[0];
   const logTeacher = latest ? teacherById(latest.tId) : top;
   const recentFocus = [...new Set(log.slice(0, 4).map(l => l.focus.split(/[—&]/)[0].trim()))].slice(0, 3);
+  const SESSIONS_DONE = 8, MILESTONE = 10;
+  const remaining = Math.max(0, MILESTONE - SESSIONS_DONE);
+  const pct = Math.min(100, Math.round((SESSIONS_DONE / MILESTONE) * 100));
+  const [showFull, setShowFull] = useState(false);
 
   return (
     <div style={{ padding: '8px 20px 28px' }}>
@@ -81,44 +85,54 @@ export function ClientHome({ onOpen, goSearch, answers }) {
             <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10.5, opacity: .7 }}>Last visit · 3 days ago</span>
           </div>
 
-          <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, lineHeight: 1.4, color: 'var(--cream)', margin: '14px 0 4px' }}>
-            Across <span style={{ color: 'var(--blush)' }}>28 sessions</span>, {logTeacher.name.split(' ')[0]} has guided you through <span style={{ color: 'var(--blush)' }}>{(recentFocus[0] || 'lower-back mobility').toLowerCase()}</span> — and her latest note says it's paying off. You're <span style={{ color: 'var(--blush)' }}>2 sessions</span> from your next milestone.
+          <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 21, lineHeight: 1.35, color: 'var(--cream)', margin: '14px 0 14px' }}>
+            You're <span style={{ color: 'var(--blush)' }}>{remaining} session{remaining === 1 ? '' : 's'}</span> from your <span style={{ color: 'var(--blush)' }}>{MILESTONE}-session milestone</span>.
           </p>
 
-          {latest && (
-            <div style={{ display: 'flex', gap: 10, background: 'rgba(250,247,243,.1)', borderRadius: 14, padding: '12px 13px', margin: '14px 0 0' }}>
-              <Icon n="quote" size={15} color="var(--blush)" style={{ marginTop: 2, flex: 'none' }} />
-              <div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)', fontStyle: 'italic' }}>"{latest.note.split('. ')[0]}."</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--blush)', marginTop: 6 }}>{logTeacher.name} · after session {latest.n}</div>
-              </div>
-            </div>
-          )}
-
-          <div style={{ margin: '14px 0 4px' }}>
+          <div style={{ margin: '0 0 4px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11, opacity: .85, marginBottom: 6 }}>
-              <span>30-session milestone</span><span style={{ whiteSpace: 'nowrap' }}>28 / 30</span>
+              <span>{MILESTONE}-session milestone</span><span style={{ whiteSpace: 'nowrap' }}>{SESSIONS_DONE} / {MILESTONE}</span>
             </div>
             <div style={{ height: 7, background: 'rgba(250,247,243,.2)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ width: '93%', height: '100%', background: 'var(--blush)', borderRadius: 999 }} />
+              <div style={{ width: pct + '%', height: '100%', background: 'var(--blush)', borderRadius: 999 }} />
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 13 }}>
-            <span style={{ width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--blush)', marginBottom: 1 }}>Recent focus areas</span>
-            {recentFocus.map(f => (
-              <span key={f} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--cream)', background: 'rgba(250,247,243,.16)', border: '1px solid rgba(250,247,243,.24)', padding: '5px 10px', borderRadius: 999 }}>
-                <Icon n="target" size={11} color="var(--blush)" /> {f}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'rgba(250,247,243,.1)', borderRadius: 14, padding: '11px 13px', margin: '14px 0 14px' }}>
-            <Icon n="bell" size={15} color="var(--blush)" style={{ marginTop: 1, flex: 'none' }} />
-            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)' }}>{logTeacher.name.split(' ')[0]} planned <span style={{ color: 'var(--blush)' }}>single-leg work</span> for your next session — book this week to keep the momentum while it's fresh.</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '14px 0 14px' }}>
+            <Icon n="bell" size={14} color="var(--blush)" style={{ marginTop: 1, flex: 'none' }} />
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)' }}>{logTeacher.name.split(' ')[0]} planned <span style={{ color: 'var(--blush)' }}>single-leg work</span> next — book this week to keep the momentum.</span>
           </div>
 
           <Button variant="light" full size="md" onClick={goSearch} iconRight="arrow-right">Book your next session</Button>
+
+          <button className="tap" onClick={() => setShowFull(v => !v)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 12, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--blush)' }}>
+            {showFull ? 'Hide details' : 'See full progress'} <Icon n={showFull ? 'chevron-up' : 'chevron-down'} size={13} color="var(--blush)" />
+          </button>
+
+          {showFull && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(250,247,243,.18)' }}>
+              <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 15, lineHeight: 1.5, color: 'var(--cream)', margin: '0 0 12px' }}>
+                Across <span style={{ color: 'var(--blush)' }}>{SESSIONS_DONE} sessions</span>, {logTeacher.name.split(' ')[0]} has guided you through <span style={{ color: 'var(--blush)' }}>{(recentFocus[0] || 'lower-back mobility').toLowerCase()}</span> — and it's paying off.
+              </p>
+              {latest && (
+                <div style={{ display: 'flex', gap: 10, background: 'rgba(250,247,243,.1)', borderRadius: 14, padding: '12px 13px', marginBottom: 12 }}>
+                  <Icon n="quote" size={15} color="var(--blush)" style={{ marginTop: 2, flex: 'none' }} />
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)', fontStyle: 'italic' }}>"{latest.note.split('. ')[0]}."</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--blush)', marginTop: 6 }}>{logTeacher.name} · after session {latest.n}</div>
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <span style={{ width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--blush)', marginBottom: 1 }}>Recent focus areas</span>
+                {recentFocus.map(f => (
+                  <span key={f} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--cream)', background: 'rgba(250,247,243,.16)', border: '1px solid rgba(250,247,243,.24)', padding: '5px 10px', borderRadius: 999 }}>
+                    <Icon n="target" size={11} color="var(--blush)" /> {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
