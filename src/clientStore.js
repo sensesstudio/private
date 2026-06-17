@@ -44,12 +44,12 @@ export function useClientStore() {
 
 // The health declaration is complete only when pregnant + surgery are answered,
 // a trimester is chosen if pregnant, and a doctor clearance is given when the
-// client is both pregnant and post-surgery.
+// client is either pregnant or post-surgery.
 export function isDeclarationComplete(a = {}) {
   if (a.pregnant !== 'yes' && a.pregnant !== 'no') return false;
   if (a.surgery !== 'yes' && a.surgery !== 'no') return false;
   if (a.pregnant === 'yes' && !a.pregnancyWeeks) return false;
-  if (a.pregnant === 'yes' && a.surgery === 'yes' && a.doctorClearance !== 'yes' && a.doctorClearance !== 'no') return false;
+  if ((a.pregnant === 'yes' || a.surgery === 'yes') && a.doctorClearance !== 'yes' && a.doctorClearance !== 'no') return false;
   return true;
 }
 

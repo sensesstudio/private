@@ -169,8 +169,8 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
             </div>
           )}
           <YesNo label="Any recent surgery?" note="Within the last 12 months" value={answers.surgery} onChange={v => setOne('surgery', v)} />
-          {answers.pregnant === 'yes' && answers.surgery === 'yes' && (
-            <YesNo label="Has a doctor cleared you to exercise?" note="Required when pregnant and post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
+          {(answers.pregnant === 'yes' || answers.surgery === 'yes') && (
+            <YesNo label="Has a doctor cleared you to exercise?" note="Required if pregnant or post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
           )}
           {!isDeclarationComplete(answers) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--terracotta)' }}><Icon n="info" size={13} color="var(--terracotta)" /> Please answer the health declaration — it's required.</div>

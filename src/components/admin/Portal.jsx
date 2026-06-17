@@ -205,14 +205,14 @@ function clientAbout(c, ov) {
   const langMap = { en: 'English', yue: 'Cantonese', zh: 'Mandarin', none: 'No preference' };
   const pregFallback = c.id === 'c5' ? '2nd trimester (13–26 wks)' : 'No';
   const surgFallback = c.id === 'c8' ? 'Yes — knee, 8 months ago' : 'No';
-  const both = ov && ov.pregnant === 'yes' && ov.surgery === 'yes';
+  const needsDoctor = ov && (ov.pregnant === 'yes' || ov.surgery === 'yes');
   return {
     age: (ov && ov.age) || ages[c.id] || '25–34',
     level: ov && ov.level ? (lvl[ov.level] || ov.level) : (levels[c.id] || 'Some experience'),
     goal: ov && ov.goals && ov.goals.length ? ov.goals.map(id => (GOALS.find(g => g.id === id) || {}).label).filter(Boolean).join(', ') : c.goal,
     pregnant: ov && ov.pregnant ? (ov.pregnant === 'yes' ? (ov.pregnancyWeeks || 'Yes') : 'No') : pregFallback,
     surgery: ov && ov.surgery ? (ov.surgery === 'yes' ? 'Yes — within last 12 months' : 'No') : surgFallback,
-    doctor: both ? (ov.doctorClearance === 'yes' ? 'Yes — cleared by doctor' : ov.doctorClearance === 'no' ? 'No — not cleared' : 'Awaiting confirmation') : null,
+    doctor: needsDoctor ? (ov.doctorClearance === 'yes' ? 'Yes — cleared by doctor' : ov.doctorClearance === 'no' ? 'No — not cleared' : 'Awaiting confirmation') : null,
     languages: ov && ov.languages && ov.languages.length ? ov.languages.map(id => langMap[id] || id).join(', ') : null,
     credits: ov && typeof ov.credits === 'number' ? `${ov.credits} credit${ov.credits === 1 ? '' : 's'} remaining` : null,
     billing: ov && ov.payments && ov.payments.length
