@@ -5,6 +5,41 @@ import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, EARNINGS } from '../../data.js'
 import { locName } from '../../data.js';
 import { inputStyle, labelMini } from '../../styles.js';
 import { EmptyState } from '../client/ClientDetail.jsx';
+import { getClientProfile, pregnancyFromEDD, useClientStore } from '../../clientStore.js';
+
+// Safety-relevant health info a teacher needs at a glance, read from the live
+// client profile (falls back to demo sample data for clients c5 / c8). Updates
+// live within the session; goes fully cross-device once on Supabase Realtime.
+function clientSafety(clientId) {
+  const ov = getClientProfile(clientId) || {};
+  const pregnant = ov.pregnant ? ov.pregnant === 'yes' : clientId === 'c5';
+  const preg = pregnant ? pregnancyFromEDD(ov.edd) : null;
+  const surgery = ov.surgery ? ov.surgery === 'yes' : clientId === 'c8';
+  const doctor = (pregnant || surgery) ? (ov.doctorClearance || null) : null;
+  const injuries = ov.injury || [];
+  return { pregnant, preg, surgery, doctor, injuries, hasFlags: pregnant || surgery || injuries.length > 0 };
+}
+
+function SafetyStrip({ clientId }) {
+  useClientStore(); // re-render the moment the client updates their declaration
+  const s = clientSafety(clientId);
+  if (!s.hasFlags) return null;
+  const chips = [];
+  if (s.pregnant) chips.push({ icon: 'baby', text: s.preg ? `Pregnant · ≈${s.preg.weeks} wks (${s.preg.trimester})` : 'Pregnant', warm: true });
+  if (s.surgery) chips.push({ icon: 'stethoscope', text: 'Recent surgery (within 12 mo)', warm: true });
+  if (s.doctor) chips.push({ icon: s.doctor === 'yes' ? 'shield-check' : 'shield-alert', text: s.doctor === 'yes' ? 'Doctor cleared' : 'Not doctor-cleared', warm: s.doctor !== 'yes' });
+  s.injuries.forEach(i => chips.push({ icon: 'alert-triangle', text: i, warm: false }));
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      <Icon n="heart-pulse" size={14} color="var(--terracotta)" />
+      {chips.map((ch, i) => (
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, color: ch.warm ? 'var(--terracotta)' : 'var(--taupe)', background: ch.warm ? 'rgba(185,117,91,.12)' : 'var(--sand)', padding: '4px 10px', borderRadius: 999 }}>
+          <Icon n={ch.icon} size={12} color={ch.warm ? 'var(--terracotta)' : 'var(--taupe)'} /> {ch.text}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function Workspace({ title, nav, tab, setTab, children, headRight }) {
   const { mobile } = useVP();
@@ -170,6 +205,7 @@ function TeacherToday({ me, setTab }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14.5, color: 'var(--espresso)' }}>{c.name}</div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)' }}>{b.type} · {c.goal}</div>
+                  <div style={{ marginTop: 6 }}><SafetyStrip clientId={c.id} /></div>
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--taupe)', background: 'var(--sand)', padding: '5px 11px', borderRadius: 999, whiteSpace: 'nowrap' }}>{locName(b.locId)}</div>
               </div>
@@ -288,6 +324,7 @@ function TeacherSessions({ me }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 15, color: 'var(--espresso)' }}>{c.name}</div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', marginTop: 2 }}>{new Date(b.date + 'T00:00:00').toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' })} · {b.time} · {b.type}</div>
+                  <div style={{ marginTop: 7 }}><SafetyStrip clientId={c.id} /></div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)' }}>{hkd(b.amount)}</div>
@@ -319,6 +356,7 @@ function TeacherSessions({ me }) {
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)' }}>{logFor.c.name} · {logFor.c.goal}</div>
               </div>
             </div>
+            <div style={{ marginBottom: 16 }}><SafetyStrip clientId={logFor.c.id} /></div>
             <div style={labelMini}>Focus area</div>
             <input value={focus} onChange={e => setFocus(e.target.value)} placeholder="e.g. Lower-back mobility & core control" style={{ ...inputStyle, marginTop: 8, marginBottom: 14 }} />
             <div style={labelMini}>Instructor's comment</div>
