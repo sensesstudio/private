@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress } from '../shared/index.jsx';
-import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS } from '../../data.js';
+import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
 import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
@@ -566,6 +566,40 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
   );
 }
 
+function ClientLocations() {
+  return (
+    <div style={{ padding: '8px 20px 28px' }}>
+      <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Locations</h1>
+      <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 4px' }}>Five studios across Hong Kong · your credits work at all of them.</p>
+      <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: 0, lineHeight: 1.7 }}>全港五間工作室 · 套票通用。</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+        {LOCATIONS.map(l => (
+          <div key={l.id} style={{ background: 'var(--ivory)', borderRadius: 20, padding: '16px 18px', border: '1.5px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+              <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', flex: 'none' }}>
+                <Icon n={l.sea ? 'waves' : 'map-pin'} size={19} color="var(--accent)" />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1.1 }}>{l.name}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', marginTop: 2 }}>{l.note}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-soft)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <Icon n="navigation" size={14} color="var(--fg3)" style={{ marginTop: 2, flex: 'none' }} />
+              <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 13, color: 'var(--espresso)', lineHeight: 1.5 }}>{l.address}</span>
+            </div>
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Senses Studio ' + l.name + ', ' + l.address)}`}
+               target="_blank" rel="noopener noreferrer" className="tap"
+               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, textDecoration: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--accent)' }}>
+              <Icon n="map-pin" size={14} color="var(--accent)" /> Directions
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ClientPricing({ onBook }) {
   return (
     <div style={{ padding: '8px 20px 28px' }}>
@@ -632,6 +666,7 @@ export function ClientPortal() {
       Home: <ClientBrowse onGate={gate} onOpen={openDetail} />,
       Search: <ClientBrowse onGate={gate} onOpen={openDetail} />,
       Pricing: <ClientPricing onBook={gate} />,
+      Locations: <ClientLocations />,
       Bookings: gateScreen('calendar-check', 'Sign in to see bookings'),
       Profile: gateScreen('user', 'Sign in to view your profile'),
     };
@@ -656,6 +691,7 @@ export function ClientPortal() {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} />,
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
     Pricing: <ClientPricing onBook={goSearch} />,
+    Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} />,
     Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} />,
   };

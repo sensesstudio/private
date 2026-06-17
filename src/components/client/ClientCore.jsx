@@ -7,7 +7,7 @@ import { inputStyle, socialBtn, backLink } from '../../styles.js';
 import { isDeclarationComplete, pregnancyFromEDD } from '../../clientStore.js';
 
 export function ClientNav({ tab, setTab }) {
-  const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
+  const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['map-pin', 'Locations'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
   return (
     <div style={{ flex: 'none', background: 'rgba(250,247,243,.94)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border)', padding: '10px 8px calc(10px + env(safe-area-inset-bottom)) 8px', display: 'flex', justifyContent: 'space-around', zIndex: 40 }}>
       {items.map(([ic, label]) => {
