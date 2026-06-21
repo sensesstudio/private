@@ -5,6 +5,8 @@ import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
 import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
 import { useStudios } from '../../supabase/useReference.js';
+import { isSupabaseConfigured } from '../../supabase/client.js';
+import * as db from '../../supabase/queries.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
@@ -654,6 +656,7 @@ export function ClientPortal() {
   const [extraBookings, setExtraBookings] = useState([]);
   const [credits, setCredits] = useState(7);
   const [showWaiver, setShowWaiver] = useState(false);
+  const [authUserId, setAuthUserId] = useState(null); // real Supabase user id when signed in for real
   useClientStore();
   const profile = getClientProfile('c1');
   const waiverOk = !!(profile && profile.waiver && profile.waiver.agreed);
@@ -688,10 +691,10 @@ export function ClientPortal() {
     );
   }
   if (stage === 'login') {
-    return <PhoneFrame><ClientLogin onBack={() => setStage('browse')} onBrowse={() => { setTab('Home'); setStage('browse'); }} onSignIn={() => setStage('app')} /></PhoneFrame>;
+    return <PhoneFrame><ClientLogin onBack={() => setStage('browse')} onBrowse={() => { setTab('Home'); setStage('browse'); }} onSignIn={(uid, isNew) => { if (uid) setAuthUserId(uid); setTab('Home'); setStage(isNew ? 'intake' : 'app'); }} /></PhoneFrame>;
   }
   if (stage === 'intake') {
-    return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { saveClientProfile('c1', answers); setStage('app'); setTab('Home'); }} /></PhoneFrame>;
+    return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { saveClientProfile('c1', answers); if (isSupabaseConfigured && authUserId) db.saveClientProfile(authUserId, answers).catch(e => console.warn('Supabase profile save failed', e)); setStage('app'); setTab('Home'); }} /></PhoneFrame>;
   }
 
   const screens = {

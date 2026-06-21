@@ -5,6 +5,8 @@ import { TEACHERS, LOCATIONS, GOALS, INJURIES, SCHEDULES, LEVELS } from '../../d
 import { locName } from '../../data.js';
 import { inputStyle, socialBtn, backLink } from '../../styles.js';
 import { isDeclarationComplete, pregnancyFromEDD } from '../../clientStore.js';
+import { isSupabaseConfigured } from '../../supabase/client.js';
+import { signIn, signUpClient } from '../../supabase/auth.js';
 
 export function ClientNav({ tab, setTab }) {
   const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['map-pin', 'Locations'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
@@ -25,7 +27,34 @@ export function ClientNav({ tab, setTab }) {
 
 export function ClientLogin({ onBrowse, onSignIn, onBack }) {
   const { mobile } = useVP();
+  const live = isSupabaseConfigured;
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [info, setInfo] = useState('');
+
+  const submit = async () => {
+    if (!live) { onSignIn(); return; } // demo fallback when Supabase isn't configured
+    setErr(''); setInfo('');
+    if (!email || !password || (mode === 'signup' && !fullName)) { setErr('Please fill in all fields.'); return; }
+    setBusy(true);
+    try {
+      if (mode === 'signup') {
+        const { user, needsConfirmation } = await signUpClient({ email, password, fullName });
+        if (needsConfirmation) { setInfo('Account created — check your email to confirm, then sign in.'); setMode('signin'); }
+        else onSignIn(user?.id, true);
+      } else {
+        const user = await signIn({ email, password });
+        onSignIn(user?.id, false);
+      }
+    } catch (e) {
+      setErr(e?.message || 'Something went wrong. Please try again.');
+    } finally { setBusy(false); }
+  };
+
   return (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', background: 'var(--cream)', position: 'relative' }}>
       <div style={{ position: 'relative', height: mobile ? '56vh' : 440, flex: 'none' }}>
@@ -47,20 +76,32 @@ export function ClientLogin({ onBrowse, onSignIn, onBack }) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, width: '100%', margin: '0 auto' }}>
+          {live && mode === 'signup' && (
+            <input value={fullName} onChange={e => setFullName(e.target.value)} type="text" placeholder="Your name" style={inputStyle} />
+          )}
           <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email address" style={inputStyle} />
-          <input type="password" placeholder="Password" style={inputStyle} />
-          <button className="tap" onClick={onSignIn} style={{ alignSelf: 'flex-end', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--taupe)', padding: '2px 2px', marginTop: -2 }}>Forgot password?</button>
-          <Button variant="dark" full size="lg" onClick={onSignIn} style={{ marginTop: 4 }}>Sign in</Button>
+          <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" style={inputStyle} />
+          {err && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--terracotta)' }}>{err}</div>}
+          {info && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--accent)' }}>{info}</div>}
+          {!live && (
+            <button className="tap" onClick={onSignIn} style={{ alignSelf: 'flex-end', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--taupe)', padding: '2px 2px', marginTop: -2 }}>Forgot password?</button>
+          )}
+          <Button variant="dark" full size="lg" onClick={submit} disabled={busy} style={{ marginTop: 4 }}>{busy ? 'Please wait…' : (live && mode === 'signup' ? 'Create account' : 'Sign in')}</Button>
+          {live && (
+            <button className="tap" onClick={() => { setErr(''); setInfo(''); setMode(mode === 'signup' ? 'signin' : 'signup'); }} style={{ alignSelf: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--accent)' }}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}</button>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '6px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)' }}>New here</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)' }}>or</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
           <Button variant="accent" full size="lg" onClick={onBrowse} icon="calendar-days" iconRight="arrow-right">Browse our schedule</Button>
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button className="tap" onClick={onSignIn} style={socialBtn}><Icon n="apple" size={17} /> Apple</button>
-            <button className="tap" onClick={onSignIn} style={socialBtn}><span style={{ fontWeight: 700, fontFamily: 'var(--font-serif)' }}>G</span> Google</button>
-          </div>
+          {!live && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button className="tap" onClick={onSignIn} style={socialBtn}><Icon n="apple" size={17} /> Apple</button>
+              <button className="tap" onClick={onSignIn} style={socialBtn}><span style={{ fontWeight: 700, fontFamily: 'var(--font-serif)' }}>G</span> Google</button>
+            </div>
+          )}
         </div>
         <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', marginTop: 'auto', paddingTop: 22 }}>5 studios · Central · Causeway Bay · Quarry Bay · Kwun Tong · Lai Chi Kok</p>
       </div>
