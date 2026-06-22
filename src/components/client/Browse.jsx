@@ -126,7 +126,6 @@ export function ClientBrowse({ onGate, onOpen }) {
           Browse our instructors, sessions and live availability. Create an account only when you're ready to book.
           <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--fg3)', lineHeight: 1.7 }}>瀏覽即時空檔，及即時確認預約。</span>
         </p>
-        <HeroCarousel />
       </div>
 
       <div style={{ flex: 'none', padding: '16px 20px 4px' }}>
