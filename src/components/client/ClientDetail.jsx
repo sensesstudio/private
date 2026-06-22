@@ -77,6 +77,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
       </div>
 
       <div style={{ marginTop: 22, borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'var(--espresso)' }}>
+        <image-slot id="client-home-hero" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.42 }} shape="rect" fit="cover" placeholder="" />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(58,50,44,.62), rgba(58,50,44,.86))' }} />
         <div style={{ position: 'relative', padding: '20px 20px 18px', color: 'var(--cream)' }}>
           {live ? (
