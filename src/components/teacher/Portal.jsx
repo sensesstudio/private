@@ -412,6 +412,9 @@ function TeacherEarnings({ me }) {
 function TeacherProfile({ me, onLogout }) {
   const { mobile } = useVP();
   const [rate, setRate] = useState(me.rate);
+  const [studios, setStudios] = useState(me.locIds || [me.locId]);
+  // Toggle a studio on/off; always keep at least one selected.
+  const toggleStudio = (id) => setStudios(s => s.includes(id) ? (s.length > 1 ? s.filter(x => x !== id) : s) : [...s, id]);
   return (
     <div style={{ padding: mobile ? '20px 18px 28px' : '34px 40px 40px', maxWidth: 760, margin: '0 auto' }}>
       <PageHead eyebrow="Public profile" title="Your profile" sub="This is what clients see when they match with you." />
@@ -423,7 +426,7 @@ function TeacherProfile({ me, onLogout }) {
         <div style={{ padding: 22, marginTop: -44, position: 'relative' }}>
           <Avatar t={me} size={80} radius={20} style={{ border: '4px solid var(--ivory)' }} />
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 24, color: 'var(--espresso)', margin: '12px 0 4px' }}>{me.name}</h2>
-          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13.5, color: 'var(--taupe)', margin: 0 }}>{me.headline} · {locName(me.locId)}</p>
+          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13.5, color: 'var(--taupe)', margin: 0 }}>{me.headline} · {studios.map(locName).join(' · ')}</p>
         </div>
       </Card>
       <Card pad={22} style={{ marginBottom: 16 }}>
@@ -437,6 +440,21 @@ function TeacherProfile({ me, onLogout }) {
           <input type="range" min="400" max="800" step="10" value={rate} onChange={e => setRate(+e.target.value)} style={{ flex: 1, accentColor: 'var(--accent)' }} />
         </div>
         <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: '10px 0 0' }}>Studio average is HK$520. Your rate is set per hour and shown to matched clients.</p>
+      </Card>
+      <Card pad={22} style={{ marginBottom: 16 }}>
+        <div style={labelMini}>Studios you teach at</div>
+        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: '6px 0 0' }}>Clients can find and book you at any studio you select. Open your slots per studio under Availability.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 12 }}>
+          {LOCATIONS.map(L => {
+            const on = studios.includes(L.id);
+            return (
+              <button key={L.id} type="button" className="tap" onClick={() => toggleStudio(L.id)} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', minHeight: 42, borderRadius: 999, border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent-tint)' : 'var(--ivory)' }}>
+                <Icon n={on ? 'check-circle-2' : (L.sea ? 'waves' : 'map-pin')} size={15} color={on ? 'var(--accent)' : 'var(--taupe)'} />
+                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13, color: on ? 'var(--accent)' : 'var(--espresso)' }}>{L.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </Card>
       <Card pad={22} style={{ marginBottom: 16 }}>
         <div style={labelMini}>Specialisations</div>

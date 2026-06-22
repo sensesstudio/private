@@ -227,7 +227,7 @@ export function ClientSearch({ onOpen, loading }) {
   const [q, setQ] = useState('');
   const [loc, setLoc] = useState('any');
   const ranked = sortByMatch(TEACHERS).filter(t =>
-    (loc === 'any' || t.locId === loc) &&
+    (loc === 'any' || (t.locIds || [t.locId]).includes(loc)) &&
     (q === '' || (t.name + t.headline + t.specs.join()).toLowerCase().includes(q.toLowerCase()))
   );
   return (
@@ -303,7 +303,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
       <div style={{ flex: 1, padding: mobile ? '18px 20px 16px' : '22px 26px 16px', maxWidth: 640, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <Stars value={t.rating} reviews={t.reviews} />
-          <span style={metaItem}><Icon n="map-pin" size={14} /> {locName(t.locId)}</span>
+          <span style={metaItem}><Icon n="map-pin" size={14} /> {(() => { const ls = t.locIds || [t.locId]; return ls.length <= 2 ? ls.map(locName).join(' · ') : `${locName(ls[0])} +${ls.length - 1} more`; })()}</span>
           <span style={metaItem}><Icon n="award" size={14} /> {t.exp} yrs</span>
           <span style={{ ...metaItem, color: 'var(--accent)', fontWeight: 500 }}><span className="live-dot" /> {t.responds}</span>
         </div>

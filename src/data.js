@@ -13,7 +13,7 @@ export const TEACHERS = [
     id: 't1', name: 'Élise Wong', initials: 'ÉW', ph: '',
     headline: 'Reformer & rehabilitation',
     specs: ['Reformer', 'Injury rehab', 'Posture'],
-    rate: 580, locId: 'central', exp: 9, rating: 4.9, reviews: 212, match: 96,
+    rate: 580, locId: 'central', locIds: ['central', 'cwb'], exp: 9, rating: 4.9, reviews: 212, match: 96,
     langs: ['English', 'Cantonese'],
     certs: ['STOTT Reformer (Full)', 'Polestar Rehabilitation', 'Pre/Postnatal'],
     bio: 'Élise blends clinical precision with calm. After nine years and a background in physiotherapy, she specialises in returning the body to ease — rebuilding strength around old injuries, one breath at a time.',
@@ -77,6 +77,7 @@ const _REASONS = {
 TEACHERS.forEach(t => {
   t.soon = _SOON[t.id];
   t.reasons = _REASONS[t.id];
+  t.locIds = t.locIds || [t.locId]; // studios this teacher works at (defaults to their primary)
   t.online = ['t1', 't2', 't4', 't5'].includes(t.id);
   t.responds = t.online ? 'Replies in minutes' : 'Replies within the hour';
 });
