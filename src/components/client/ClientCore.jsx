@@ -35,6 +35,7 @@ export function ClientLogin({ onBrowse, onSignIn, onBack }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [info, setInfo] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   const submit = async () => {
     if (!live) { onSignIn(); return; } // demo fallback when Supabase isn't configured
@@ -80,7 +81,12 @@ export function ClientLogin({ onBrowse, onSignIn, onBack }) {
             <input value={fullName} onChange={e => setFullName(e.target.value)} type="text" placeholder="Your name" style={inputStyle} />
           )}
           <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email address" style={inputStyle} />
-          <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" style={inputStyle} />
+          <div style={{ position: 'relative' }}>
+            <input value={password} onChange={e => setPassword(e.target.value)} type={showPw ? 'text' : 'password'} placeholder="Password" style={{ ...inputStyle, paddingRight: 50 }} />
+            <button type="button" className="tap" onClick={() => setShowPw(v => !v)} aria-label={showPw ? 'Hide password' : 'Show password'} style={{ position: 'absolute', right: 6, top: 0, bottom: 0, width: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--taupe)', padding: 0 }}>
+              <Icon n={showPw ? 'eye-off' : 'eye'} size={19} color="var(--taupe)" />
+            </button>
+          </div>
           {err && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--terracotta)' }}>{err}</div>}
           {info && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--accent)' }}>{info}</div>}
           {!live && (
