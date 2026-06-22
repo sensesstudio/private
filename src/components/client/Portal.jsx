@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress } from '../shared/index.jsx';
-import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS } from '../../data.js';
+import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS, isTrial } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
 import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
@@ -29,7 +29,7 @@ function PayOption({ id, method, setMethod, icon, label, note }) {
   );
 }
 
-function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarationOk = true, onCompleteDeclaration, waiverOk = true, onSignWaiver }) {
+function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onConfirmed, declarationOk = true, onCompleteDeclaration, waiverOk = true, onSignWaiver }) {
   useSlots(); // re-render as the held slot's state changes
   const ready = declarationOk && waiverOk;
   const [stage, setStage] = useState('review');
@@ -146,7 +146,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
             <>
               <div style={labelMini}>{credits > 0 ? 'Top up with a package' : 'Choose a package to begin'}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9, margin: '10px 0 14px' }}>
-                {PACKAGES.filter(p => p.format === format).map(p => {
+                {PACKAGES.filter(p => p.format === format && !(isTrial(p.id) && purchased.includes(p.id))).map(p => {
                   const on = pkg === p.id;
                   return (
                     <button key={p.id} className="tap" onClick={() => setPkg(p.id)} style={{ cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 13, padding: '13px 15px', borderRadius: 15, minHeight: 56, background: on ? 'var(--accent-tint)' : 'var(--ivory)', border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)') }}>
@@ -179,7 +179,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
           <h2 style={sheetTitle}>Payment</h2>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--espresso)', color: 'var(--cream)', borderRadius: 16, padding: '16px 18px', marginBottom: 18 }}>
             <div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, opacity: .8 }}>{selectedPkg.name}{pkg !== 'trial' && ` · ${selectedPkg.credits} credits`}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, opacity: .8 }}>{selectedPkg.name}{!isTrial(pkg) && ` · ${selectedPkg.credits} credits`}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, opacity: .6, marginTop: 2 }}>{t.name} · {dayLabel} · {slotTime}</div>
             </div>
             <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 26, color: 'var(--blush)' }}>{hkd(amount)}</div>
@@ -621,10 +621,11 @@ function ClientLocations() {
   );
 }
 
-function ClientPricing({ onBook, onBuy }) {
+function ClientPricing({ onBook, onBuy, purchased = [] }) {
   const [buying, setBuying] = useState(null);
   const [fmt, setFmt] = useState('1:1');
-  const list = PACKAGES.filter(p => p.format === fmt);
+  // Hide a trial once the customer has already bought it (one-time per format).
+  const list = PACKAGES.filter(p => p.format === fmt && !(isTrial(p.id) && purchased.includes(p.id)));
   const buy = async (id) => {
     if (!onBuy) return;
     setBuying(id);
@@ -686,6 +687,7 @@ export function ClientPortal() {
   const [showWaiver, setShowWaiver] = useState(false);
   const [authUserId, setAuthUserId] = useState(null); // real Supabase user id when signed in for real
   const [authName, setAuthName] = useState('');
+  const [purchased, setPurchased] = useState([]); // package ids this user has paid for (limits one-time trials)
   const live = !!authUserId; // true when a real Supabase account is signed in
 
   // When signed in for real, load this user's own data — their saved intake,
@@ -695,15 +697,17 @@ export function ClientPortal() {
     let active = true;
     (async () => {
       try {
-        const [prof, bal, name] = await Promise.all([
+        const [prof, bal, name, purch] = await Promise.all([
           db.fetchClientProfile(authUserId),
           db.fetchCreditBalance(authUserId),
           db.fetchProfileName(authUserId),
+          db.fetchPurchasedPackageIds(authUserId),
         ]);
         if (!active) return;
         if (prof) setAnswers(prof);
         setCredits(bal || 0);
         if (name) setAuthName(name);
+        setPurchased(purch || []);
       } catch (e) { console.warn('Could not load profile', e); }
     })();
     return () => { active = false; };
@@ -751,7 +755,7 @@ export function ClientPortal() {
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} />,
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
-    Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} />,
+    Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
     Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} />,
@@ -765,7 +769,7 @@ export function ClientPortal() {
         </div>
       )}
       <Sheet open={!!booking} onClose={() => setBooking(null)}>
-        {booking && <BookingFlow {...booking} credits={credits} declarationOk={isDeclarationComplete(answers)} waiverOk={waiverOk} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onSignWaiver={() => setShowWaiver(true)} onClose={() => setBooking(null)} onConfirmed={info => {
+        {booking && <BookingFlow {...booking} credits={credits} purchased={purchased} declarationOk={isDeclarationComplete(answers)} waiverOk={waiverOk} onCompleteDeclaration={() => { setBooking(null); setStage('intake'); }} onSignWaiver={() => setShowWaiver(true)} onClose={() => setBooking(null)} onConfirmed={info => {
           const next = info.usedCredit ? Math.max(0, credits - 1) : credits + (info.addCredits || 0) - 1;
           setCredits(next);
           setClientCredits('c1', next); // sync balance to admin

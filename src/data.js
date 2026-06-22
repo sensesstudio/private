@@ -97,6 +97,9 @@ export const PACKAGES = [
   { id: 'p12-10',     format: '1:2', name: '10-class pack', credits: 10, price: 12000, per: 1200,   tag: 'Most chosen', blurb: 'Ten semi-privates · best value · valid 6 months.', popular: true },
 ];
 
+// Trials are one-time per customer per format (id like 'p11-trial' / 'p12-trial').
+export const isTrial = (id) => typeof id === 'string' && id.endsWith('-trial');
+
 export const GOALS = [
   { id: 'strength', label: 'Build strength',      icon: 'dumbbell' },
   { id: 'flex',     label: 'Improve flexibility',  icon: 'wind' },

@@ -39,6 +39,18 @@ Deno.serve(async (req) => {
     const { data: pkg, error } = await supabase.from('packages').select('*').eq('id', packageId).single();
     if (error || !pkg) return json({ error: 'Unknown package.' }, 400);
 
+    // One-time trials: block a second purchase of the same trial. Check with the
+    // service role so it's reliable regardless of row-level security.
+    if (packageId.endsWith('-trial')) {
+      const admin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      );
+      const { data: prior } = await admin.from('payments')
+        .select('id').eq('client_id', user.id).eq('package_id', packageId).eq('status', 'paid').maybeSingle();
+      if (prior) return json({ error: 'You have already used this trial offer.' }, 400);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{

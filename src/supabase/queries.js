@@ -32,6 +32,14 @@ export async function fetchProfileName(clientId) {
   return data?.full_name || '';
 }
 
+// Package ids the client has already paid for — used to enforce one-time trials.
+export async function fetchPurchasedPackageIds(clientId) {
+  guard();
+  const { data, error } = await supabase.from('payments').select('package_id').eq('client_id', clientId).eq('status', 'paid');
+  if (error) throw error;
+  return (data || []).map(r => r.package_id).filter(Boolean);
+}
+
 // ── Credits & payments ───────────────────────────────────────────────────────
 export async function fetchCreditBalance(clientId) {
   guard();
