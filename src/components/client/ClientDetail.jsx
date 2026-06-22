@@ -171,17 +171,21 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
           <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11, color: 'var(--fg3)', flex: 'none' }}>Book at your call</span>
         </div>
         <div className="screen-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -20px', padding: '0 20px 6px' }}>
-          {ranked.filter(t => t.online).map(t => (
+          {ranked.filter(t => t.online).map(t => {
+            const parts = (t.soon || '').split('·').map(s => s.trim());
+            const when = (parts[0] || 'Available').replace('Free', 'Available'); // "Available now" / "Available today"
+            const at = parts[1] || ''; // next slot time, e.g. "4:30pm"
+            return (
             <div key={t.id} className="tap" onClick={() => onOpen(t)} style={{ flex: 'none', width: 156, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Avatar t={t} size={46} radius={13} />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)' }}><span className="live-dot" />Free</span>
+                {at && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 10.5, color: 'var(--accent)', background: 'var(--accent-tint)', padding: '5px 9px', borderRadius: 999 }}><span className="live-dot" />{at}</span>}
               </div>
               <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', marginTop: 11, lineHeight: 1.1 }}>{t.name}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', marginTop: 3 }}>{t.soon}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11, color: 'var(--sage)', marginTop: 3 }}>{when}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: 'var(--accent)', marginTop: 9, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Book now <Icon n="arrow-right" size={12} color="var(--accent)" /></div>
             </div>
-          ))}
+          );})}
         </div>
       </div>
 
