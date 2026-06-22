@@ -200,34 +200,6 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
   const canSubmit = langChosen && declOk;
 
   const steps = [
-    { key: 'health', title: 'A quick health declaration', sub: 'Required for your safety — it helps your instructor adapt every session.',
-      render: () => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <YesNo label="Are you pregnant?" note="Including recently postnatal" value={answers.pregnant} onChange={v => setOne('pregnant', v)} />
-          {answers.pregnant === 'yes' && (() => {
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const iso = d => d.toISOString().slice(0, 10);
-            const maxDate = new Date(today.getTime() + 287 * 86400000); // ~41 weeks ahead
-            const preg = pregnancyFromEDD(answers.edd);
-            return (
-              <div style={{ background: 'var(--accent-tint)', borderRadius: 16, padding: '15px 16px' }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13.5, color: 'var(--espresso)', marginBottom: 4 }}>Estimated due date</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', marginBottom: 11 }}>Enter it once — we’ll keep your trimester up to date for your instructor.</div>
-                <input type="date" value={answers.edd || ''} min={iso(today)} max={iso(maxDate)} onChange={e => setOne('edd', e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, padding: '12px 14px', minHeight: 46, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--ivory)', color: 'var(--espresso)' }} />
-                {preg && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--taupe)', marginTop: 9 }}>≈ {preg.weeks} weeks · {preg.trimester}</div>}
-              </div>
-            );
-          })()}
-          <YesNo label="Any recent surgery?" note="Within the last 12 months" value={answers.surgery} onChange={v => setOne('surgery', v)} />
-          {(answers.pregnant === 'yes' || answers.surgery === 'yes') && (
-            <YesNo label="Has a doctor cleared you to exercise?" note="Required if pregnant or post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
-          )}
-          {!isDeclarationComplete(answers) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--terracotta)' }}><Icon n="info" size={13} color="var(--terracotta)" /> Please answer the health declaration — it's required.</div>
-          )}
-        </div>
-      ) },
     { key: 'goals', title: 'What brings you to the mat?', sub: "Choose all that feel true — we'll weight your matches around them.",
       render: () => <div style={tileGrid()}>{GOALS.map(g => <OptionTile key={g.id} label={g.label} icon={g.icon} multi on={(answers.goals || []).includes(g.id)} onClick={() => toggle('goals', g.id)} />)}</div> },
     { key: 'age', title: 'A little about you', sub: 'Your age range helps us tailor a safe, suitable practice.',
@@ -272,6 +244,34 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
           </div>
         );
       } },
+    { key: 'health', title: 'A quick health declaration', sub: 'Required for your safety — it helps your instructor adapt every session.',
+      render: () => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <YesNo label="Are you pregnant?" note="Including recently postnatal" value={answers.pregnant} onChange={v => setOne('pregnant', v)} />
+          {answers.pregnant === 'yes' && (() => {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const iso = d => d.toISOString().slice(0, 10);
+            const maxDate = new Date(today.getTime() + 287 * 86400000); // ~41 weeks ahead
+            const preg = pregnancyFromEDD(answers.edd);
+            return (
+              <div style={{ background: 'var(--accent-tint)', borderRadius: 16, padding: '15px 16px' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13.5, color: 'var(--espresso)', marginBottom: 4 }}>Estimated due date</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--fg3)', marginBottom: 11 }}>Enter it once — we’ll keep your trimester up to date for your instructor.</div>
+                <input type="date" value={answers.edd || ''} min={iso(today)} max={iso(maxDate)} onChange={e => setOne('edd', e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, padding: '12px 14px', minHeight: 46, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--ivory)', color: 'var(--espresso)' }} />
+                {preg && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--taupe)', marginTop: 9 }}>≈ {preg.weeks} weeks · {preg.trimester}</div>}
+              </div>
+            );
+          })()}
+          <YesNo label="Any recent surgery?" note="Within the last 12 months" value={answers.surgery} onChange={v => setOne('surgery', v)} />
+          {(answers.pregnant === 'yes' || answers.surgery === 'yes') && (
+            <YesNo label="Has a doctor cleared you to exercise?" note="Required if pregnant or post-surgery" value={answers.doctorClearance} onChange={v => setOne('doctorClearance', v)} />
+          )}
+          {!isDeclarationComplete(answers) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--terracotta)' }}><Icon n="info" size={13} color="var(--terracotta)" /> Please answer the health declaration — it's required.</div>
+          )}
+        </div>
+      ) },
   ];
 
   const finish = () => { setFinding(true); setTimeout(() => { setFinding(false); onDone(); }, 2400); };
