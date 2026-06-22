@@ -657,7 +657,7 @@ function ClientPricing({ onBook, onBuy }) {
               <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--espresso)' }}>{p.credits === '∞' ? 'Unlimited private sessions' : (p.credits + (p.credits === 1 ? ' private session' : ' private sessions'))}</span>
             </div>
             {onBuy && (
-              <button className="tap" onClick={() => buy(p.id)} disabled={buying === p.id} style={{ marginTop: 14, width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13.5, padding: '12px', minHeight: 46, borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', opacity: buying === p.id ? 0.6 : 1 }}>
+              <button className="tap" onClick={() => buy(p.id)} disabled={buying === p.id} style={{ marginTop: 14, width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13.5, padding: '12px', minHeight: 46, borderRadius: 12, border: 'none', background: p.format === '1:2' ? 'var(--terracotta)' : 'var(--accent)', color: '#fff', opacity: buying === p.id ? 0.6 : 1 }}>
                 {buying === p.id ? 'Starting checkout…' : `Buy · ${hkd(p.price)}`}
               </button>
             )}
