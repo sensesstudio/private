@@ -2,13 +2,22 @@
 -- authoritative price from this table (never from the browser), so a row must
 -- exist for every package id used by the client (see src/data.js PACKAGES).
 --
--- Upsert so this migration is safe to re-run and easy to amend later: change a
--- price here (or in the dashboard) and checkout charges the new amount.
+-- Two formats — private 1:1 and semi-private 1:2 — each with trial, single
+-- class, 5-class and 10-class packs. Upsert so this is safe to re-run and easy
+-- to amend later: change a price here (or in the dashboard) and checkout
+-- charges the new amount.
 
 insert into packages (id, name, credits, price_hkd, validity_months, tag) values
-  ('trial',   'First session', 1,  900,  null, 'Begin'),
-  ('starter', '5-class pack',  5,  4750, 3,    null),
-  ('studio',  '10-class pack', 10, 9000, 6,    'Most chosen')
+  -- Private 1:1
+  ('p11-trial',  'Trial session (1:1)',  1,  900,   null, 'Begin'),
+  ('p11-single', 'Single class (1:1)',   1,  1200,  null, null),
+  ('p11-5',      '5-class pack (1:1)',    5,  4750,  3,    'Save 15%'),
+  ('p11-10',     '10-class pack (1:1)',   10, 9000,  6,    'Most chosen'),
+  -- Semi-private 1:2
+  ('p12-trial',  'Trial session (1:2)',  1,  1200,  null, 'Begin'),
+  ('p12-single', 'Single class (1:2)',   1,  1600,  null, null),
+  ('p12-5',      '5-class pack (1:2)',    5,  6500,  3,    'Save 15%'),
+  ('p12-10',     '10-class pack (1:2)',   10, 12000, 6,    'Most chosen')
 on conflict (id) do update set
   name            = excluded.name,
   credits         = excluded.credits,

@@ -33,12 +33,20 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
   useSlots(); // re-render as the held slot's state changes
   const ready = declarationOk && waiverOk;
   const [stage, setStage] = useState('review');
-  const [pkg, setPkg] = useState('studio');
+  const [pkg, setPkg] = useState('p11-10');
   const [method, setMethod] = useState('apple');
   const [format, setFormat] = useState('1:1');
   const [mode, setMode] = useState(credits > 0 ? 'credit' : 'buy');
   const [, tick] = useState(0);
   const bookedRef = useRef(false);
+
+  // Switching format swaps the package list, so re-pick a sensible default
+  // within the new format (the popular pack, else the first).
+  const pickFormat = (f) => {
+    setFormat(f);
+    const def = PACKAGES.find(p => p.format === f && p.popular) || PACKAGES.find(p => p.format === f);
+    if (def) setPkg(def.id);
+  };
 
   // Hold the slot for 10 minutes while the client decides; release it if they
   // back out before booking.
@@ -103,7 +111,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
             {[['1:1', 'users', 'Private', '1-on-1'], ['1:2', 'users-round', 'Semi-private', '1-on-2']].map(([f, ic, a, b]) => {
               const on = format === f;
               return (
-                <button key={f} className="tap" onClick={() => setFormat(f)} style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 15, background: on ? 'var(--accent-tint)' : 'var(--ivory)', border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)') }}>
+                <button key={f} className="tap" onClick={() => pickFormat(f)} style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 15, background: on ? 'var(--accent-tint)' : 'var(--ivory)', border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)') }}>
                   <Icon n={ic} size={19} color={on ? 'var(--accent)' : 'var(--taupe)'} />
                   <span style={{ textAlign: 'left' }}>
                     <span style={{ display: 'block', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13, color: 'var(--espresso)' }}>{a}</span>
@@ -138,7 +146,7 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
             <>
               <div style={labelMini}>{credits > 0 ? 'Top up with a package' : 'Choose a package to begin'}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9, margin: '10px 0 14px' }}>
-                {PACKAGES.map(p => {
+                {PACKAGES.filter(p => p.format === format).map(p => {
                   const on = pkg === p.id;
                   return (
                     <button key={p.id} className="tap" onClick={() => setPkg(p.id)} style={{ cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 13, padding: '13px 15px', borderRadius: 15, minHeight: 56, background: on ? 'var(--accent-tint)' : 'var(--ivory)', border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)') }}>
@@ -615,6 +623,8 @@ function ClientLocations() {
 
 function ClientPricing({ onBook, onBuy }) {
   const [buying, setBuying] = useState(null);
+  const [fmt, setFmt] = useState('1:1');
+  const list = PACKAGES.filter(p => p.format === fmt);
   const buy = async (id) => {
     if (!onBuy) return;
     setBuying(id);
@@ -626,8 +636,9 @@ function ClientPricing({ onBook, onBuy }) {
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Pricing</h1>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 4px' }}>Private 1:1 &amp; semi-private 1:2 · prepaid class packs.</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: 0, lineHeight: 1.7 }}>私人一對一及一對二課程 · 預付課程套票。</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
-        {PACKAGES.map(p => (
+      <Segmented options={[{ value: '1:1', label: 'Private · 1:1' }, { value: '1:2', label: 'Semi-private · 1:2' }]} value={fmt} onChange={setFmt} style={{ marginTop: 18, width: '100%', display: 'flex' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+        {list.map(p => (
           <div key={p.id} style={{ position: 'relative', background: 'var(--ivory)', borderRadius: 20, padding: '18px 18px 16px', border: '1.5px solid ' + (p.popular ? 'var(--accent)' : 'var(--border-soft)'), boxShadow: p.popular ? 'var(--shadow-md)' : 'var(--shadow-sm)' }}>
             {p.popular && <div style={{ position: 'absolute', top: -10, left: 18 }}><Pill color="#fff" bg="var(--accent)">Most chosen</Pill></div>}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
