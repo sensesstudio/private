@@ -48,7 +48,7 @@ function suggestReason(t, goalLabels) {
   return 'A strong fit for your goals and schedule, with openings this week.';
 }
 
-export function ClientHome({ onOpen, goSearch, answers }) {
+export function ClientHome({ onOpen, goSearch, answers, name, live }) {
   const ranked = sortByMatch(TEACHERS);
   const top = ranked[0];
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
@@ -60,6 +60,8 @@ export function ClientHome({ onOpen, goSearch, answers }) {
   const remaining = Math.max(0, MILESTONE - SESSIONS_DONE);
   const pct = Math.min(100, Math.round((SESSIONS_DONE / MILESTONE) * 100));
   const [showFull, setShowFull] = useState(false);
+  const firstName = (live && name) ? name.split(' ')[0] : 'Mara';
+  const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
 
   return (
     <div style={{ padding: '8px 20px 28px' }}>
@@ -68,16 +70,31 @@ export function ClientHome({ onOpen, goSearch, answers }) {
           <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>Monday · 15 June</div>
           <h1 style={{ margin: '7px 0 0', lineHeight: 1 }}>
             <span style={{ fontFamily: 'var(--font-script)', fontSize: 38, color: 'var(--ink)' }}>Welcome,</span><br />
-            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--espresso)' }}>Mara</span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--espresso)' }}>{firstName}</span>
           </h1>
         </div>
-        <Avatar t={{ initials: 'MW', ph: 'almond' }} size={46} />
+        <Avatar t={{ initials, ph: 'almond' }} size={46} />
       </div>
 
       <div style={{ marginTop: 22, borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'var(--espresso)' }}>
         <image-slot id="client-home-hero" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.42 }} shape="rect" fit="cover" placeholder="" />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(58,50,44,.62), rgba(58,50,44,.86))' }} />
         <div style={{ position: 'relative', padding: '20px 20px 18px', color: 'var(--cream)' }}>
+          {live ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--blush)' }}>
+                <Icon n="sparkles" size={13} color="var(--blush)" /> Welcome
+              </div>
+              <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 21, lineHeight: 1.35, color: 'var(--cream)', margin: '14px 0 6px' }}>
+                Let's find your rhythm{goalLabels[0] ? <> — starting with <span style={{ color: 'var(--blush)' }}>{goalLabels[0].toLowerCase()}</span></> : ''}.
+              </p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)', opacity: .9, margin: '0 0 16px' }}>
+                Book your first private session — your instructor tailors every move to you.
+              </p>
+              <Button variant="light" full size="md" onClick={goSearch} iconRight="arrow-right">Find your instructor</Button>
+            </>
+          ) : (
+            <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--blush)' }}>
               <Icon n="sparkles" size={13} color="var(--blush)" /> Your progress
@@ -132,6 +149,8 @@ export function ClientHome({ onOpen, goSearch, answers }) {
                 ))}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

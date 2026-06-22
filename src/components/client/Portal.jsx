@@ -233,9 +233,9 @@ function BookingFlow({ t, day, slot, credits = 0, onClose, onConfirmed, declarat
   );
 }
 
-function ClientBookings({ extra, onRate }) {
+function ClientBookings({ extra, onRate, live }) {
   const [tab, setTab] = useState('Upcoming');
-  const mine = BOOKINGS.filter(b => b.cId === 'c1');
+  const mine = live ? [] : BOOKINGS.filter(b => b.cId === 'c1'); // real users have only their own (real) bookings
   const upcoming = [...(extra || []), ...mine.filter(b => b.status === 'confirmed').map(toCard)];
   const past = mine.filter(b => b.status !== 'confirmed').map(toCard);
   const list = tab === 'Upcoming' ? upcoming : past;
@@ -506,9 +506,12 @@ function WaiverSheet({ onClose, onSigned, signed }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
+  const displayName = live ? (name || 'Member') : 'Mara Whitfield';
+  const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
+  const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
   const status = intakeStatus(answers);
   const aboutPill = status === 'completed'
     ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Completed</Pill>
@@ -521,10 +524,10 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver }) {
   return (
     <div style={{ padding: '8px 20px 28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '6px 0 20px' }}>
-        <Avatar t={{ initials: 'MW', ph: 'almond' }} size={66} />
+        <Avatar t={{ initials, ph: 'almond' }} size={66} />
         <div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 25, color: 'var(--espresso)', margin: 0 }}>Mara Whitfield</h1>
-          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', marginTop: 3 }}>Member since Jan 2024 · 28 sessions</div>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 25, color: 'var(--espresso)', margin: 0 }}>{displayName}</h1>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', marginTop: 3 }}>{memberLine}</div>
         </div>
       </div>
 
@@ -670,6 +673,29 @@ export function ClientPortal() {
   const [credits, setCredits] = useState(7);
   const [showWaiver, setShowWaiver] = useState(false);
   const [authUserId, setAuthUserId] = useState(null); // real Supabase user id when signed in for real
+  const [authName, setAuthName] = useState('');
+  const live = !!authUserId; // true when a real Supabase account is signed in
+
+  // When signed in for real, load this user's own data — their saved intake,
+  // real credit balance (0 to start) and name — replacing the demo placeholder.
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured) return undefined;
+    let active = true;
+    (async () => {
+      try {
+        const [prof, bal, name] = await Promise.all([
+          db.fetchClientProfile(authUserId),
+          db.fetchCreditBalance(authUserId),
+          db.fetchProfileName(authUserId),
+        ]);
+        if (!active) return;
+        if (prof) setAnswers(prof);
+        setCredits(bal || 0);
+        if (name) setAuthName(name);
+      } catch (e) { console.warn('Could not load profile', e); }
+    })();
+    return () => { active = false; };
+  }, [authUserId]);
   useClientStore();
   const profile = getClientProfile('c1');
   const waiverOk = !!(profile && profile.waiver && profile.waiver.agreed);
@@ -711,12 +737,12 @@ export function ClientPortal() {
   }
 
   const screens = {
-    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} />,
+    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} />,
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} />,
     Locations: <ClientLocations />,
-    Bookings: <ClientBookings extra={extraBookings} onRate={setRating} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} />,
+    Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} />,
   };
 
   return (

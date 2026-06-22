@@ -24,6 +24,14 @@ export async function saveClientProfile(clientId, answers) {
   if (error) throw error;
 }
 
+// The signed-in user's display name (from their profile row).
+export async function fetchProfileName(clientId) {
+  guard();
+  const { data, error } = await supabase.from('profiles').select('full_name').eq('id', clientId).maybeSingle();
+  if (error) throw error;
+  return data?.full_name || '';
+}
+
 // ── Credits & payments ───────────────────────────────────────────────────────
 export async function fetchCreditBalance(clientId) {
   guard();
