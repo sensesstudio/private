@@ -637,6 +637,7 @@ function ClientPricing({ onBook, onBuy }) {
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 4px' }}>Private 1:1 &amp; semi-private 1:2 · prepaid class packs.</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: 0, lineHeight: 1.7 }}>私人一對一及一對二課程 · 預付課程套票。</p>
       <Segmented options={[{ value: '1:1', label: 'Private · 1:1' }, { value: '1:2', label: 'Semi-private · 1:2' }]} value={fmt} onChange={setFmt} style={{ marginTop: 18, width: '100%', display: 'flex' }} />
+      {fmt === '1:2' && <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--taupe)', margin: '12px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}><Icon n="users-round" size={13} color="var(--taupe)" /> Prices are the total for two people sharing the session.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
         {list.map(p => (
           <div key={p.id} style={{ position: 'relative', background: 'var(--ivory)', borderRadius: 20, padding: '18px 18px 16px', border: '1.5px solid ' + (p.popular ? 'var(--accent)' : 'var(--border-soft)'), boxShadow: p.popular ? 'var(--shadow-md)' : 'var(--shadow-sm)' }}>

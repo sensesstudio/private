@@ -11,12 +11,12 @@ insert into packages (id, name, credits, price_hkd, validity_months, tag) values
   -- Private 1:1
   ('p11-trial',  'Trial session (1:1)',  1,  900,   null, 'Begin'),
   ('p11-single', 'Single class (1:1)',   1,  1200,  null, null),
-  ('p11-5',      '5-class pack (1:1)',    5,  4750,  3,    'Save 15%'),
+  ('p11-5',      '5-class pack (1:1)',    5,  4750,  3,    null),
   ('p11-10',     '10-class pack (1:1)',   10, 9000,  6,    'Most chosen'),
-  -- Semi-private 1:2
+  -- Semi-private 1:2 (prices are the total for two sharing the session)
   ('p12-trial',  'Trial session (1:2)',  1,  1200,  null, 'Begin'),
   ('p12-single', 'Single class (1:2)',   1,  1600,  null, null),
-  ('p12-5',      '5-class pack (1:2)',    5,  6500,  3,    'Save 15%'),
+  ('p12-5',      '5-class pack (1:2)',    5,  6500,  3,    null),
   ('p12-10',     '10-class pack (1:2)',   10, 12000, 6,    'Most chosen')
 on conflict (id) do update set
   name            = excluded.name,
