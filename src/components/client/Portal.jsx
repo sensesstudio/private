@@ -7,6 +7,7 @@ import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientSt
 import { useStudios } from '../../supabase/useReference.js';
 import { isSupabaseConfigured } from '../../supabase/client.js';
 import * as db from '../../supabase/queries.js';
+import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
@@ -609,7 +610,14 @@ function ClientLocations() {
   );
 }
 
-function ClientPricing({ onBook }) {
+function ClientPricing({ onBook, onBuy }) {
+  const [buying, setBuying] = useState(null);
+  const buy = async (id) => {
+    if (!onBuy) return;
+    setBuying(id);
+    const res = await onBuy(id);
+    if (res && res.ok === false) { alert(res.error || 'Could not start checkout. Please try again.'); setBuying(null); }
+  };
   return (
     <div style={{ padding: '8px 20px 28px' }}>
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Pricing</h1>
@@ -633,6 +641,11 @@ function ClientPricing({ onBook }) {
               <Icon n="check-circle-2" size={15} color="var(--accent)" />
               <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--espresso)' }}>{p.credits === '∞' ? 'Unlimited private sessions' : (p.credits + (p.credits === 1 ? ' private session' : ' private sessions'))}</span>
             </div>
+            {onBuy && (
+              <button className="tap" onClick={() => buy(p.id)} disabled={buying === p.id} style={{ marginTop: 14, width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13.5, padding: '12px', minHeight: 46, borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', opacity: buying === p.id ? 0.6 : 1 }}>
+                {buying === p.id ? 'Starting checkout…' : `Buy · ${hkd(p.price)}`}
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -675,7 +688,7 @@ export function ClientPortal() {
     const publicScreens = {
       Home: <ClientBrowse onGate={gate} onOpen={openDetail} />,
       Search: <ClientBrowse onGate={gate} onOpen={openDetail} />,
-      Pricing: <ClientPricing onBook={gate} />,
+      Pricing: <ClientPricing onBook={gate} onBuy={isSupabaseConfigured ? (() => { setStage('login'); }) : undefined} />,
       Locations: <ClientLocations />,
       Bookings: gateScreen('calendar-check', 'Sign in to see bookings'),
       Profile: gateScreen('user', 'Sign in to view your profile'),
@@ -700,7 +713,7 @@ export function ClientPortal() {
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} />,
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
-    Pricing: <ClientPricing onBook={goSearch} />,
+    Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} />,
     Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} />,
