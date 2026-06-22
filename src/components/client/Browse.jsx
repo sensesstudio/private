@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon, Eyebrow, Avatar, Stars, Segmented, useVP } from '../shared/index.jsx';
+import { EmptyState } from './ClientDetail.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
@@ -82,12 +83,15 @@ export function ClientBrowse({ onGate, onOpen }) {
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
   const [sort, setSort] = useState('match');
-  const teachers = [...TEACHERS].sort((a, b) => {
-    if (sort === 'name') return a.name.localeCompare(b.name);
-    if (sort === 'rating') return b.rating - a.rating;
-    if (sort === 'price') return a.rate - b.rate;
-    return b.match - a.match;
-  });
+  const [locFilter, setLocFilter] = useState('any');
+  const teachers = [...TEACHERS]
+    .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
+    .sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'rating') return b.rating - a.rating;
+      if (sort === 'price') return a.rate - b.rate;
+      return b.match - a.match;
+    });
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const baseMonth = 5, baseYear = 2026;
@@ -147,9 +151,19 @@ export function ClientBrowse({ onGate, onOpen }) {
                 <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, pointerEvents: 'none' }} />
               </label>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
-              {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 14px', padding: '0 20px 4px' }} className="screen-scroll">
+              {[{ id: 'any', name: 'All studios' }, ...LOCATIONS].map(l => {
+                const on = locFilter === l.id;
+                return <button key={l.id} className="tap" onClick={() => setLocFilter(l.id)} style={{ flex: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.04em', padding: '9px 15px', minHeight: 40, borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--taupe)', whiteSpace: 'nowrap' }}>{l.name}</button>;
+              })}
             </div>
+            {teachers.length === 0 ? (
+              <EmptyState icon="search-x" title="No instructors at this studio yet" body="Try another studio — we're adding teachers across all five locations." />
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
+                {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
+              </div>
+            )}
           </>
         )}
 
