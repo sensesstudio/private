@@ -595,7 +595,11 @@ function ClientLocations() {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
         {studios.map(l => (
-          <div key={l.id} style={{ background: 'var(--ivory)', borderRadius: 20, padding: '16px 18px', border: '1.5px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}>
+          <div key={l.id} style={{ background: 'var(--ivory)', borderRadius: 20, overflow: 'hidden', border: '1.5px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ height: 158, position: 'relative', background: 'linear-gradient(135deg, var(--blush), var(--sand))' }}>
+              <img src={`assets/locations/${l.id}.jpg`} alt={l.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            </div>
+            <div style={{ padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', flex: 'none' }}>
                 <Icon n={l.sea ? 'waves' : 'map-pin'} size={19} color="var(--accent)" />
@@ -614,6 +618,7 @@ function ClientLocations() {
                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, textDecoration: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--accent)' }}>
               <Icon n="map-pin" size={14} color="var(--accent)" /> Directions
             </a>
+            </div>
           </div>
         ))}
       </div>
