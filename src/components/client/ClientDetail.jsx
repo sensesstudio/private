@@ -50,7 +50,7 @@ function suggestReason(t, goalLabels) {
   return 'A strong fit for your goals and schedule, with openings this week.';
 }
 
-export function ClientHome({ onOpen, goSearch, answers, name, live }) {
+export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass }) {
   const ranked = sortByMatch(TEACHERS);
   const top = ranked[0];
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
@@ -79,6 +79,18 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
         </div>
         <Avatar t={{ initials, ph: 'almond' }} size={46} />
       </div>
+
+      {nextClass && (
+        <div className="tap card-hover" onClick={() => onOpen(nextClass.t)} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+          <Avatar t={nextClass.t} size={48} radius={13} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)' }}><Icon n="bell" size={12} color="var(--accent)" /> Next class</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', marginTop: 3, lineHeight: 1.1 }}>{nextClass.t.name}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{nextClass.dayLabel} · {nextClass.slotTime} · {locName(nextClass.t.locId)}</div>
+          </div>
+          <Icon n="chevron-right" size={18} color="var(--clay)" />
+        </div>
+      )}
 
       {live && (
       <div style={{ marginTop: 22, borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'var(--espresso)' }}>

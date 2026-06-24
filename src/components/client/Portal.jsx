@@ -864,8 +864,12 @@ export function ClientPortal() {
     return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { saveClientProfile('c1', answers); if (isSupabaseConfigured && authUserId) db.saveClientProfile(authUserId, answers).catch(e => console.warn('Supabase profile save failed', e)); setStage('app'); setTab('Home'); }} /></PhoneFrame>;
   }
 
+  const fmtClassDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' });
+  const demoUpcoming = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'confirmed').slice().sort((a, b) => a.date.localeCompare(b.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time }));
+  const nextClass = extraBookings[0] || demoUpcoming[0] || null;
+
   const screens = {
-    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} />,
+    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} />,
     Search: <ClientBrowse embedded onOpen={openDetail} onGate={() => {}} />,
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,

@@ -141,7 +141,7 @@ const _bk = (id, cId, tId, date, time, status, type = 'Private') => {
   return { id, cId, tId, date, time, status, type, locId: t.locId, amount: t.rate };
 };
 export const BOOKINGS = [
-  _bk('b01','c1','t1','2026-06-16','07:00','confirmed'),
+  _bk('b01','c1','t1','2026-06-26','07:00','confirmed'),
   _bk('b02','c2','t2','2026-06-16','18:30','confirmed'),
   _bk('b03','c3','t1','2026-06-17','08:00','confirmed'),
   _bk('b04','c4','t3','2026-06-17','10:00','confirmed'),

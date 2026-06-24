@@ -11,6 +11,28 @@ const HERO_PHOTOS = [
   'assets/hero/cover.jpg',
 ];
 
+// Hong Kong general (public) holidays 2026. ⚠️ Best-effort — please verify the
+// lunar-based dates against gov.hk; edit here to correct.
+const HK_HOLIDAYS_2026 = {
+  '2026-01-01': "The first day of January",
+  '2026-02-17': "Lunar New Year's Day",
+  '2026-02-18': "Second day of Lunar New Year",
+  '2026-02-19': "Third day of Lunar New Year",
+  '2026-04-03': "Good Friday",
+  '2026-04-04': "Day following Good Friday",
+  '2026-04-06': "Easter Monday",
+  '2026-04-07': "Ching Ming Festival",
+  '2026-05-01': "Labour Day",
+  '2026-05-25': "Buddha's Birthday",
+  '2026-06-19': "Tuen Ng Festival",
+  '2026-07-01': "HKSAR Establishment Day",
+  '2026-09-26': "Day after Mid-Autumn Festival",
+  '2026-10-01': "National Day",
+  '2026-10-19': "Chung Yeung Festival",
+  '2026-12-25': "Christmas Day",
+  '2026-12-26': "First weekday after Christmas",
+};
+
 function HeroCarousel() {
   const [i, setI] = useState(0);
   if (!HERO_PHOTOS.length) {
@@ -86,6 +108,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const [locFilter, setLocFilter] = useState('any');
   const [schedLoc, setSchedLoc] = useState('any');
   const [schedTeacher, setSchedTeacher] = useState('any');
+  const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
   const teachers = [...TEACHERS]
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
     .sort((a, b) => {
@@ -104,7 +127,8 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const daysList = [];
   for (let dom = startDom; dom <= daysInMonth; dom++) {
     const dt = new Date(mYear, mIdx, dom);
-    daysList.push({ dow: DOW[dt.getDay()], dom });
+    const iso = `${mYear}-${String(mIdx + 1).padStart(2, '0')}-${String(dom).padStart(2, '0')}`;
+    daysList.push({ dow: DOW[dt.getDay()], dom, iso, holiday: HK_HOLIDAYS_2026[iso] });
   }
   const goMonth = (delta) => { const next = monthOff + delta; if (next < 0 || next > 11) return; setMonthOff(next); setDay(0); };
   const perTeacher = {};
@@ -174,8 +198,24 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
             {teachers.length === 0 ? (
               <EmptyState icon="search-x" title="No instructors at this studio yet" body="Try another studio — we're adding teachers across all five locations." />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: mobile ? 10 : 14 }}>
-                {teachers.map(t => <BrowseTeacher key={t.id} t={t} onOpen={onOpen} />)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {teachers.map(t => (
+                  <div key={t.id} className="tap card-hover" onClick={() => onOpen(t)} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 12, boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+                    <Avatar t={t} size={54} radius={14} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1.1 }}>{t.name}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', margin: '2px 0 5px', ...ell }}>{t.headline}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Stars value={t.rating} reviews={t.reviews} size={11} />
+                        <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', display: 'inline-flex', alignItems: 'center', gap: 3, minWidth: 0, ...ell }}><Icon n="map-pin" size={11} /> {locName(t.locId)}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flex: 'none' }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)' }}>{hkd(t.rate)}<span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10, color: 'var(--fg3)' }}>/hr</span></div>
+                      <Icon n="chevron-right" size={16} color="var(--clay)" style={{ marginTop: 4 }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>
@@ -244,13 +284,20 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
               {daysList.map((d, i) => {
                 const on = day === i;
                 return (
-                  <button key={i} className="tap" onClick={() => setDay(i)} style={{ flex: 'none', width: 50, textAlign: 'center', padding: '9px 0', borderRadius: 15, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'var(--ivory)' }}>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: on ? 'rgba(255,255,255,.85)' : 'var(--fg3)' }}>{d.dow}</div>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 18, color: on ? '#fff' : 'var(--espresso)', marginTop: 2 }}>{d.dom}</div>
+                  <button key={i} title={d.holiday || ''} className="tap" onClick={() => setDay(i)} style={{ flex: 'none', width: 50, textAlign: 'center', padding: '9px 0', borderRadius: 15, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : (d.holiday ? 'var(--terracotta)' : 'var(--border)')), background: on ? 'var(--accent)' : (d.holiday ? 'rgba(185,117,91,.10)' : 'var(--ivory)') }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: on ? 'rgba(255,255,255,.85)' : (d.holiday ? 'var(--terracotta)' : 'var(--fg3)') }}>{d.dow}</div>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 18, color: on ? '#fff' : (d.holiday ? 'var(--terracotta)' : 'var(--espresso)'), marginTop: 2 }}>{d.dom}</div>
+                    <div style={{ width: 5, height: 5, borderRadius: 999, margin: '3px auto 0', background: d.holiday ? (on ? '#fff' : 'var(--terracotta)') : 'transparent' }} />
                   </button>
                 );
               })}
             </div>
+            {daysList[day] && daysList[day].holiday && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(185,117,91,.10)', border: '1px solid rgba(185,117,91,.30)', borderRadius: 12, padding: '10px 13px', marginBottom: 14 }}>
+                <Icon n="calendar-heart" size={15} color="var(--terracotta)" />
+                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--terracotta)' }}>Public holiday · {daysList[day].holiday}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {schedule.map((sl, i) => (
                 <div key={i} className="tap" onClick={() => onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', borderBottom: i < schedule.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
