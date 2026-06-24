@@ -114,7 +114,11 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const [locFilter, setLocFilter] = useState('any');
   const [schedLoc, setSchedLoc] = useState('any');
   const [schedTeacher, setSchedTeacher] = useState('any');
+  const [studioView, setStudioView] = useState(null); // a studio drilled into under Studios
   const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+  const studioSlots = studioView
+    ? openSlotsForDay(0).map(s => ({ t: teacherById(s.teacherId), time: s.time })).filter(x => x.t && (x.t.locIds || [x.t.locId]).includes(studioView)).sort((a, b) => a.time.localeCompare(b.time))
+    : [];
   const teachers = [...TEACHERS]
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
     .sort((a, b) => {
@@ -242,10 +246,10 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
           </div>
         )}
 
-        {seg === 'Studios' && (
+        {seg === 'Studios' && !studioView && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {LOCATIONS.map(l => (
-              <div key={l.id} className="tap card-hover" onClick={embedded ? () => { setLocFilter(l.id); setSeg('Teachers'); } : onGate} style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+              <div key={l.id} className="tap card-hover" onClick={embedded ? () => setStudioView(l.id) : onGate} style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
                 <div className={'app-ph ' + (l.sea ? 'sage' : '')} style={{ width: 52, height: 52, borderRadius: 14, flex: 'none', display: 'grid', placeItems: 'center' }}>
                   <Icon n={l.sea ? 'waves' : 'map-pin'} size={20} color="rgba(255,255,255,.95)" />
                 </div>
@@ -255,6 +259,34 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                 <Icon n="chevron-right" size={18} color="var(--clay)" />
               </div>
             ))}
+          </div>
+        )}
+
+        {seg === 'Studios' && studioView && (
+          <div>
+            <button className="tap" onClick={() => setStudioView(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 10, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--taupe)' }}><Icon n="arrow-left" size={15} color="var(--taupe)" /> All studios</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14, fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 20, color: 'var(--espresso)' }}>
+              <span className="live-dot" /> Available in {locName(studioView)} now
+            </div>
+            {studioSlots.length === 0 ? (
+              <EmptyState icon="calendar-x" title="No open slots right now" body="Availability refreshes through the day — check back soon or try another studio." />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {studioSlots.map((sl, i) => (
+                  <div key={i} className="tap" onClick={() => onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0', borderBottom: i < studioSlots.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+                    <div style={{ width: 56, flex: 'none' }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)' }}>{sl.time}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10, color: 'var(--fg3)' }}>60 min</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{sl.t.specs[0]}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>Private · 60 min</div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>Book</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
