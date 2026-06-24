@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP } from '../shared/index.jsx';
+import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP, useLiveReviews } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, GOALS, PROGRESS_LOG, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
+import { isSupabaseConfigured } from '../../supabase/client.js';
+import { fetchReviews } from '../../supabase/queries.js';
 import { metaItem, labelMini } from '../../styles.js';
 import { TeacherCard } from './ClientCore.jsx';
 import { useSlots, daysForTeacher, takeRandomOpen } from '../../slots.js';
@@ -264,6 +266,18 @@ export function TeacherDetail({ t, onClose, onBook }) {
   useSlots(); // re-render when slots are held / booked / released
   const [day, setDay] = useState(0);
   const [justBooked, setJustBooked] = useState(null);
+  const [showReviews, setShowReviews] = useState(false);
+  const liveReviews = useLiveReviews({ tId: t.id }); // reviews submitted in-app
+  const [dbReviews, setDbReviews] = useState([]); // real reviews from Supabase
+  useEffect(() => {
+    setDbReviews([]);
+    // Only query the backend for real (UUID) teacher ids; mock ids skip it.
+    if (!isSupabaseConfigured || !/[0-9a-f-]{20,}/i.test(t.id)) return;
+    let active = true;
+    fetchReviews(t.id).then(r => { if (active) setDbReviews(r); }).catch(() => {});
+    return () => { active = false; };
+  }, [t.id]);
+  const allReviews = [...liveReviews, ...dbReviews];
 
   // Real-time availability: a slot gets taken every few seconds.
   useEffect(() => {
@@ -282,6 +296,35 @@ export function TeacherDetail({ t, onClose, onBook }) {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      {showReviews && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+            <button className="tap" onClick={() => setShowReviews(false)} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+            <div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1 }}>Reviews · {t.name}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>{t.rating} average · {t.reviews} reviews</div>
+            </div>
+          </div>
+          <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '16px 18px 28px' }}>
+            {allReviews.length === 0 ? (
+              <EmptyState icon="message-square" title="No written reviews yet" body="When clients share a reflection after their session, it'll appear here." />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {allReviews.map(r => (
+                  <div key={r.id} style={{ background: 'var(--ivory)', borderRadius: 16, border: '1px solid var(--border-soft)', padding: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ display: 'inline-flex', gap: 1 }}>{[1, 2, 3, 4, 5].map(i => <Icon key={i} n="star" size={14} color={i <= r.stars ? 'var(--accent)' : 'var(--linen)'} sw={0} style={{ fill: i <= r.stars ? 'var(--accent)' : 'var(--linen)' }} />)}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>{r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
+                    </div>
+                    {r.text && <p style={{ fontFamily: 'var(--font-serif)', fontSize: 15, lineHeight: 1.55, color: 'var(--espresso)', margin: '9px 0 0' }}>"{r.text}"</p>}
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--taupe)', marginTop: 8 }}>{r.clientName}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <div style={{ position: 'relative' }}>
         <div style={{ position: 'relative', height: mobile ? 230 : 240 }}>
           <div className={'app-ph ' + (t.ph || '')} style={{ position: 'absolute', inset: 0 }} />
@@ -304,7 +347,10 @@ export function TeacherDetail({ t, onClose, onBook }) {
 
       <div style={{ flex: 1, padding: mobile ? '18px 20px 16px' : '22px 26px 16px', maxWidth: 640, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <Stars value={t.rating} reviews={t.reviews} />
+          <button className="tap" onClick={() => setShowReviews(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Stars value={t.rating} reviews={t.reviews} />
+            <Icon n="chevron-right" size={14} color="var(--clay)" />
+          </button>
           <span style={metaItem}><Icon n="map-pin" size={14} /> {(() => { const ls = t.locIds || [t.locId]; return ls.length <= 2 ? ls.map(locName).join(' · ') : `${locName(ls[0])} +${ls.length - 1} more`; })()}</span>
           <span style={metaItem}><Icon n="award" size={14} /> {t.exp} yrs</span>
           <span style={{ ...metaItem, color: 'var(--accent)', fontWeight: 500 }}><span className="live-dot" /> {t.responds}</span>

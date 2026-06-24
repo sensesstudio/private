@@ -32,6 +32,17 @@ export async function fetchProfileName(clientId) {
   return data?.full_name || '';
 }
 
+// Reviews for a teacher (real data from the reviews table). Returns [] until
+// teachers live on Supabase with UUID ids; merged with in-app live reviews.
+export async function fetchReviews(teacherId) {
+  guard();
+  const { data, error } = await supabase
+    .from('reviews').select('id, stars, comment, created_at')
+    .eq('teacher_id', teacherId).order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(r => ({ id: r.id, stars: r.stars, text: r.comment, date: (r.created_at || '').slice(0, 10), clientName: 'Verified client' }));
+}
+
 // Package ids the client has already paid for — used to enforce one-time trials.
 export async function fetchPurchasedPackageIds(clientId) {
   guard();
