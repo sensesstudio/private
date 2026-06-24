@@ -244,6 +244,7 @@ function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onCon
 
 function ClientBookings({ extra, onRate, live }) {
   const [tab, setTab] = useState('Upcoming');
+  const [showLog, setShowLog] = useState(false);
   const mine = live ? [] : BOOKINGS.filter(b => b.cId === 'c1'); // real users have only their own (real) bookings
   const upcoming = [...(extra || []), ...mine.filter(b => b.status === 'confirmed').map(toCard)];
   const past = mine.filter(b => b.status !== 'confirmed').map(toCard);
@@ -256,6 +257,9 @@ function ClientBookings({ extra, onRate, live }) {
     <div style={{ padding: '8px 20px 28px' }}>
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 16px' }}>My bookings</h1>
       <Segmented options={['Upcoming', 'Past']} value={tab} onChange={setTab} style={{ marginBottom: 18, width: '100%', display: 'flex' }} />
+      {tab === 'Past' && (
+        <button className="tap" onClick={() => setShowLog(true)} style={{ width: '100%', marginBottom: 16, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 14, padding: '13px', minHeight: 48, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13, color: 'var(--accent)' }}><Icon n="clipboard-list" size={16} color="var(--accent)" /> See your progress log</button>
+      )}
       {list.length === 0 ? (
         <EmptyState icon="calendar-x" title={tab === 'Upcoming' ? 'Nothing booked yet' : 'No past sessions'} body={tab === 'Upcoming' ? 'When you book a private session it will appear here, ready when you are.' : 'Your completed sessions will gather here over time.'} />
       ) : (
@@ -277,6 +281,7 @@ function ClientBookings({ extra, onRate, live }) {
           ))}
         </div>
       )}
+      {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
     </div>
   );
 }
@@ -536,11 +541,12 @@ function PreferencesSheet({ onClose }) {
   const [code, setCode] = useState(prof.phoneCode || '+852');
   const [num, setNum] = useState(prof.phoneNumber || '');
   const [email, setEmail] = useState(prof.email || '');
-  const [channel, setChannel] = useState(prof.channel || 'whatsapp');
+  const [channels, setChannels] = useState(prof.channels || { whatsapp: true, email: false });
   const [notify, setNotify] = useState(prof.notify || { reminders: true, availability: false, promos: false });
   const [saved, setSaved] = useState(false);
   const flip = k => setNotify(n => ({ ...n, [k]: !n[k] }));
-  const save = () => { saveClientProfile('c1', { phoneCode: code, phoneNumber: num, phone: `${code} ${num}`.trim(), email, channel, notify }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  const flipCh = k => setChannels(c => ({ ...c, [k]: !c[k] }));
+  const save = () => { saveClientProfile('c1', { phoneCode: code, phoneNumber: num, phone: `${code} ${num}`.trim(), email, channels, notify }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   const rows = [
     ['reminders', 'Booking reminders', 'Confirmations and a nudge before each session'],
     ['availability', 'Class availability alerts', 'When a favourite instructor opens new slots'],
@@ -564,7 +570,18 @@ function PreferencesSheet({ onClose }) {
         <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email address" style={inputStyle} />
 
         <div style={{ ...labelMini, marginTop: 24 }}>Notify me by</div>
-        <Segmented options={[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'Email' }]} value={channel} onChange={setChannel} style={{ marginTop: 10, width: '100%', display: 'flex' }} />
+        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: '5px 0 10px' }}>Choose one or both.</p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[['whatsapp', 'message-circle', 'WhatsApp'], ['email', 'mail', 'Email']].map(([k, ic, label]) => {
+            const on = !!channels[k];
+            return (
+              <button key={k} type="button" className="tap" onClick={() => flipCh(k)} style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 14, background: on ? 'var(--accent-tint)' : 'var(--ivory)', border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--border)') }}>
+                <Icon n={on ? 'check-circle-2' : ic} size={18} color={on ? 'var(--accent)' : 'var(--taupe)'} />
+                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13.5, color: on ? 'var(--accent)' : 'var(--espresso)' }}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
 
         <div style={{ ...labelMini, marginTop: 24 }}>Notifications</div>
         <div style={{ background: 'var(--ivory)', borderRadius: 18, border: '1px solid var(--border-soft)', overflow: 'hidden', marginTop: 10 }}>
@@ -580,7 +597,7 @@ function PreferencesSheet({ onClose }) {
         </div>
 
         <Button variant="accent" full size="lg" onClick={save} icon={saved ? 'check' : 'save'} style={{ marginTop: 22 }}>{saved ? 'Saved' : 'Save preferences'}</Button>
-        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '12px 0 0', lineHeight: 1.5 }}>Reminders are sent via WhatsApp through SleekFlow once enabled.</p>
+        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '12px 0 0', lineHeight: 1.5 }}>We'll send reminders to your chosen channels.</p>
       </div>
     </div>
   );

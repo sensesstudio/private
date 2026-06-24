@@ -221,6 +221,8 @@ function clientAbout(c, ov) {
     waiver: ov && ov.waiver && ov.waiver.agreed
       ? `Signed by ${ov.waiver.name}${ov.waiver.date ? ' · ' + new Date(ov.waiver.date).toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`
       : 'Not signed',
+    contact: ov && (ov.phone || ov.email) ? [ov.phone, ov.email].filter(Boolean).join(' · ') : null,
+    channels: ov && ov.channels ? (['whatsapp', 'email'].filter(k => ov.channels[k]).map(k => k === 'whatsapp' ? 'WhatsApp' : 'Email').join(' & ') || 'None selected') : null,
     note: (ov && ov.notes) || notes[c.id] || '—',
     updated: !!ov,
   };
@@ -298,7 +300,7 @@ function AdminClients() {
               {view === 'About' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {about.updated && <div style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', background: 'var(--accent-tint)', padding: '5px 10px', borderRadius: 999 }}><Icon n="badge-check" size={12} color="var(--accent)" /> Updated by client</div>}
-                  {[['target', 'Primary goal', about.goal], ['user', 'Age range', about.age], ['gauge', 'Experience', about.level], ['flower-2', 'Pregnant', about.pregnant], ['stethoscope', 'Recent surgery', about.surgery], ...(about.doctor ? [['heart-pulse', 'Doctor cleared to exercise', about.doctor]] : []), ...(about.languages ? [['languages', 'Preferred language', about.languages]] : []), ...(about.credits ? [['ticket', 'Credits', about.credits]] : []), ...(about.billing ? [['banknote', 'Payments', about.billing]] : []), ['shield-check', 'Liability waiver', about.waiver]].map(([ic, k, v]) => (
+                  {[['target', 'Primary goal', about.goal], ['user', 'Age range', about.age], ['gauge', 'Experience', about.level], ['flower-2', 'Pregnant', about.pregnant], ['stethoscope', 'Recent surgery', about.surgery], ...(about.doctor ? [['heart-pulse', 'Doctor cleared to exercise', about.doctor]] : []), ...(about.languages ? [['languages', 'Preferred language', about.languages]] : []), ...(about.contact ? [['phone', 'Contact', about.contact]] : []), ...(about.channels ? [['bell', 'Notify by', about.channels]] : []), ...(about.credits ? [['ticket', 'Credits', about.credits]] : []), ...(about.billing ? [['banknote', 'Payments', about.billing]] : []), ['shield-check', 'Liability waiver', about.waiver]].map(([ic, k, v]) => (
                     <div key={k} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                       <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--sand)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon n={ic} size={16} color="var(--taupe)" /></span>
                       <div>
