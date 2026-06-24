@@ -886,7 +886,7 @@ function ClientPricing({ onBook, onBuy, purchased = [], live = false, onNeedAuth
             {p.validityMonths && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
                 <Icon n="calendar-clock" size={15} color="var(--taupe)" />
-                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--taupe)' }}>Valid for {p.validityMonths} month{p.validityMonths > 1 ? 's' : ''} from purchase</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--taupe)' }}>Valid for {p.validityMonths} month{p.validityMonths > 1 ? 's' : ''} from first visit</span>
               </div>
             )}
             {onBuy && (
