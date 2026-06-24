@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress, addReview } from '../shared/index.jsx';
+import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress, addReview, useFavs, toggleFav } from '../shared/index.jsx';
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS, isTrial } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
@@ -646,11 +646,76 @@ function UpcomingSheet({ upcoming = [], onClose, onCancel, onReschedule }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, upcoming = [], onCancelBooking, onReschedule }) {
+function SheetShell({ title, sub, onClose, children }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+        <div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1 }}>{title}</div>
+          {sub && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>{sub}</div>}
+        </div>
+      </div>
+      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '16px 18px 28px' }}>{children}</div>
+    </div>
+  );
+}
+
+function FavouritesSheet({ favTeachers = [], onClose, onOpen }) {
+  return (
+    <SheetShell title="Favourite teachers" sub={`${favTeachers.length} saved`} onClose={onClose}>
+      {favTeachers.length === 0 ? (
+        <EmptyState icon="heart" title="No favourites yet" body="Tap the heart on an instructor's profile to save them — we'll suggest them more on your Home." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          {favTeachers.map(t => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 12, boxShadow: 'var(--shadow-sm)' }}>
+              <button className="tap" onClick={() => { onClose(); onOpen && onOpen(t); }} style={{ display: 'flex', alignItems: 'center', gap: 13, flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                <Avatar t={t} size={48} radius={13} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{t.name}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', marginTop: 2 }}>{t.headline}</div>
+                </div>
+              </button>
+              <button className="tap" onClick={() => toggleFav(t.id)} aria-label="Remove favourite" style={{ flex: 'none', width: 38, height: 38, borderRadius: 999, background: 'var(--accent-tint)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Icon n="heart" size={17} color="var(--terracotta)" sw={0} style={{ fill: 'var(--terracotta)' }} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </SheetShell>
+  );
+}
+
+function PastSessionsSheet({ past = [], onClose, onRate }) {
+  return (
+    <SheetShell title="Past sessions" sub={`${past.length} completed`} onClose={onClose}>
+      {past.length === 0 ? (
+        <EmptyState icon="clipboard-list" title="No past sessions" body="Your completed sessions will gather here over time." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {past.map((b, idx) => (
+            <div key={b.id + idx} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 13, boxShadow: 'var(--shadow-sm)' }}>
+              <Avatar t={b.t} size={48} radius={13} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+              </div>
+              <button className="tap" onClick={() => { onClose(); onRate && onRate(b.t); }} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 13px', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, color: 'var(--accent)' }}><Icon n="star" size={13} color="var(--accent)" /> Rate</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </SheetShell>
+  );
+}
+
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, upcoming = [], onCancelBooking, onReschedule, favTeachers = [], past = [], onOpen, onRate }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
+  const [showFavs, setShowFavs] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -718,7 +783,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Upcoming bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Upcoming bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['heart', 'Favourite teachers', () => setShowFavs(true), favTeachers.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{favTeachers.length}</Pill> : null], ['history', 'Past sessions', () => setShowPast(true), null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -730,6 +795,8 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
       {showPrefs && <PreferencesSheet onClose={() => setShowPrefs(false)} />}
       {showBookings && <UpcomingSheet upcoming={upcoming} onClose={() => setShowBookings(false)} onCancel={onCancelBooking} onReschedule={t => { setShowBookings(false); onReschedule && onReschedule(t); }} />}
+      {showFavs && <FavouritesSheet favTeachers={favTeachers} onClose={() => setShowFavs(false)} onOpen={onOpen} />}
+      {showPast && <PastSessionsSheet past={past} onClose={() => setShowPast(false)} onRate={onRate} />}
     </div>
   );
 }
@@ -847,6 +914,7 @@ export function ClientPortal() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [extraBookings, setExtraBookings] = useState([]);
   const [cancelled, setCancelled] = useState([]); // booking ids the client cancelled
+  const favIds = useFavs();
   const [credits, setCredits] = useState(7);
   const [showWaiver, setShowWaiver] = useState(false);
   const [authUserId, setAuthUserId] = useState(null); // real Supabase user id when signed in for real
@@ -927,6 +995,8 @@ export function ClientPortal() {
   const upcomingAll = [...extraBookings, ...demoUpcoming].filter(b => !cancelled.includes(b.id));
   const nextClass = upcomingAll[0] || null;       // Home: just the next one
   const cancelBooking = (id) => { setCancelled(c => [...c, id]); setExtraBookings(b => b.filter(x => x.id !== id)); };
+  const favTeachers = favIds.map(id => teacherById(id)).filter(Boolean);
+  const pastClasses = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'completed').slice().sort((a, b) => b.date.localeCompare(a.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time }));
 
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} goTab={setTab} />,
@@ -934,7 +1004,7 @@ export function ClientPortal() {
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} upcoming={upcomingAll} onCancelBooking={cancelBooking} onReschedule={openDetail} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} upcoming={upcomingAll} onCancelBooking={cancelBooking} onReschedule={openDetail} favTeachers={favTeachers} past={pastClasses} onOpen={openDetail} onRate={setRating} />,
   };
 
   return (

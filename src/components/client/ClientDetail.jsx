@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP, useLiveReviews } from '../shared/index.jsx';
+import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP, useLiveReviews, useFavs, toggleFav } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, GOALS, PROGRESS_LOG, LOCATIONS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
@@ -90,6 +90,10 @@ function suggestReason(t, goalLabels) {
 
 export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, goTab }) {
   const ranked = sortByMatch(TEACHERS);
+  const favSet = useFavs();
+  const onlineRanked = ranked.filter(t => t.online);
+  const favOnline = onlineRanked.filter(t => favSet.includes(t.id));
+  const suggested = [...favOnline, ...onlineRanked.filter(t => !favSet.includes(t.id))].slice(0, favOnline.length ? 5 : 3);
   const top = ranked[0];
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
   const log = PROGRESS_LOG || [];
@@ -192,7 +196,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, g
         <Icon n="sparkles" size={13} color="var(--accent)" /> Based on your goals, history & profile · available this week
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-        {ranked.filter(t => t.online).slice(0, 3).map(t => (
+        {suggested.map(t => (
           <div key={t.id} className="tap card-hover" onClick={() => onOpen(t)} style={{ background: 'var(--ivory)', borderRadius: 20, border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', gap: 13, padding: 14 }}>
               <Avatar t={t} size={56} radius={15} />
@@ -259,6 +263,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
   const [day, setDay] = useState(0);
   const [justBooked, setJustBooked] = useState(null);
   const [showReviews, setShowReviews] = useState(false);
+  const faved = useFavs().includes(t.id);
   const liveReviews = useLiveReviews({ tId: t.id }); // reviews submitted in-app
   const [dbReviews, setDbReviews] = useState([]); // real reviews from Supabase
   useEffect(() => {
@@ -323,7 +328,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
           {t.photo && <img src={t.photo} alt={t.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 28%' }} />}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(58,50,44,.3) 0%, transparent 35%, rgba(58,50,44,.55) 100%)' }} />
           <button className="tap" onClick={onClose} style={{ position: 'absolute', top: 16, left: 16, width: 42, height: 42, borderRadius: 999, background: 'rgba(250,247,243,.92)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 5 }}><Icon n={mobile ? 'chevron-down' : 'x'} size={20} color="var(--espresso)" /></button>
-          <button className="tap" style={{ position: 'absolute', top: 16, right: 16, width: 42, height: 42, borderRadius: 999, background: 'rgba(250,247,243,.92)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 5 }}><Icon n="heart" size={19} color="var(--terracotta)" /></button>
+          <button className="tap" onClick={() => toggleFav(t.id)} aria-label={faved ? 'Remove favourite' : 'Add favourite'} style={{ position: 'absolute', top: 16, right: 16, width: 42, height: 42, borderRadius: 999, background: 'rgba(250,247,243,.92)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 5 }}><Icon n="heart" size={19} color="var(--terracotta)" sw={faved ? 0 : 1.8} style={{ fill: faved ? 'var(--terracotta)' : 'none' }} /></button>
           <div style={{ position: 'absolute', left: 18, bottom: 16, right: 18, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', color: 'var(--cream)' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 28, margin: 0, lineHeight: 1.05, color: 'var(--cream)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</h2>
