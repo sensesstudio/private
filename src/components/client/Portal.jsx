@@ -523,15 +523,24 @@ function PrefToggle({ on, onChange }) {
   );
 }
 
+const COUNTRY_CODES = [
+  { code: '+852', flag: '🇭🇰' }, { code: '+86', flag: '🇨🇳' }, { code: '+853', flag: '🇲🇴' },
+  { code: '+886', flag: '🇹🇼' }, { code: '+65', flag: '🇸🇬' }, { code: '+44', flag: '🇬🇧' },
+  { code: '+1', flag: '🇺🇸' }, { code: '+61', flag: '🇦🇺' }, { code: '+81', flag: '🇯🇵' },
+  { code: '+82', flag: '🇰🇷' }, { code: '+60', flag: '🇲🇾' }, { code: '+63', flag: '🇵🇭' },
+  { code: '+66', flag: '🇹🇭' }, { code: '+91', flag: '🇮🇳' }, { code: '+971', flag: '🇦🇪' },
+];
+
 function PreferencesSheet({ onClose }) {
   const prof = getClientProfile('c1') || {};
-  const [phone, setPhone] = useState(prof.phone || '');
+  const [code, setCode] = useState(prof.phoneCode || '+852');
+  const [num, setNum] = useState(prof.phoneNumber || '');
   const [email, setEmail] = useState(prof.email || '');
   const [channel, setChannel] = useState(prof.channel || 'whatsapp');
   const [notify, setNotify] = useState(prof.notify || { reminders: true, availability: false, promos: false });
   const [saved, setSaved] = useState(false);
   const flip = k => setNotify(n => ({ ...n, [k]: !n[k] }));
-  const save = () => { saveClientProfile('c1', { phone, email, channel, notify }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  const save = () => { saveClientProfile('c1', { phoneCode: code, phoneNumber: num, phone: `${code} ${num}`.trim(), email, channel, notify }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   const rows = [
     ['reminders', 'Booking reminders', 'Confirmations and a nudge before each session'],
     ['availability', 'Class availability alerts', 'When a favourite instructor opens new slots'],
@@ -546,7 +555,12 @@ function PreferencesSheet({ onClose }) {
       <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '18px 18px 28px' }}>
         <div style={labelMini}>Contact details</div>
         <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: '5px 0 12px' }}>So we can confirm bookings and reach you on WhatsApp.</p>
-        <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="Phone (e.g. +852 9123 4567)" style={{ ...inputStyle, marginBottom: 10 }} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <select value={code} onChange={e => setCode(e.target.value)} style={{ ...inputStyle, width: 104, flex: 'none', paddingRight: 8, appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer' }}>
+            {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+          </select>
+          <input value={num} onChange={e => setNum(e.target.value)} type="tel" placeholder="9123 4567" style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+        </div>
         <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email address" style={inputStyle} />
 
         <div style={{ ...labelMini, marginTop: 24 }}>Notify me by</div>
