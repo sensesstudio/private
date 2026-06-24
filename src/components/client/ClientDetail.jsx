@@ -214,6 +214,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
                   <Icon n="sparkles" size={12} color="var(--accent)" style={{ marginTop: 1, flex: 'none' }} />
                   <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, lineHeight: 1.45, color: 'var(--espresso)' }}>{suggestReason(t, goalLabels)}</span>
                 </div>
+                <button className="tap" onClick={e => { e.stopPropagation(); onOpen(t); }} style={{ marginTop: 11, width: '100%', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 14px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5 }}>Book now <Icon n="arrow-right" size={14} color="#fff" /></button>
               </div>
             </div>
           </div>
