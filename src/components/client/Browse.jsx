@@ -308,7 +308,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{sl.t.name}</div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>{sl.t.specs[0]} · {locName(sl.t.locId)}</div>
                   </div>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, color: 'var(--accent)', flex: 'none' }}>Open</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>Book</span>
                 </div>
               ))}
               {schedule.length === 0 && (
