@@ -70,6 +70,7 @@ const SESSION_TYPES = [
   { id: 'mat', name: 'Mobility', icon: 'wind', from: 900, blurb: 'Move well, far beyond the studio' },
   { id: 'foundations', name: 'Posture & Alignment', icon: 'move-vertical', from: 450, blurb: 'Where a strong practice begins' },
   { id: 'gyrotonic', name: '1:1 The GYROTONIC®', icon: 'orbit', from: 1000, blurb: 'Circular, flowing, full-body movement' },
+  { id: 'polestar', name: 'Polestar Mentoring', icon: 'compass', from: 1200, blurb: 'One-on-one mentoring in the Polestar method' },
 ];
 
 function BrowseTeacher({ t, onOpen }) {
