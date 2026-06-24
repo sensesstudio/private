@@ -38,9 +38,9 @@ function TeacherSkel() {
 function suggestReason(t, goalLabels) {
   const g = (goalLabels || []).join(' ').toLowerCase();
   if (t.specs.some(s => /rehab|reformer/i.test(s)) && /rehab|injury|posture|back/.test(g))
-    return "Specialises in the lower-back rehab you've been working on — a natural next step from your sessions with Élise.";
+    return "Specialises in the lower-back rehab you've been working on — a natural next step from your sessions with Hailey.";
   if (t.specs.some(s => /posture|align|found/i.test(s)))
-    return 'Posture & alignment focus matches your profile goals — good for the weeks Élise is fully booked.';
+    return 'Posture & alignment focus matches your profile goals — good for the weeks Hailey is fully booked.';
   if (t.specs.some(s => /restor|prenatal|breath/i.test(s)))
     return 'Restorative work to balance your strength sessions — pairs well with your current routine.';
   if (t.specs.some(s => /athletic|strength|mobil/i.test(s)))
