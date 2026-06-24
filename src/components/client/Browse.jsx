@@ -181,8 +181,8 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
             {SESSION_TYPES.map(s => (
               <div key={s.id} className="tap card-hover" onClick={embedded ? () => setSeg('Teachers') : onGate} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 15, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
-                <div onClick={e => e.stopPropagation()} style={{ width: '100%', height: 96, borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
-                  <image-slot id={'class-photo-' + s.id} style={{ display: 'block', width: '100%', height: '100%' }} shape="rect" fit="cover" placeholder={s.name} />
+                <div style={{ width: '100%', height: 96, borderRadius: 12, overflow: 'hidden', marginBottom: 12, position: 'relative', background: 'linear-gradient(135deg, var(--blush), var(--sand))' }}>
+                  <img src={`assets/needs/${s.id}.jpg`} alt={s.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', lineHeight: 1.2, minHeight: '2.4em', display: 'flex', alignItems: 'flex-start' }}>{s.name}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', margin: '6px 0 12px', lineHeight: 1.45, flex: 1 }}>{s.blurb}</div>
