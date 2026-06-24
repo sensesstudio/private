@@ -60,6 +60,8 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
   const remaining = Math.max(0, MILESTONE - SESSIONS_DONE);
   const pct = Math.min(100, Math.round((SESSIONS_DONE / MILESTONE) * 100));
   const [showFull, setShowFull] = useState(false);
+  const now = new Date();
+  const dateLabel = `${now.toLocaleDateString('en-HK', { weekday: 'long' })} · ${now.getDate()} ${now.toLocaleDateString('en-HK', { month: 'long' })}`;
   const firstName = (live && name) ? name.split(' ')[0] : 'Mara';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
 
@@ -67,7 +69,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
     <div style={{ padding: '8px 20px 28px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 4 }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>Monday · 15 June</div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>{dateLabel}</div>
           <h1 style={{ margin: '7px 0 0', lineHeight: 1 }}>
             <span style={{ fontFamily: 'var(--font-script)', fontSize: 38, color: 'var(--ink)' }}>Welcome,</span><br />
             <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--espresso)' }}>{firstName}</span>
