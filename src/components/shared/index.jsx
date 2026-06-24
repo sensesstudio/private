@@ -242,3 +242,25 @@ export function useLiveProgress(cId) {
   }, []);
   return cId ? _liveProgress.entries.filter(e => e.cId === cId) : _liveProgress.entries;
 }
+
+// Client session reviews — shared across portals (client writes, teacher & admin see).
+const _liveReviews = { items: [] };
+
+export function addReview(r) {
+  _liveReviews.items = [{ id: 'rev' + Date.now(), date: new Date().toISOString().slice(0, 10), ...r }, ..._liveReviews.items];
+  window.dispatchEvent(new CustomEvent('reviewchange'));
+}
+
+export function useLiveReviews(filter) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const h = () => force(x => x + 1);
+    window.addEventListener('reviewchange', h);
+    return () => window.removeEventListener('reviewchange', h);
+  }, []);
+  const all = _liveReviews.items;
+  if (!filter) return all;
+  if (filter.tId) return all.filter(r => r.tId === filter.tId);
+  if (filter.cId) return all.filter(r => r.cId === filter.cId);
+  return all;
+}

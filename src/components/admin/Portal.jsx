@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, Eyebrow, Button, Avatar, Card, Pill, Segmented, Modal, useVP, useLiveProgress, downloadCSV } from '../shared/index.jsx';
+import { Icon, Eyebrow, Button, Avatar, Card, Pill, Segmented, Modal, useVP, useLiveProgress, useLiveReviews, downloadCSV } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, APPLICANTS, REVENUE, PROGRESS_LOG, GOALS } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
@@ -250,6 +250,7 @@ function AdminClients() {
   useClientStore();
   const about = sel ? clientAbout(sel, getClientProfile(sel.id)) : null;
   const prog = progressFor(sel);
+  const cReviews = useLiveReviews().filter(r => sel && r.cId === sel.id); // reflections this client shared
 
   return (
     <div style={{ padding: mobile ? '20px 18px 28px' : '34px 40px 40px', maxWidth: 1040, margin: '0 auto' }}>
@@ -313,6 +314,22 @@ function AdminClients() {
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 5 }}>In their own words</div>
                     <p style={{ fontFamily: 'var(--font-serif)', fontSize: 15, lineHeight: 1.55, color: 'var(--espresso)', margin: 0, fontStyle: about.note === '—' ? 'normal' : 'italic' }}>{about.note === '—' ? 'No note provided.' : '"' + about.note + '"'}</p>
                   </div>
+                  {cReviews.length > 0 && (
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 8 }}>Session reflections</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {cReviews.map(r => { const rt = teacherById(r.tId); return (
+                          <div key={r.id} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 12, padding: '11px 13px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--espresso)' }}>{rt ? rt.name : 'Instructor'}</span>
+                              <span style={{ display: 'inline-flex', gap: 1 }}>{[1, 2, 3, 4, 5].map(i => <Icon key={i} n="star" size={12} color={i <= r.stars ? 'var(--accent)' : 'var(--linen)'} sw={0} style={{ fill: i <= r.stars ? 'var(--accent)' : 'var(--linen)' }} />)}</span>
+                            </div>
+                            {r.text && <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--taupe)', margin: '6px 0 0' }}>"{r.text}"</p>}
+                          </div>
+                        ); })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 prog.length === 0 ? <EmptyState icon="clipboard-list" title="No progress yet" body="Notes appear here once an instructor logs a session." /> : (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon, Eyebrow, Button, Avatar, Card, Stars, Segmented, Modal, SpecChips, useVP, addLiveProgress } from '../shared/index.jsx';
+import { Icon, Eyebrow, Button, Avatar, Card, Stars, Segmented, Modal, SpecChips, useVP, addLiveProgress, useLiveReviews } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, BOOKINGS, CLIENTS, LOCATIONS, EARNINGS } from '../../data.js';
 import { locName } from '../../data.js';
@@ -415,6 +415,7 @@ function TeacherProfile({ me, onLogout }) {
   const [studios, setStudios] = useState(me.locIds || [me.locId]);
   // Toggle a studio on/off; always keep at least one selected.
   const toggleStudio = (id) => setStudios(s => s.includes(id) ? (s.length > 1 ? s.filter(x => x !== id) : s) : [...s, id]);
+  const reviews = useLiveReviews({ tId: me.id }); // client reflections, live across portals
   return (
     <div style={{ padding: mobile ? '20px 18px 28px' : '34px 40px 40px', maxWidth: 760, margin: '0 auto' }}>
       <PageHead eyebrow="Public profile" title="Your profile" sub="This is what clients see when they match with you." />
@@ -461,6 +462,28 @@ function TeacherProfile({ me, onLogout }) {
         <div style={{ marginTop: 10 }}><SpecChips items={me.specs} accent /></div>
         <div style={{ ...labelMini, marginTop: 18 }}>Certifications</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 10 }}>{me.certs.map(c => <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13.5, color: 'var(--espresso)' }}><Icon n="check-circle-2" size={16} color="var(--accent)" /> {c}</div>)}</div>
+      </Card>
+      <Card pad={22} style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={labelMini}>Recent client reflections</div>
+          <Stars value={me.rating} reviews={me.reviews} size={12} />
+        </div>
+        {reviews.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', margin: '10px 0 0' }}>New reflections from your clients will appear here.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+            {reviews.map(r => (
+              <div key={r.id} style={{ background: 'var(--cream)', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ display: 'inline-flex', gap: 1 }}>{[1, 2, 3, 4, 5].map(i => <Icon key={i} n="star" size={13} color={i <= r.stars ? 'var(--accent)' : 'var(--linen)'} sw={0} style={{ fill: i <= r.stars ? 'var(--accent)' : 'var(--linen)' }} />)}</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)' }}>{new Date(r.date + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short' })}</span>
+                </div>
+                {r.text && <p style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--espresso)', margin: '7px 0 0', fontStyle: 'italic' }}>"{r.text}"</p>}
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, color: 'var(--taupe)', marginTop: 6 }}>{r.clientName}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
       <div style={{ display: 'flex', gap: 10 }}>
         <Button variant="accent" icon="check">Save changes</Button>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress } from '../shared/index.jsx';
+import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress, addReview } from '../shared/index.jsx';
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS, isTrial } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
 import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
@@ -286,9 +286,14 @@ function ClientBookings({ extra, onRate, live }) {
   );
 }
 
-function RatingSheet({ t, onClose }) {
+function RatingSheet({ t, onClose, clientName }) {
   const [n, setN] = useState(0);
+  const [text, setText] = useState('');
   const [done, setDone] = useState(false);
+  const share = () => {
+    addReview({ tId: t.id, cId: 'c1', clientName: clientName || 'A client', stars: n, text: text.trim() });
+    setDone(true);
+  };
   return (
     <div style={{ padding: '4px 24px 36px', textAlign: 'center' }}>
       {!done ? (
@@ -303,8 +308,8 @@ function RatingSheet({ t, onClose }) {
               </button>
             ))}
           </div>
-          <textarea placeholder="Add a few words (optional)" style={{ ...inputStyle, minHeight: 88, resize: 'none' }} />
-          <Button variant="accent" full size="lg" disabled={n === 0} onClick={() => setDone(true)} style={{ marginTop: 14 }}>Share reflection</Button>
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Add a few words (optional)" style={{ ...inputStyle, minHeight: 88, resize: 'none' }} />
+          <Button variant="accent" full size="lg" disabled={n === 0} onClick={share} style={{ marginTop: 14 }}>Share reflection</Button>
         </>
       ) : (
         <div style={{ padding: '30px 0 10px' }}>
@@ -888,7 +893,7 @@ export function ClientPortal() {
         }} />}
       </Sheet>
       <Sheet open={!!rating} onClose={() => setRating(null)} maxH="80%">
-        {rating && <RatingSheet t={rating} onClose={() => setRating(null)} />}
+        {rating && <RatingSheet t={rating} clientName={authName || 'Mara Whitfield'} onClose={() => setRating(null)} />}
       </Sheet>
       {showWaiver && <WaiverSheet signed={profile && profile.waiver} onClose={() => setShowWaiver(false)} onSigned={rec => { saveClientProfile('c1', { waiver: rec }); setShowWaiver(false); }} />}
     </>}>
