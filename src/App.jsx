@@ -18,6 +18,11 @@ const PORTALS = [
 
 const COMP = { client: ClientPortal, teacher: TeacherPortal, admin: AdminPortal };
 
+// CLIENT_ONLY hides the Teacher/Admin switcher so friends only see the student
+// portal. You can still reach the others by adding #teacher / #admin to the URL.
+// Set to false to show all three tabs again.
+const CLIENT_ONLY = true;
+
 const readHash = () => {
   const h = (location.hash || '#client').replace('#', '').split('/')[0];
   return COMP[h] ? h : 'client';
@@ -77,7 +82,7 @@ export default function App() {
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 8.5, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(245,239,234,.5)', marginTop: 2 }}>Body Strong · Mind Calm</div>
           </div>
         </div>
-        <PortalSwitch portal={portal} setPortal={go} />
+        {!CLIENT_ONLY && <PortalSwitch portal={portal} setPortal={go} />}
       </div>
       <div id="portal-root">
         <div key={portal} style={{ position: 'absolute', inset: 0 }}>
