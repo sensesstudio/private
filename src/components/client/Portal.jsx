@@ -866,7 +866,7 @@ export function ClientPortal() {
 
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} />,
-    Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
+    Search: <ClientBrowse embedded onOpen={openDetail} onGate={() => {}} />,
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,

@@ -76,7 +76,7 @@ function BrowseTeacher({ t, onOpen }) {
   );
 }
 
-export function ClientBrowse({ onGate, onOpen }) {
+export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   useSlots(); // reflect live slot availability
   const { mobile } = useVP();
   const [seg, setSeg] = useState('Schedule');
@@ -114,23 +114,33 @@ export function ClientBrowse({ onGate, onOpen }) {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 4px' }}>
-        <img src="assets/logo5-trim.png" alt="Senses Studio" style={{ height: 26 }} />
-        <button className="tap card-hover" onClick={onGate} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 18px', minHeight: 40, boxShadow: 'var(--shadow-md)' }}>Sign in</button>
-      </div>
+      {!embedded && (
+        <>
+          <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 4px' }}>
+            <img src="assets/logo5-trim.png" alt="Senses Studio" style={{ height: 26 }} />
+            <button className="tap card-hover" onClick={onGate} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 18px', minHeight: 40, boxShadow: 'var(--shadow-md)' }}>Sign in</button>
+          </div>
 
-      <div style={{ flex: 'none', padding: '8px 20px 0' }}>
-        <Eyebrow>Private Pilates · 5 studios · Hong Kong</Eyebrow>
-        <h1 style={{ margin: '10px 0 0', lineHeight: 1.06 }}>
-          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)' }}>Book your </span>
-          <span style={{ fontFamily: 'var(--font-script)', fontSize: 34, color: 'var(--taupe)' }}>private pilates</span>
-        </h1>
-        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 13, letterSpacing: '.14em', color: 'var(--taupe)', marginTop: 6 }}>私人普拉提課程</div>
-        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, lineHeight: 1.55, color: 'var(--taupe)', margin: '8px 0 0' }}>
-          Browse our instructors, sessions and live availability. Create an account only when you're ready to book.
-          <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--fg3)', lineHeight: 1.7 }}>瀏覽即時空檔，及即時確認預約。</span>
-        </p>
-      </div>
+          <div style={{ flex: 'none', padding: '8px 20px 0' }}>
+            <Eyebrow>Private Pilates · 5 studios · Hong Kong</Eyebrow>
+            <h1 style={{ margin: '10px 0 0', lineHeight: 1.06 }}>
+              <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)' }}>Book your </span>
+              <span style={{ fontFamily: 'var(--font-script)', fontSize: 34, color: 'var(--taupe)' }}>private pilates</span>
+            </h1>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 13, letterSpacing: '.14em', color: 'var(--taupe)', marginTop: 6 }}>私人普拉提課程</div>
+            <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, lineHeight: 1.55, color: 'var(--taupe)', margin: '8px 0 0' }}>
+              Browse our instructors, sessions and live availability. Create an account only when you're ready to book.
+              <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--fg3)', lineHeight: 1.7 }}>瀏覽即時空檔，及即時確認預約。</span>
+            </p>
+          </div>
+        </>
+      )}
+      {embedded && (
+        <div style={{ flex: 'none', padding: '8px 20px 0' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Find your instructor</h1>
+          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: 0 }}>By date, need, instructor or studio.</p>
+        </div>
+      )}
 
       <div style={{ flex: 'none', padding: '16px 20px 4px' }}>
         <Segmented options={['Schedule', 'Needs', 'Teachers', 'Studios']} value={seg} onChange={setSeg} style={{ display: 'flex', width: '100%' }} />
@@ -170,7 +180,7 @@ export function ClientBrowse({ onGate, onOpen }) {
         {seg === 'Needs' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
             {SESSION_TYPES.map(s => (
-              <div key={s.id} className="tap card-hover" onClick={onGate} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 15, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+              <div key={s.id} className="tap card-hover" onClick={embedded ? () => setSeg('Teachers') : onGate} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 15, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
                 <div onClick={e => e.stopPropagation()} style={{ width: '100%', height: 96, borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
                   <image-slot id={'class-photo-' + s.id} style={{ display: 'block', width: '100%', height: '100%' }} shape="rect" fit="cover" placeholder={s.name} />
                 </div>
@@ -185,7 +195,7 @@ export function ClientBrowse({ onGate, onOpen }) {
         {seg === 'Studios' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {LOCATIONS.map(l => (
-              <div key={l.id} className="tap card-hover" onClick={onGate} style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+              <div key={l.id} className="tap card-hover" onClick={embedded ? () => { setLocFilter(l.id); setSeg('Teachers'); } : onGate} style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
                 <div className={'app-ph ' + (l.sea ? 'sage' : '')} style={{ width: 52, height: 52, borderRadius: 14, flex: 'none', display: 'grid', placeItems: 'center' }}>
                   <Icon n={l.sea ? 'waves' : 'map-pin'} size={20} color="rgba(255,255,255,.95)" />
                 </div>
