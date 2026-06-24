@@ -175,7 +175,7 @@ export function PhoneFrame({ children, navBar, overlay }) {
       {navBar}
       <a href="https://wa.me/85298818081" target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp"
          style={{ position: 'absolute', right: 16, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 45, width: 52, height: 52, borderRadius: '50%', background: 'var(--espresso)', color: 'var(--cream)', display: 'grid', placeItems: 'center', boxShadow: 'var(--shadow-sm)', textDecoration: 'none' }}>
-        <svg width="27" height="27" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16.04 4C9.96 4 5 8.96 5 15.04c0 2.13.6 4.1 1.62 5.78L5 28l7.36-1.93a11 11 0 0 0 3.68.64h.01C22.13 26.71 27 21.75 27 15.67 27 9.6 22.12 4 16.04 4zm0 20.2c-1.18 0-2.34-.3-3.35-.88l-.24-.14-3.99 1.05 1.06-3.89-.16-.25a9.13 9.13 0 0 1-1.4-4.86c0-5.05 4.11-9.16 9.17-9.16 2.45 0 4.75.96 6.48 2.69a9.1 9.1 0 0 1 2.68 6.48c0 5.05-4.11 9.16-9.16 9.16zm5.03-6.86c-.27-.14-1.63-.8-1.88-.9-.25-.09-.43-.14-.61.14-.18.27-.7.9-.86 1.08-.16.18-.32.2-.59.07-.27-.14-1.16-.43-2.2-1.36-.81-.72-1.36-1.62-1.52-1.89-.16-.27-.02-.42.12-.55.12-.12.27-.32.4-.48.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.84-2.01-.22-.53-.44-.46-.61-.46-.16 0-.34-.02-.52-.02s-.48.07-.73.34c-.25.27-.96.94-.96 2.3s.98 2.66 1.12 2.85c.14.18 1.93 2.95 4.68 4.13.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.52-.08 1.63-.67 1.86-1.31.23-.64.23-1.19.16-1.31-.07-.12-.25-.18-.52-.32z"/></svg>
+        <Icon n="message-circle" size={24} color="var(--cream)" sw={2} />
       </a>
       {overlay}
     </div>
