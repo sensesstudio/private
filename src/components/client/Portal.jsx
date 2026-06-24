@@ -700,9 +700,6 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
               </div>
             ))}
           </div>
-          <button className="tap" onClick={() => setShowBookings(true)} style={{ width: '100%', marginTop: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '11px', minHeight: 44, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}>
-            All upcoming bookings{upcoming.length > 3 ? ` (${upcoming.length})` : ''} <Icon n="arrow-right" size={14} color="var(--accent)" />
-          </button>
         </div>
       )}
 
@@ -721,7 +718,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Upcoming bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -956,7 +953,7 @@ export function ClientPortal() {
             recordPayment('c1', { id: 'pay' + Date.now(), date: new Date().toISOString().slice(0, 10), desc: info.pkgName, credits: info.addCredits || 0, amount: info.amount, method: 'Visa ···· 8842' });
           }
           setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, status: 'confirmed' }, ...b]);
-          setBooking(null); setDetail(null); setTab('Bookings');
+          setBooking(null); setDetail(null); setTab('Profile');
         }} />}
       </Sheet>
       <Sheet open={!!rating} onClose={() => setRating(null)} maxH="80%">
