@@ -869,7 +869,7 @@ export function ClientPortal() {
   const nextClass = extraBookings[0] || demoUpcoming[0] || null;
 
   const screens = {
-    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} />,
+    Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} goTab={setTab} />,
     Search: <ClientBrowse embedded onOpen={openDetail} onGate={() => {}} />,
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,

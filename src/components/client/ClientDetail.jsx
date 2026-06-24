@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP, useLiveReviews } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, GOALS, PROGRESS_LOG, LOCATIONS } from '../../data.js';
@@ -11,6 +11,44 @@ import { useSlots, daysForTeacher, takeRandomOpen } from '../../slots.js';
 import { inputStyle } from '../../styles.js';
 
 export function sortByMatch(arr) { return [...arr].sort((a, b) => b.match - a.match); }
+
+// Home promo slides — edit freely. `tab` is where the CTA goes; `img` loads from
+// assets/promos (gradient `ph` shows until a photo is added).
+const PROMOS = [
+  { id: 'promo1', eyebrow: 'Opening offer', title: 'Your first session, your way', text: 'Try a private 1:1 or semi-private 1:2 with any instructor.', cta: 'Book a trial', tab: 'Search', img: 'assets/promos/promo1.jpg', ph: 'blush' },
+  { id: 'promo2', eyebrow: 'Best value', title: '10-class packs', text: 'Save across all five studios — credits never tied to one place.', cta: 'See pricing', tab: 'Pricing', img: 'assets/promos/promo2.jpg', ph: 'sage' },
+  { id: 'promo3', eyebrow: 'Five studios', title: 'One pass, all of Hong Kong', text: 'Central · Causeway Bay · Quarry Bay · Kwun Tong · Lai Chi Kok.', cta: 'Explore studios', tab: 'Locations', img: 'assets/promos/promo3.jpg', ph: 'almond' },
+];
+
+function PromoHero({ goTab }) {
+  const [i, setI] = useState(0);
+  const startX = useRef(0);
+  useEffect(() => {
+    const iv = setInterval(() => setI(v => (v + 1) % PROMOS.length), 5000);
+    return () => clearInterval(iv);
+  }, []);
+  const onStart = e => { startX.current = e.touches[0].clientX; };
+  const onEnd = e => { const dx = e.changedTouches[0].clientX - startX.current; if (Math.abs(dx) > 40) setI(v => (v + (dx < 0 ? 1 : PROMOS.length - 1)) % PROMOS.length); };
+  return (
+    <div onTouchStart={onStart} onTouchEnd={onEnd} style={{ marginTop: 18, position: 'relative', height: 168, borderRadius: 22, overflow: 'hidden', background: 'var(--espresso)' }}>
+      {PROMOS.map((p, idx) => (
+        <div key={p.id} className={'app-ph ' + p.ph} style={{ position: 'absolute', inset: 0, opacity: idx === i ? 1 : 0, pointerEvents: idx === i ? 'auto' : 'none', transition: 'opacity .5s var(--ease)' }}>
+          <img src={p.img} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, rgba(58,50,44,.78) 0%, rgba(58,50,44,.45) 60%, rgba(58,50,44,.25) 100%)' }} />
+          <div style={{ position: 'relative', height: '100%', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '82%' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--blush)' }}>{p.eyebrow}</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 21, color: 'var(--cream)', margin: '5px 0 4px', lineHeight: 1.15 }}>{p.title}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'rgba(250,247,243,.9)', lineHeight: 1.45, marginBottom: 12 }}>{p.text}</div>
+            <button className="tap" onClick={() => goTab && goTab(p.tab)} style={{ alignSelf: 'flex-start', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--cream)', color: 'var(--espresso)', border: 'none', borderRadius: 999, padding: '8px 15px', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12 }}>{p.cta} <Icon n="arrow-right" size={13} color="var(--espresso)" /></button>
+          </div>
+        </div>
+      ))}
+      <div style={{ position: 'absolute', bottom: 11, right: 16, display: 'flex', gap: 5 }}>
+        {PROMOS.map((_, d) => <button key={d} className="tap" onClick={() => setI(d)} aria-label={`Slide ${d + 1}`} style={{ width: d === i ? 18 : 6, height: 6, borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer', background: d === i ? 'var(--cream)' : 'rgba(250,247,243,.5)', transition: 'width .3s' }} />)}
+      </div>
+    </div>
+  );
+}
 
 function EmptyState({ icon, title, body, action }) {
   return (
@@ -50,7 +88,7 @@ function suggestReason(t, goalLabels) {
   return 'A strong fit for your goals and schedule, with openings this week.';
 }
 
-export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass }) {
+export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, goTab }) {
   const ranked = sortByMatch(TEACHERS);
   const top = ranked[0];
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
@@ -79,6 +117,8 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass })
         </div>
         <Avatar t={{ initials, ph: 'almond' }} size={46} />
       </div>
+
+      <PromoHero goTab={goTab} />
 
       {nextClass && (
         <div className="tap card-hover" onClick={() => onOpen(nextClass.t)} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
