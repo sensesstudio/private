@@ -515,9 +515,67 @@ function WaiverSheet({ onClose, onSigned, signed }) {
   );
 }
 
+function PrefToggle({ on, onChange }) {
+  return (
+    <button type="button" className="tap" onClick={onChange} aria-pressed={on} style={{ flex: 'none', width: 46, height: 28, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 3, background: on ? 'var(--accent)' : 'var(--linen)', transition: 'background .2s' }}>
+      <span style={{ display: 'block', width: 22, height: 22, borderRadius: 999, background: '#fff', boxShadow: 'var(--shadow-sm)', transform: on ? 'translateX(18px)' : 'translateX(0)', transition: 'transform .2s var(--ease)' }} />
+    </button>
+  );
+}
+
+function PreferencesSheet({ onClose }) {
+  const prof = getClientProfile('c1') || {};
+  const [phone, setPhone] = useState(prof.phone || '');
+  const [email, setEmail] = useState(prof.email || '');
+  const [channel, setChannel] = useState(prof.channel || 'whatsapp');
+  const [notify, setNotify] = useState(prof.notify || { reminders: true, availability: false, promos: false });
+  const [saved, setSaved] = useState(false);
+  const flip = k => setNotify(n => ({ ...n, [k]: !n[k] }));
+  const save = () => { saveClientProfile('c1', { phone, email, channel, notify }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  const rows = [
+    ['reminders', 'Booking reminders', 'Confirmations and a nudge before each session'],
+    ['availability', 'Class availability alerts', 'When a favourite instructor opens new slots'],
+    ['promos', 'Promotions & news', 'Occasional offers and studio updates'],
+  ];
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+        <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)' }}>Preferences</div>
+      </div>
+      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '18px 18px 28px' }}>
+        <div style={labelMini}>Contact details</div>
+        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: '5px 0 12px' }}>So we can confirm bookings and reach you on WhatsApp.</p>
+        <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="Phone (e.g. +852 9123 4567)" style={{ ...inputStyle, marginBottom: 10 }} />
+        <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email address" style={inputStyle} />
+
+        <div style={{ ...labelMini, marginTop: 24 }}>Notify me by</div>
+        <Segmented options={[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'Email' }]} value={channel} onChange={setChannel} style={{ marginTop: 10, width: '100%', display: 'flex' }} />
+
+        <div style={{ ...labelMini, marginTop: 24 }}>Notifications</div>
+        <div style={{ background: 'var(--ivory)', borderRadius: 18, border: '1px solid var(--border-soft)', overflow: 'hidden', marginTop: 10 }}>
+          {rows.map(([k, title, sub], i) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '15px 16px', borderBottom: i < rows.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{title}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', marginTop: 2 }}>{sub}</div>
+              </div>
+              <PrefToggle on={!!notify[k]} onChange={() => flip(k)} />
+            </div>
+          ))}
+        </div>
+
+        <Button variant="accent" full size="lg" onClick={save} icon={saved ? 'check' : 'save'} style={{ marginTop: 22 }}>{saved ? 'Saved' : 'Save preferences'}</Button>
+        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '12px 0 0', lineHeight: 1.5 }}>Reminders are sent via WhatsApp through SleekFlow once enabled.</p>
+      </div>
+    </div>
+  );
+}
+
 function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -568,7 +626,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', null, null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -578,6 +636,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       </div>
       {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
       {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
+      {showPrefs && <PreferencesSheet onClose={() => setShowPrefs(false)} />}
     </div>
   );
 }
