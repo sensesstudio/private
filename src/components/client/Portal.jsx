@@ -883,6 +883,12 @@ function ClientPricing({ onBook, onBuy, purchased = [], live = false, onNeedAuth
               <Icon n="check-circle-2" size={15} color="var(--accent)" />
               <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--espresso)' }}>{p.credits === '∞' ? 'Unlimited private sessions' : (p.credits + (p.credits === 1 ? ' private session' : ' private sessions'))}</span>
             </div>
+            {p.validityMonths && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+                <Icon n="calendar-clock" size={15} color="var(--taupe)" />
+                <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12.5, color: 'var(--taupe)' }}>Valid for {p.validityMonths} month{p.validityMonths > 1 ? 's' : ''} from purchase</span>
+              </div>
+            )}
             {onBuy && (
               <button className="tap" onClick={() => buy(p.id)} disabled={buying === p.id} style={{ marginTop: 14, width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13.5, padding: '12px', minHeight: 46, borderRadius: 12, border: 'none', background: p.format === '1:2' ? 'var(--terracotta)' : 'var(--accent)', color: '#fff', opacity: buying === p.id ? 0.6 : 1 }}>
                 {!live ? 'Sign in to buy' : (buying === p.id ? 'Starting checkout…' : `Buy · ${hkd(p.price)}`)}
