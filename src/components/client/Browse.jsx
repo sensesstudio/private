@@ -73,6 +73,11 @@ const SESSION_TYPES = [
   { id: 'polestar', name: 'Polestar Mentoring', icon: 'compass', from: 1200, blurb: 'One-on-one mentoring in the Polestar method' },
 ];
 
+// Rank a teacher by how soon they're free (lower = sooner), from their `soon`
+// label e.g. "Free now · 6:30pm" / "Opens tomorrow · 10:00".
+const _soonMins = (s) => { const m = (s || '').match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i); if (!m) return 9999; let h = +m[1]; const mi = +m[2]; const ap = (m[3] || '').toLowerCase(); if (ap === 'pm' && h !== 12) h += 12; if (ap === 'am' && h === 12) h = 0; return h * 60 + mi; };
+const soonRank = (t) => { const s = (t.soon || '').toLowerCase(); const base = s.includes('now') ? 0 : s.includes('today') ? 1 : (s.includes('tomorrow') || s.includes('opens')) ? 2 : 3; return base * 10000 + _soonMins(t.soon); };
+
 function BrowseTeacher({ t, onOpen }) {
   const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
   return (
@@ -115,6 +120,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
       if (sort === 'price') return b.rate - a.rate;
+      if (sort === 'soon') return soonRank(a) - soonRank(b);
       return b.match - a.match;
     });
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -182,6 +188,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
               <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <select value={sort} onChange={e => setSort(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 34px 9px 14px', boxShadow: 'var(--shadow-sm)' }}>
                   <option value="match">Top match</option>
+                  <option value="soon">Available earliest</option>
                   <option value="name">Name A–Z</option>
                   <option value="price">Price: high to low</option>
                 </select>
