@@ -170,7 +170,6 @@ export function ClientHome({ onOpen, goSearch, answers, name, live }) {
             <span className="live-dot" />
             <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 22, color: 'var(--espresso)', margin: 0, whiteSpace: 'nowrap' }}>Available now</h2>
           </div>
-          <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11, color: 'var(--fg3)', flex: 'none' }}>Book at your call</span>
         </div>
         <div className="screen-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -20px', padding: '0 20px 6px' }}>
           {ranked.filter(t => t.online).map(t => {
