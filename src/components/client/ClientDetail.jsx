@@ -193,7 +193,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, g
         <button className="tap" onClick={goSearch} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>See all</button>
       </div>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Icon n="sparkles" size={13} color="var(--accent)" /> Based on your goals, history & profile · available this week
+        <Icon n="sparkles" size={13} color="var(--accent)" /> Based on your goals, favourites & profile · available this week
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {suggested.map(t => (
@@ -209,8 +209,8 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, g
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)' }}><span className="live-dot" />{t.soon.replace('Free ', '')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 10, background: 'var(--accent-tint)', borderRadius: 11, padding: '8px 10px' }}>
-                  <Icon n="sparkles" size={12} color="var(--accent)" style={{ marginTop: 1, flex: 'none' }} />
-                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, lineHeight: 1.45, color: 'var(--espresso)' }}>{suggestReason(t, goalLabels)}</span>
+                  <Icon n={favSet.includes(t.id) ? 'heart' : 'sparkles'} size={12} color="var(--accent)" sw={favSet.includes(t.id) ? 0 : 1.6} style={{ marginTop: 1, flex: 'none', fill: favSet.includes(t.id) ? 'var(--accent)' : 'none' }} />
+                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, lineHeight: 1.45, color: 'var(--espresso)' }}>{favSet.includes(t.id) ? 'One of your favourites — book again.' : suggestReason(t, goalLabels)}</span>
                 </div>
                 <button className="tap" onClick={e => { e.stopPropagation(); onOpen(t); }} style={{ marginTop: 11, width: '100%', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 14px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5 }}>Book now <Icon n="arrow-right" size={14} color="#fff" /></button>
               </div>
