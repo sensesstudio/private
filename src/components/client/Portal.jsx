@@ -7,6 +7,7 @@ import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientSt
 import { useStudios } from '../../supabase/useReference.js';
 import { isSupabaseConfigured } from '../../supabase/client.js';
 import * as db from '../../supabase/queries.js';
+import { signOut } from '../../supabase/auth.js';
 import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
@@ -514,7 +515,7 @@ function WaiverSheet({ onClose, onSigned, signed }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live }) {
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
@@ -567,7 +568,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', null, null], ['log-out', 'Sign out', null, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', null, null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -679,8 +680,12 @@ function ClientPricing({ onBook, onBuy, purchased = [] }) {
   );
 }
 
+// GUEST_MODE lets people try the full app without signing in — they land
+// straight in the client app (demo data). Set to false to require login again.
+const GUEST_MODE = true;
+
 export function ClientPortal() {
-  const [stage, setStage] = useState('browse');
+  const [stage, setStage] = useState(GUEST_MODE ? 'app' : 'browse');
   const [tab, setTab] = useState('Home');
   const [answers, setAnswers] = useState({ age: '25–34', goals: ['rehab', 'posture'], level: 'some', injury: ['Lower back'], schedule: ['am'], location: ['central'] });
   const [detail, setDetail] = useState(null);
@@ -724,6 +729,12 @@ export function ClientPortal() {
   const openDetail = t => setDetail(t);
   const startBooking = (t, day, slot) => { if (!slot) return; setBooking({ t, day, slot }); };
   const goSearch = () => { setTab('Search'); setSearchLoading(true); setTimeout(() => setSearchLoading(false), 900); };
+  // Sign out (if signed in) or open the login screen (from guest mode).
+  const handleAuth = () => {
+    if (live && isSupabaseConfigured) signOut().catch(() => {});
+    setAuthUserId(null); setAuthName(''); setPurchased([]); setCredits(7);
+    setTab('Home'); setStage('login');
+  };
 
   if (stage === 'browse') {
     const gate = () => setStage('login');
@@ -763,7 +774,7 @@ export function ClientPortal() {
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} />,
   };
 
   return (
