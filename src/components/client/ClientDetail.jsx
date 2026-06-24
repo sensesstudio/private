@@ -282,8 +282,8 @@ export function TeacherDetail({ t, onClose, onBook }) {
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ position: 'relative' }}>
         <div style={{ position: 'relative', height: mobile ? 230 : 240 }}>
-          <image-slot id={'teacher-photo-' + t.id} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} shape="rect" fit="cover" placeholder="Drop instructor photo" />
-          <div className={'app-ph ' + (t.ph || '')} style={{ position: 'absolute', inset: 0, zIndex: -1 }} />
+          <div className={'app-ph ' + (t.ph || '')} style={{ position: 'absolute', inset: 0 }} />
+          {t.photo && <img src={t.photo} alt={t.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 28%' }} />}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(58,50,44,.3) 0%, transparent 35%, rgba(58,50,44,.55) 100%)' }} />
           <button className="tap" onClick={onClose} style={{ position: 'absolute', top: 16, left: 16, width: 42, height: 42, borderRadius: 999, background: 'rgba(250,247,243,.92)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 5 }}><Icon n={mobile ? 'chevron-down' : 'x'} size={20} color="var(--espresso)" /></button>
           <button className="tap" style={{ position: 'absolute', top: 16, right: 16, width: 42, height: 42, borderRadius: 999, background: 'rgba(250,247,243,.92)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 5 }}><Icon n="heart" size={19} color="var(--terracotta)" /></button>

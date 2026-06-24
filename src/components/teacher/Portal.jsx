@@ -420,8 +420,8 @@ function TeacherProfile({ me, onLogout }) {
       <PageHead eyebrow="Public profile" title="Your profile" sub="This is what clients see when they match with you." />
       <Card pad={0} style={{ overflow: 'hidden', marginBottom: 18 }}>
         <div style={{ position: 'relative', height: 150 }}>
-          <image-slot id="teacher-self-photo" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} shape="rect" fit="cover" placeholder="Drop your profile photo" />
-          <div className={'app-ph ' + me.ph} style={{ position: 'absolute', inset: 0, zIndex: -1 }} />
+          <div className={'app-ph ' + me.ph} style={{ position: 'absolute', inset: 0 }} />
+          {me.photo && <img src={me.photo} alt={me.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />}
         </div>
         <div style={{ padding: 22, marginTop: -44, position: 'relative' }}>
           <Avatar t={me} size={80} radius={20} style={{ border: '4px solid var(--ivory)' }} />

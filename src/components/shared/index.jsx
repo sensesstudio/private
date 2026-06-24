@@ -91,6 +91,11 @@ export function Avatar({ t, size = 56, radius, style = {} }) {
         fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: size * 0.34,
         color: 'rgba(255,255,255,.92)', letterSpacing: '.02em', textShadow: '0 1px 4px rgba(58,50,44,.25)',
       }}>{t.initials}</span>
+      {t.photo && (
+        <img src={t.photo} alt={t.name || ''} loading="lazy"
+          onError={e => { e.currentTarget.style.display = 'none'; }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      )}
     </div>
   );
 }

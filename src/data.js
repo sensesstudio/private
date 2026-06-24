@@ -78,6 +78,7 @@ TEACHERS.forEach(t => {
   t.soon = _SOON[t.id];
   t.reasons = _REASONS[t.id];
   t.locIds = t.locIds || [t.locId]; // studios this teacher works at (defaults to their primary)
+  t.photo = t.photo || `assets/teachers/${t.id}.jpg`; // portrait; falls back to initials if absent
   t.online = ['t1', 't2', 't4', 't5'].includes(t.id);
   t.responds = t.online ? 'Replies in minutes' : 'Replies within the hour';
 });
