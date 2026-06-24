@@ -608,10 +608,49 @@ function PreferencesSheet({ onClose }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, upcoming = [] }) {
+function UpcomingSheet({ upcoming = [], onClose, onCancel, onReschedule }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
+        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
+        <div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1 }}>Upcoming bookings</div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>{upcoming.length} booked</div>
+        </div>
+      </div>
+      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '16px 18px 28px' }}>
+        {upcoming.length === 0 ? (
+          <EmptyState icon="calendar-x" title="No upcoming bookings" body="When you book a private session it will appear here." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            {upcoming.map((b, idx) => (
+              <div key={b.id + idx} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                  <Avatar t={b.t} size={50} radius={14} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+                  <button className="tap" onClick={() => onReschedule && onReschedule(b.t)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}><Icon n="calendar-clock" size={14} color="var(--accent)" /> Reschedule</button>
+                  <button className="tap" onClick={() => onCancel && onCancel(b.id)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--ivory)', border: '1px solid var(--terracotta)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)' }}><Icon n="x" size={14} color="var(--terracotta)" /> Cancel</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '16px 0 0', lineHeight: 1.5 }}>Free cancellation up to 24 hours before your session.</p>
+      </div>
+    </div>
+  );
+}
+
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, upcoming = [], onCancelBooking, onReschedule }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [showBookings, setShowBookings] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -651,7 +690,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, ...labelMini, marginBottom: 10 }}><Icon n="bell" size={12} color="var(--accent)" /> {upcoming.length > 1 ? 'Upcoming bookings' : 'Next booking'}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {upcoming.map((b, idx) => (
+            {upcoming.slice(0, 3).map((b, idx) => (
               <div key={b.id + idx} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
                 <Avatar t={b.t} size={46} radius={13} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -661,6 +700,9 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
               </div>
             ))}
           </div>
+          <button className="tap" onClick={() => setShowBookings(true)} style={{ width: '100%', marginTop: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '11px', minHeight: 44, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}>
+            All upcoming bookings{upcoming.length > 3 ? ` (${upcoming.length})` : ''} <Icon n="arrow-right" size={14} color="var(--accent)" />
+          </button>
         </div>
       )}
 
@@ -690,6 +732,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
       {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
       {showPrefs && <PreferencesSheet onClose={() => setShowPrefs(false)} />}
+      {showBookings && <UpcomingSheet upcoming={upcoming} onClose={() => setShowBookings(false)} onCancel={onCancelBooking} onReschedule={t => { setShowBookings(false); onReschedule && onReschedule(t); }} />}
     </div>
   );
 }
@@ -806,6 +849,7 @@ export function ClientPortal() {
   const [rating, setRating] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [extraBookings, setExtraBookings] = useState([]);
+  const [cancelled, setCancelled] = useState([]); // booking ids the client cancelled
   const [credits, setCredits] = useState(7);
   const [showWaiver, setShowWaiver] = useState(false);
   const [authUserId, setAuthUserId] = useState(null); // real Supabase user id when signed in for real
@@ -883,9 +927,9 @@ export function ClientPortal() {
 
   const fmtClassDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' });
   const demoUpcoming = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'confirmed').slice().sort((a, b) => a.date.localeCompare(b.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time }));
-  const upcomingAll = [...extraBookings, ...demoUpcoming];
+  const upcomingAll = [...extraBookings, ...demoUpcoming].filter(b => !cancelled.includes(b.id));
   const nextClass = upcomingAll[0] || null;       // Home: just the next one
-  const upcomingClasses = upcomingAll.slice(0, 3); // Profile: up to 3
+  const cancelBooking = (id) => { setCancelled(c => [...c, id]); setExtraBookings(b => b.filter(x => x.id !== id)); };
 
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} goTab={setTab} />,
@@ -893,7 +937,7 @@ export function ClientPortal() {
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} upcoming={upcomingClasses} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} upcoming={upcomingAll} onCancelBooking={cancelBooking} onReschedule={openDetail} />,
   };
 
   return (
