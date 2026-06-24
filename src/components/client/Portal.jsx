@@ -608,7 +608,7 @@ function PreferencesSheet({ onClose }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth }) {
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, nextClass }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
@@ -646,6 +646,17 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
         </div>
         <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, opacity: .7 }}>Valid through Dec 2026 · use at any studio</div>
       </div>
+
+      {nextClass && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)', marginBottom: 18 }}>
+          <Avatar t={nextClass.t} size={46} radius={13} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)' }}><Icon n="bell" size={12} color="var(--accent)" /> Next booking</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', marginTop: 3, lineHeight: 1.1 }}>{nextClass.t.name}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{nextClass.dayLabel} · {nextClass.slotTime} · {locName(nextClass.t.locId)}</div>
+          </div>
+        </div>
+      )}
 
       {goalLabels.length > 0 && (
         <div style={{ marginBottom: 18 }}>
@@ -874,7 +885,7 @@ export function ClientPortal() {
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} nextClass={nextClass} />,
   };
 
   return (

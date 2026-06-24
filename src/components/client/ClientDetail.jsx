@@ -30,12 +30,12 @@ function PromoHero({ goTab }) {
   const onStart = e => { startX.current = e.touches[0].clientX; };
   const onEnd = e => { const dx = e.changedTouches[0].clientX - startX.current; if (Math.abs(dx) > 40) setI(v => (v + (dx < 0 ? 1 : PROMOS.length - 1)) % PROMOS.length); };
   return (
-    <div onTouchStart={onStart} onTouchEnd={onEnd} style={{ marginTop: 18, position: 'relative', height: 168, borderRadius: 22, overflow: 'hidden', background: 'var(--espresso)' }}>
+    <div onTouchStart={onStart} onTouchEnd={onEnd} style={{ marginTop: 18, position: 'relative', height: 190, borderRadius: 22, overflow: 'hidden', background: 'var(--espresso)' }}>
       {PROMOS.map((p, idx) => (
         <div key={p.id} className={'app-ph ' + p.ph} style={{ position: 'absolute', inset: 0, opacity: idx === i ? 1 : 0, pointerEvents: idx === i ? 'auto' : 'none', transition: 'opacity .5s var(--ease)' }}>
           <img src={p.img} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, rgba(58,50,44,.78) 0%, rgba(58,50,44,.45) 60%, rgba(58,50,44,.25) 100%)' }} />
-          <div style={{ position: 'relative', height: '100%', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '82%' }}>
+          <div style={{ position: 'relative', height: '100%', padding: '20px 20px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, maxWidth: '84%' }}>
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--blush)' }}>{p.eyebrow}</div>
             <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 21, color: 'var(--cream)', margin: '5px 0 4px', lineHeight: 1.15 }}>{p.title}</div>
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'rgba(250,247,243,.9)', lineHeight: 1.45, marginBottom: 12 }}>{p.text}</div>
