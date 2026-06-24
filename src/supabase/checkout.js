@@ -9,8 +9,15 @@ export async function startCheckout(packageId) {
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     body: { packageId, origin: window.location.origin },
   });
-  if (error || !data?.url) {
-    return { ok: false, error: error?.message || data?.error || 'Could not start checkout' };
+  if (error) {
+    // supabase-js wraps non-2xx in FunctionsHttpError; pull the function's own
+    // JSON { error } message out of the Response for a useful alert.
+    let msg = error.message || 'Could not start checkout';
+    try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch { /* keep msg */ }
+    return { ok: false, error: msg };
+  }
+  if (!data?.url) {
+    return { ok: false, error: data?.error || 'Could not start checkout' };
   }
   window.location.href = data.url; // off to Stripe
   return { ok: true };

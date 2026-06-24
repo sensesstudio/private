@@ -627,12 +627,13 @@ function ClientLocations() {
   );
 }
 
-function ClientPricing({ onBook, onBuy, purchased = [] }) {
+function ClientPricing({ onBook, onBuy, purchased = [], live = false, onNeedAuth }) {
   const [buying, setBuying] = useState(null);
   const [fmt, setFmt] = useState('1:1');
   // Hide a trial once the customer has already bought it (one-time per format).
   const list = PACKAGES.filter(p => p.format === fmt && !(isTrial(p.id) && purchased.includes(p.id)));
   const buy = async (id) => {
+    if (!live) { onNeedAuth?.(); return; } // guests: sign in before buying
     if (!onBuy) return;
     setBuying(id);
     const res = await onBuy(id);
@@ -665,7 +666,7 @@ function ClientPricing({ onBook, onBuy, purchased = [] }) {
             </div>
             {onBuy && (
               <button className="tap" onClick={() => buy(p.id)} disabled={buying === p.id} style={{ marginTop: 14, width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13.5, padding: '12px', minHeight: 46, borderRadius: 12, border: 'none', background: p.format === '1:2' ? 'var(--terracotta)' : 'var(--accent)', color: '#fff', opacity: buying === p.id ? 0.6 : 1 }}>
-                {buying === p.id ? 'Starting checkout…' : `Buy · ${hkd(p.price)}`}
+                {!live ? 'Sign in to buy' : (buying === p.id ? 'Starting checkout…' : `Buy · ${hkd(p.price)}`)}
               </button>
             )}
           </div>
@@ -771,7 +772,7 @@ export function ClientPortal() {
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} />,
     Search: <ClientSearch onOpen={openDetail} loading={searchLoading} />,
-    Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} />,
+    Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
     Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} />,
