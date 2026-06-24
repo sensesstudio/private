@@ -10,7 +10,7 @@ export const LOCATIONS = [
 
 export const TEACHERS = [
   {
-    id: 't1', name: 'Élise Wong', initials: 'ÉW', ph: '',
+    id: 't1', name: 'Hailey Saw', initials: 'HS', ph: '',
     headline: 'Reformer & rehabilitation',
     specs: ['Reformer', 'Injury rehab', 'Posture'],
     rate: 580, locId: 'central', locIds: ['central', 'cwb'], exp: 9, rating: 4.9, reviews: 212, match: 96,
@@ -21,7 +21,7 @@ export const TEACHERS = [
     nextAvail: 'Tomorrow · 7:00 AM',
   },
   {
-    id: 't2', name: 'Marin Cheng', initials: 'MC', ph: 'sage',
+    id: 't2', name: 'Minna Ho', initials: 'MH', ph: 'sage',
     headline: 'Contemporary & athletic pilates',
     specs: ['Reformer', 'Athletic', 'Strength'],
     rate: 520, locId: 'cwb', exp: 6, rating: 4.8, reviews: 148, match: 91,
@@ -32,7 +32,7 @@ export const TEACHERS = [
     nextAvail: 'Today · 6:30 PM',
   },
   {
-    id: 't3', name: 'Noor Rahman', initials: 'NR', ph: 'almond',
+    id: 't3', name: 'Evanne Lame', initials: 'EL', ph: 'almond',
     headline: 'Pre / postnatal & restorative',
     specs: ['Prenatal', 'Restorative', 'Breathwork'],
     rate: 540, locId: 'qb', exp: 8, rating: 4.9, reviews: 176, match: 88,
@@ -43,7 +43,7 @@ export const TEACHERS = [
     nextAvail: 'Thu · 10:00 AM',
   },
   {
-    id: 't4', name: 'Aya Tanaka', initials: 'AT', ph: 'taupe',
+    id: 't4', name: 'Vesta Ko', initials: 'VK', ph: 'taupe',
     headline: 'Mat, mobility & conditioning',
     specs: ['Mat', 'Mobility', 'Conditioning'],
     rate: 480, locId: 'kt', exp: 5, rating: 4.7, reviews: 94, match: 84,
@@ -54,7 +54,7 @@ export const TEACHERS = [
     nextAvail: 'Tomorrow · 12:15 PM',
   },
   {
-    id: 't5', name: 'Sasha Lai', initials: 'SL', ph: 'blush',
+    id: 't5', name: 'Stacey Gim', initials: 'SG', ph: 'blush',
     headline: 'Foundations & alignment',
     specs: ['Foundations', 'Alignment', 'Beginners'],
     rate: 450, locId: 'lck', exp: 4, rating: 4.8, reviews: 67, match: 79,
