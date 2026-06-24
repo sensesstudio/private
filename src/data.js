@@ -32,7 +32,7 @@ export const TEACHERS = [
     nextAvail: 'Today · 6:30 PM',
   },
   {
-    id: 't3', name: 'Evanne Lame', initials: 'EL', ph: 'almond',
+    id: 't3', name: 'Evanne Lam', initials: 'EL', ph: 'almond',
     headline: 'Pre / postnatal & restorative',
     specs: ['Prenatal', 'Restorative', 'Breathwork'],
     rate: 950, locId: 'qb', exp: 8, rating: 4.9, reviews: 176, match: 88,
