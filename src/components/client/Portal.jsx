@@ -858,7 +858,7 @@ export function ClientPortal() {
     );
   }
   if (stage === 'login') {
-    return <PhoneFrame><ClientLogin onBack={() => setStage('browse')} onBrowse={() => { setTab('Home'); setStage('browse'); }} onSignIn={(uid, isNew) => { if (uid) setAuthUserId(uid); setTab('Home'); setStage(isNew ? 'intake' : 'app'); }} /></PhoneFrame>;
+    return <PhoneFrame><ClientLogin onBack={() => { setTab('Home'); setStage('app'); }} onBrowse={() => { setTab('Search'); setStage('app'); }} onSignIn={(uid, isNew) => { if (uid) setAuthUserId(uid); setTab('Home'); setStage(isNew ? 'intake' : 'app'); }} /></PhoneFrame>;
   }
   if (stage === 'intake') {
     return <PhoneFrame><Intake answers={answers} setAnswers={setAnswers} onBack={() => setStage('login')} onDone={() => { saveClientProfile('c1', answers); if (isSupabaseConfigured && authUserId) db.saveClientProfile(authUserId, answers).catch(e => console.warn('Supabase profile save failed', e)); setStage('app'); setTab('Home'); }} /></PhoneFrame>;
