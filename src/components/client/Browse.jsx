@@ -84,6 +84,8 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const [monthOff, setMonthOff] = useState(0);
   const [sort, setSort] = useState('match');
   const [locFilter, setLocFilter] = useState('any');
+  const [schedLoc, setSchedLoc] = useState('any');
+  const [schedTeacher, setSchedTeacher] = useState('any');
   const teachers = [...TEACHERS]
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
     .sort((a, b) => {
@@ -109,8 +111,10 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const schedule = openSlotsForDay(day + monthOff)
     .filter(s => { perTeacher[s.teacherId] = (perTeacher[s.teacherId] || 0) + 1; return perTeacher[s.teacherId] <= 2; })
     .map(s => ({ t: teacherById(s.teacherId), time: s.time }))
+    .filter(x => x.t && (schedLoc === 'any' || (x.t.locIds || [x.t.locId]).includes(schedLoc)) && (schedTeacher === 'any' || x.t.id === schedTeacher))
     .sort((a, b) => a.time.localeCompare(b.time))
     .slice(0, 14);
+  const schedSelectStyle = { width: '100%', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 30px 10px 14px', minHeight: 42 };
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
@@ -219,6 +223,22 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                 <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', minWidth: 116, textAlign: 'center' }}>{MONTHS[mIdx]} {mYear}</span>
                 <button className="tap" onClick={() => goMonth(1)} disabled={monthOff >= 11} style={{ width: 32, height: 32, borderRadius: 999, display: 'grid', placeItems: 'center', cursor: monthOff >= 11 ? 'not-allowed' : 'pointer', background: 'var(--ivory)', border: '1px solid var(--border)', opacity: monthOff >= 11 ? .4 : 1 }}><Icon n="chevron-right" size={16} color="var(--espresso)" /></button>
               </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <label style={{ position: 'relative', flex: 1, display: 'inline-flex' }}>
+                <select value={schedLoc} onChange={e => setSchedLoc(e.target.value)} style={schedSelectStyle}>
+                  <option value="any">All studios</option>
+                  {LOCATIONS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+                <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              </label>
+              <label style={{ position: 'relative', flex: 1, display: 'inline-flex' }}>
+                <select value={schedTeacher} onChange={e => setSchedTeacher(e.target.value)} style={schedSelectStyle}>
+                  <option value="any">All instructors</option>
+                  {TEACHERS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              </label>
             </div>
             <div className="screen-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 16px', padding: '0 20px 4px' }}>
               {daysList.map((d, i) => {
