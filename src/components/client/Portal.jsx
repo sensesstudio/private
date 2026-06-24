@@ -608,7 +608,7 @@ function PreferencesSheet({ onClose }) {
   );
 }
 
-function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, nextClass }) {
+function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name, live, onAuth, upcoming = [] }) {
   const [showLog, setShowLog] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
@@ -647,13 +647,19 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
         <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, opacity: .7 }}>Valid through Dec 2026 · use at any studio</div>
       </div>
 
-      {nextClass && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)', marginBottom: 18 }}>
-          <Avatar t={nextClass.t} size={46} radius={13} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)' }}><Icon n="bell" size={12} color="var(--accent)" /> Next booking</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', marginTop: 3, lineHeight: 1.1 }}>{nextClass.t.name}</div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{nextClass.dayLabel} · {nextClass.slotTime} · {locName(nextClass.t.locId)}</div>
+      {upcoming.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, ...labelMini, marginBottom: 10 }}><Icon n="bell" size={12} color="var(--accent)" /> {upcoming.length > 1 ? 'Upcoming bookings' : 'Next booking'}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {upcoming.map((b, idx) => (
+              <div key={b.id + idx} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+                <Avatar t={b.t} size={46} radius={13} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -877,7 +883,9 @@ export function ClientPortal() {
 
   const fmtClassDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' });
   const demoUpcoming = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'confirmed').slice().sort((a, b) => a.date.localeCompare(b.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time }));
-  const nextClass = extraBookings[0] || demoUpcoming[0] || null;
+  const upcomingAll = [...extraBookings, ...demoUpcoming];
+  const nextClass = upcomingAll[0] || null;       // Home: just the next one
+  const upcomingClasses = upcomingAll.slice(0, 3); // Profile: up to 3
 
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} goTab={setTab} />,
@@ -885,7 +893,7 @@ export function ClientPortal() {
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
-    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} nextClass={nextClass} />,
+    Profile: <ClientProfile answers={answers} credits={credits} onRestart={() => setStage('intake')} onWaiver={() => setShowWaiver(true)} waiver={profile && profile.waiver} name={authName} live={live} onAuth={handleAuth} upcoming={upcomingClasses} />,
   };
 
   return (
