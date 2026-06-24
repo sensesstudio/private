@@ -836,7 +836,7 @@ function ClientLocations() {
             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Senses Studio ' + l.name + ', ' + l.address)}`}
                target="_blank" rel="noopener noreferrer" className="tap"
                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, textDecoration: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--accent)' }}>
-              <Icon n="map-pin" size={14} color="var(--accent)" /> Directions
+              <Icon n="map-pin" size={14} color="var(--accent)" /> Google Map
             </a>
             </div>
           </div>
