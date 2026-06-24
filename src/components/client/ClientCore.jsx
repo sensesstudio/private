@@ -9,15 +9,15 @@ import { isSupabaseConfigured } from '../../supabase/client.js';
 import { signIn, signUpClient } from '../../supabase/auth.js';
 
 export function ClientNav({ tab, setTab }) {
-  const items = [['home', 'Home'], ['search', 'Search'], ['tag', 'Pricing'], ['map-pin', 'Locations'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
+  const items = [['home', 'Home'], ['calendar-plus', 'Search', 'Book'], ['tag', 'Pricing'], ['map-pin', 'Locations'], ['calendar-check', 'Bookings'], ['user', 'Profile']];
   return (
     <div style={{ flex: 'none', background: 'rgba(250,247,243,.94)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border)', padding: '10px 8px calc(10px + env(safe-area-inset-bottom)) 8px', display: 'flex', justifyContent: 'space-around', zIndex: 40 }}>
-      {items.map(([ic, label]) => {
-        const on = tab === label;
+      {items.map(([ic, key, label]) => {
+        const on = tab === key;
         return (
-          <button key={label} className="tap" onClick={() => setTab(label)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '6px 6px', minWidth: 0, flex: 1, minHeight: 48, color: on ? 'var(--accent)' : 'var(--fg3)' }}>
+          <button key={key} className="tap" onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '6px 6px', minWidth: 0, flex: 1, minHeight: 48, color: on ? 'var(--accent)' : 'var(--fg3)' }}>
             <Icon n={ic} size={22} sw={on ? 2.2 : 1.7} />
-            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: on ? 600 : 400, fontSize: 10, letterSpacing: '.04em' }}>{label}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: on ? 600 : 400, fontSize: 10, letterSpacing: '.04em' }}>{label || key}</span>
           </button>
         );
       })}
