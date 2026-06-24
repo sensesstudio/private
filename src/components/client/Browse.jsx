@@ -113,8 +113,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
-      if (sort === 'rating') return b.rating - a.rating;
-      if (sort === 'price') return a.rate - b.rate;
+      if (sort === 'price') return b.rate - a.rate;
       return b.match - a.match;
     });
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -183,8 +182,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                 <select value={sort} onChange={e => setSort(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 34px 9px 14px', boxShadow: 'var(--shadow-sm)' }}>
                   <option value="match">Top match</option>
                   <option value="name">Name A–Z</option>
-                  <option value="rating">Top rated</option>
-                  <option value="price">Price: low to high</option>
+                  <option value="price">Price: high to low</option>
                 </select>
                 <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, pointerEvents: 'none' }} />
               </label>
