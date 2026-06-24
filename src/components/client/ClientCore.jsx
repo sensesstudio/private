@@ -173,6 +173,14 @@ function FindingMatch() {
   );
 }
 
+// Goal-specific follow-up prompts — shown when the matching goal is selected so
+// the instructor knows the specifics (which knee, which area) before class.
+const GOAL_DETAILS = [
+  { id: 'rehab', key: 'rehabDetail', label: 'About your injury', ph: 'Where, and what happened? e.g. left knee — ACL repair 6 months ago; avoid deep bending.' },
+  { id: 'strength', key: 'strengthDetail', label: 'Strength focus', ph: 'Any target areas? e.g. core & lower back for posture; legs for hiking.' },
+  { id: 'posture', key: 'postureDetail', label: 'Posture & alignment', ph: 'What feels off? e.g. rounded shoulders and a tight neck from desk work.' },
+];
+
 export function Intake({ onDone, onBack, answers, setAnswers }) {
   const { mobile } = useVP();
   const [finding, setFinding] = useState(false);
@@ -201,7 +209,17 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
 
   const steps = [
     { key: 'goals', title: 'What brings you to the mat?', sub: "Choose all that feel true — we'll weight your matches around them.",
-      render: () => <div style={tileGrid()}>{GOALS.map(g => <OptionTile key={g.id} label={g.label} icon={g.icon} multi on={(answers.goals || []).includes(g.id)} onClick={() => toggle('goals', g.id)} />)}</div> },
+      render: () => (
+        <div>
+          <div style={tileGrid()}>{GOALS.map(g => <OptionTile key={g.id} label={g.label} icon={g.icon} multi on={(answers.goals || []).includes(g.id)} onClick={() => toggle('goals', g.id)} />)}</div>
+          {GOAL_DETAILS.filter(g => (answers.goals || []).includes(g.id)).map(g => (
+            <div key={g.key} style={{ marginTop: 14 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 7 }}>{g.label}</div>
+              <textarea value={answers[g.key] || ''} onChange={e => setOne(g.key, e.target.value)} placeholder={g.ph} style={{ ...inputStyle, minHeight: 70, resize: 'none', lineHeight: 1.5 }} />
+            </div>
+          ))}
+        </div>
+      ) },
     { key: 'age', title: 'A little about you', sub: 'Your age range helps us tailor a safe, suitable practice.',
       render: () => <div style={tileGrid()}>{['Under 25', '25–34', '35–44', '45–54', '55+'].map(a => <OptionTile key={a} label={a} on={answers.age === a} onClick={() => setOne('age', a)} />)}</div> },
     { key: 'level', title: 'Where are you in your practice?', sub: 'So we pair you with the right pace and patience.',
@@ -231,7 +249,7 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
           </div>
         );
       } },
-    { key: 'notes', title: 'In your own words', sub: "Anything else about your goals or what you're hoping for? Optional.",
+    { key: 'notes', title: 'What should your instructor know?', sub: 'The more specific, the better they can tailor your sessions — and you won’t need to re-explain to each instructor.',
       render: () => {
         const words = (answers.notes || '').trim() ? (answers.notes || '').trim().split(/\s+/).length : 0;
         return (
@@ -239,7 +257,7 @@ export function Intake({ onDone, onBack, answers, setAnswers }) {
             <textarea value={answers.notes || ''} onChange={e => {
               const w = e.target.value.trim() ? e.target.value.trim().split(/\s+/) : [];
               if (w.length <= 100) setOne('notes', e.target.value); else setOne('notes', w.slice(0, 100).join(' '));
-            }} placeholder="e.g. I'd love to feel stronger for hiking, and ease the tension in my shoulders from desk work…" style={{ ...inputStyle, minHeight: 150, resize: 'none', lineHeight: 1.55 }} />
+            }} placeholder="e.g. Recovering from a left-knee ACL repair — want to rebuild leg strength without deep bending. Also tight lower back &amp; shoulders from desk work. Prefer a calm, hands-on style." style={{ ...inputStyle, minHeight: 150, resize: 'none', lineHeight: 1.55 }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: words > 100 ? 'var(--terracotta)' : 'var(--fg3)' }}>{words} / 100 words</div>
           </div>
         );
