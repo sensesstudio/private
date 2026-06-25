@@ -71,6 +71,7 @@ const SESSION_TYPES = [
   { id: 'foundations', name: 'Posture & Alignment', icon: 'move-vertical', from: 450, level: 1, blurb: 'Where a strong practice begins' },
   { id: 'gyrotonic', name: '1:1 The GYROTONIC®', icon: 'orbit', from: 1000, level: 3, blurb: 'Circular, flowing, full-body movement' },
   { id: 'polestar', name: 'Polestar Mentoring', icon: 'compass', from: 1200, level: 5, blurb: 'One-on-one mentoring in the Polestar method' },
+  { id: 'stott', name: 'STOTT Method', icon: 'ruler', from: 900, level: 2, blurb: 'Anatomically precise contemporary Pilates' },
 ];
 
 // Rank a teacher by how soon they're free (lower = sooner), from their `soon`
