@@ -406,7 +406,7 @@ function AdminTeachers() {
           <div>
             <div style={{ position: 'relative', height: 130 }}>
               <div className={'app-ph ' + (sel.ph || '')} style={{ position: 'absolute', inset: 0, borderTopLeftRadius: 26, borderTopRightRadius: 26 }} />
-              {sel.photo && <img src={sel.photo} alt={sel.name} onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%', borderTopLeftRadius: 26, borderTopRightRadius: 26 }} />
+              {sel.photo && <img src={sel.photo} alt={sel.name} onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%', borderTopLeftRadius: 26, borderTopRightRadius: 26 }} />}
               <button className="tap" onClick={() => setSel(null)} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 999, background: 'rgba(250,247,243,.9)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Icon n="x" size={17} color="var(--espresso)" /></button>
             </div>
             <div style={{ padding: '18px 24px 26px' }}>
