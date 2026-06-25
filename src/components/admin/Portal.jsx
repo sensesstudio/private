@@ -348,8 +348,13 @@ function AdminClients() {
                           <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', whiteSpace: 'nowrap' }}>Session {num}</span>
                           <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', whiteSpace: 'nowrap' }}>{new Date(p.date + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', marginBottom: 6 }}>{p.focus}</div>
+                        {p.focus && <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', marginBottom: 6 }}>{p.focus}</div>}
+                        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 3 }}>Session notes</div>
                         <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--taupe)', margin: 0 }}>{p.note}</p>
+                        {p.posture && <>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '8px 0 3px' }}>Posture record</div>
+                          <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--taupe)', margin: 0 }}>{p.posture}</p>
+                        </>}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 9 }}><Avatar t={t} size={22} radius={7} /><span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--fg3)' }}>{t.name}</span></div>
                       </div>
                     ); })}

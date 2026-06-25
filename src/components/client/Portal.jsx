@@ -355,14 +355,17 @@ function ProgressLog({ onClose }) {
                       </span>
                       <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', whiteSpace: 'nowrap', flex: 'none' }}>{new Date(p.date + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 4 }}>Focus area</div>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.25 }}>{p.focus}</div>
-                    </div>
-                    <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '11px 13px', marginBottom: 12 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 5 }}>Instructor's comment</div>
+                    {p.focus && <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.25, margin: '0 0 12px' }}>{p.focus}</div>}
+                    <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '11px 13px', marginBottom: 10 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 5 }}>Session notes</div>
                       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, lineHeight: 1.55, color: 'var(--espresso)', margin: 0 }}>{p.note}</p>
                     </div>
+                    {p.posture && (
+                      <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '11px 13px', marginBottom: 12 }}>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', marginBottom: 5 }}>Posture record</div>
+                        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, lineHeight: 1.55, color: 'var(--espresso)', margin: 0 }}>{p.posture}</p>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                       <Avatar t={t} size={26} radius={8} />
                       <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--taupe)' }}>{t.name} · {locName(t.locId)}</span>

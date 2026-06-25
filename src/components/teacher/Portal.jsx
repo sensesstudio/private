@@ -298,13 +298,14 @@ function TeacherSessions({ me }) {
   const [logged, setLogged] = useState({});
   const [note, setNote] = useState('');
   const [focus, setFocus] = useState('');
+  const [posture, setPosture] = useState('');
   const [toast, setToast] = useState(null);
   const all = BOOKINGS.filter(b => b.tId === me.id);
   const list = tab === 'Upcoming' ? all.filter(b => b.status === 'confirmed') : all.filter(b => b.status !== 'confirmed');
 
-  const openLog = (b, c) => { setNote(''); setFocus(''); setLogFor({ b, c }); };
+  const openLog = (b, c) => { setNote(''); setFocus(''); setPosture(''); setLogFor({ b, c }); };
   const saveLog = () => {
-    addLiveProgress({ cId: logFor.c.id, tId: me.id, focus: focus.trim() || (logFor.c.goal || 'Session'), note: note.trim() });
+    addLiveProgress({ cId: logFor.c.id, tId: me.id, focus: focus.trim() || undefined, note: note.trim(), posture: posture.trim() || undefined });
     setLogged(l => ({ ...l, [logFor.b.id]: true }));
     setToast(`Progress saved — ${logFor.c.name.split(' ')[0]} can see it now`);
     setLogFor(null);
@@ -357,10 +358,12 @@ function TeacherSessions({ me }) {
               </div>
             </div>
             <div style={{ marginBottom: 16 }}><SafetyStrip clientId={logFor.c.id} /></div>
-            <div style={labelMini}>Focus area</div>
+            <div style={labelMini}>Session focus <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--fg3)' }}>(optional)</span></div>
             <input value={focus} onChange={e => setFocus(e.target.value)} placeholder="e.g. Lower-back mobility & core control" style={{ ...inputStyle, marginTop: 8, marginBottom: 14 }} />
-            <div style={labelMini}>Instructor's comment</div>
-            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Focus, wins, form cues, what to progress next time…" style={{ ...inputStyle, minHeight: 110, resize: 'none', marginTop: 8 }} />
+            <div style={labelMini}>Session notes 每堂備註</div>
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Wins, form cues, what to progress next time…" style={{ ...inputStyle, minHeight: 90, resize: 'none', marginTop: 8, marginBottom: 14 }} />
+            <div style={labelMini}>Posture record 體態記錄</div>
+            <textarea value={posture} onChange={e => setPosture(e.target.value)} placeholder="Alignment observations — pelvis, spine, shoulders, asymmetries…" style={{ ...inputStyle, minHeight: 80, resize: 'none', marginTop: 8 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>
               <Icon n="eye" size={13} color="var(--accent)" /> Shared instantly to {logFor.c.name.split(' ')[0]}'s progress log
             </div>
