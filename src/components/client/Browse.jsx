@@ -74,6 +74,19 @@ const SESSION_TYPES = [
   { id: 'stott', name: 'STOTT Method', icon: 'ruler', from: 900, level: 2, blurb: 'Anatomically precise contemporary Pilates' },
 ];
 
+// Maps a Need filter to keywords matched against a teacher's specs/headline/certs.
+const NEED_KW = {
+  reformer: /rehab|reformer|injur/i,
+  contemporary: /strength|core|athletic|contempor/i,
+  prenatal: /prenatal|postnatal|restor|natal|breath/i,
+  mat: /mobil|\bmat\b|conditioning/i,
+  foundations: /posture|align|foundation|beginner/i,
+  gyrotonic: /gyroton/i,
+  polestar: /polestar/i,
+  stott: /stott/i,
+};
+const LANG_OPTS = ['Cantonese', 'English', 'Mandarin'];
+
 // Rank a teacher by how soon they're free (lower = sooner), from their `soon`
 // label e.g. "Free now · 6:30pm" / "Opens tomorrow · 10:00".
 const _soonMins = (s) => { const m = (s || '').match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i); if (!m) return 9999; let h = +m[1]; const mi = +m[2]; const ap = (m[3] || '').toLowerCase(); if (ap === 'pm' && h !== 12) h += 12; if (ap === 'am' && h === 12) h = 0; return h * 60 + mi; };
@@ -108,11 +121,14 @@ function BrowseTeacher({ t, onOpen }) {
 export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   useSlots(); // reflect live slot availability
   const { mobile } = useVP();
-  const [seg, setSeg] = useState('Schedule');
+  const [seg, setSeg] = useState(embedded ? 'Find instructor' : 'Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
   const [sort, setSort] = useState('match');
   const [locFilter, setLocFilter] = useState('any');
+  const [q, setQ] = useState('');          // teacher name search
+  const [fLang, setFLang] = useState('any'); // medium of instruction
+  const [fNeed, setFNeed] = useState('any'); // need / focus
   const [schedLoc, setSchedLoc] = useState('any');
   const [schedTeacher, setSchedTeacher] = useState('any');
   const [studioView, setStudioView] = useState(null); // a studio drilled into under Studios
@@ -121,7 +137,10 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
     ? openSlotsForDay(0).map(s => ({ t: teacherById(s.teacherId), time: s.time })).filter(x => x.t && (x.t.locIds || [x.t.locId]).includes(studioView)).sort((a, b) => a.time.localeCompare(b.time))
     : [];
   const teachers = [...TEACHERS]
+    .filter(t => q === '' || (t.name + ' ' + t.headline + ' ' + t.specs.join(' ')).toLowerCase().includes(q.toLowerCase()))
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
+    .filter(t => fLang === 'any' || (t.langs || []).includes(fLang))
+    .filter(t => fNeed === 'any' || (NEED_KW[fNeed] || /$^/).test([...(t.specs || []), t.headline, ...(t.certs || [])].join(' ')))
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
       if (sort === 'price') return b.rate - a.rate;
@@ -182,14 +201,39 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
       )}
 
       <div style={{ flex: 'none', padding: '16px 20px 4px' }}>
-        <Segmented options={['Schedule', 'Needs', 'Teachers', 'Studios']} value={seg} onChange={setSeg} style={{ display: 'flex', width: '100%' }} />
+        <Segmented options={embedded ? ['Find instructor', 'By date'] : ['Schedule', 'Needs', 'Teachers', 'Studios']} value={seg} onChange={setSeg} style={{ display: 'flex', width: '100%' }} />
       </div>
 
       <div style={{ flex: 1, padding: '14px 20px 16px' }}>
-        {seg === 'Teachers' && (
+        {(seg === 'Teachers' || seg === 'Find instructor') && (
           <>
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <Icon n="search" size={17} color="var(--fg3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search instructor name…" style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--ink)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px 12px 40px', outline: 'none' }} />
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '0 0 7px' }}>Studio</div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 14px', padding: '0 20px 4px' }} className="screen-scroll">
+              {[{ id: 'any', name: 'All' }, ...LOCATIONS].map(l => {
+                const on = locFilter === l.id;
+                return <button key={l.id} className="tap" onClick={() => setLocFilter(l.id)} style={{ flex: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, padding: '8px 14px', minHeight: 38, borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--taupe)', whiteSpace: 'nowrap' }}>{l.name}</button>;
+              })}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '0 0 7px' }}>Language</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {['any', ...LANG_OPTS].map(l => {
+                const on = fLang === l;
+                return <button key={l} className="tap" onClick={() => setFLang(l)} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, padding: '8px 14px', minHeight: 38, borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--taupe)' }}>{l === 'any' ? 'Any' : l}</button>;
+              })}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '0 0 7px' }}>Need</div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 14px', padding: '0 20px 4px' }} className="screen-scroll">
+              {[{ id: 'any', name: 'Any' }, ...SESSION_TYPES].map(n => {
+                const on = fNeed === n.id;
+                return <button key={n.id} className="tap" onClick={() => setFNeed(n.id)} style={{ flex: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, padding: '8px 14px', minHeight: 38, borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--taupe)', whiteSpace: 'nowrap' }}>{n.name}</button>;
+              })}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
-              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)' }}>{teachers.length} instructors</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)' }}>{teachers.length} instructor{teachers.length === 1 ? '' : 's'}</span>
               <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <select value={sort} onChange={e => setSort(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 34px 9px 14px', boxShadow: 'var(--shadow-sm)' }}>
                   <option value="match">Top match</option>
@@ -200,14 +244,8 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                 <Icon n="chevron-down" size={15} color="var(--taupe)" style={{ position: 'absolute', right: 12, pointerEvents: 'none' }} />
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 14px', padding: '0 20px 4px' }} className="screen-scroll">
-              {[{ id: 'any', name: 'All studios' }, ...LOCATIONS].map(l => {
-                const on = locFilter === l.id;
-                return <button key={l.id} className="tap" onClick={() => setLocFilter(l.id)} style={{ flex: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.04em', padding: '9px 15px', minHeight: 40, borderRadius: 999, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'), background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--taupe)', whiteSpace: 'nowrap' }}>{l.name}</button>;
-              })}
-            </div>
             {teachers.length === 0 ? (
-              <EmptyState icon="search-x" title="No instructors at this studio yet" body="Try another studio — we're adding teachers across all five locations." />
+              <EmptyState icon="search-x" title="No instructors match" body="Try fewer filters, a different studio, or clear the search." />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {teachers.map(t => (
@@ -297,7 +335,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
           </div>
         )}
 
-        {seg === 'Schedule' && (
+        {(seg === 'Schedule' || seg === 'By date') && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--accent)' }}>
