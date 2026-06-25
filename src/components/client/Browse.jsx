@@ -63,7 +63,7 @@ function HeroCarousel() {
   );
 }
 
-const SESSION_TYPES = [
+export const SESSION_TYPES = [
   { id: 'reformer', name: 'Rehab', icon: 'activity', from: 900, level: 1, blurb: 'Spring-loaded precision, clinical care' },
   { id: 'contemporary', name: 'Core & Strength', icon: 'flame', from: 900, level: 4, blurb: 'Dynamic, strength-building flow' },
   { id: 'prenatal', name: 'Pre / Postnatal & Restore', icon: 'flower-2', from: 900, level: 1, blurb: 'Gentle, intelligent, strengthening' },
@@ -75,7 +75,7 @@ const SESSION_TYPES = [
 ];
 
 // Maps a Need filter to keywords matched against a teacher's specs/headline/certs.
-const NEED_KW = {
+export const NEED_KW = {
   reformer: /rehab|reformer|injur/i,
   contemporary: /strength|core|athletic|contempor/i,
   prenatal: /prenatal|postnatal|restor|natal|breath/i,

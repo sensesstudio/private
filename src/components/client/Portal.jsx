@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PhoneFrame, Sheet, Icon, Button, Avatar, Pill, Segmented, hkd, useLiveProgress, addReview, useFavs, toggleFav } from '../shared/index.jsx';
 import { PACKAGES, BOOKINGS, CLIENTS, PROGRESS_LOG, GOALS, LOCATIONS, isTrial } from '../../data.js';
 import { locName, teacherById } from '../../data.js';
-import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft } from '../../slots.js';
+import { useSlots, holdSlot, releaseSlot, bookSlot, slotById, holdSecondsLeft, daysForTeacher } from '../../slots.js';
 import { saveClientProfile, isDeclarationComplete, getClientProfile, useClientStore, intakeStatus, recordPayment, setClientCredits } from '../../clientStore.js';
 import { useStudios } from '../../supabase/useReference.js';
 import { isSupabaseConfigured } from '../../supabase/client.js';
@@ -14,6 +14,7 @@ import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styl
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
 import { ClientHome, ClientSearch, TeacherDetail, EmptyState, sortByMatch } from './ClientDetail.jsx';
+import { ChatAssistant } from './ChatAssistant.jsx';
 import { MatchBadge } from '../shared/index.jsx';
 
 function PayOption({ id, method, setMethod, icon, label, note }) {
@@ -965,6 +966,13 @@ export function ClientPortal() {
 
   const openDetail = t => setDetail(t);
   const startBooking = (t, day, slot) => { if (!slot) return; setBooking({ t, day, slot }); };
+  // From the Ask assistant: rebuild the concrete day/slot and open the booking flow.
+  const openSlotFromChat = (teacherId, dayIdx, time) => {
+    const t = teacherById(teacherId);
+    const day = daysForTeacher(teacherId)[dayIdx];
+    const slot = day && day.slots.find(s => s.time === time && s.status === 'open');
+    if (t && slot) startBooking(t, day, slot);
+  };
   const goSearch = () => { setTab('Search'); setSearchLoading(true); setTimeout(() => setSearchLoading(false), 900); };
   // Sign out (if signed in) or open the login screen (from guest mode).
   const handleAuth = () => {
@@ -983,6 +991,7 @@ export function ClientPortal() {
     const publicScreens = {
       Home: <ClientBrowse onGate={gate} onOpen={openDetail} />,
       Search: <ClientBrowse onGate={gate} onOpen={openDetail} />,
+      Ask: <ChatAssistant onPickSlot={() => gate()} />,
       Pricing: <ClientPricing onBook={gate} onBuy={isSupabaseConfigured ? (() => { setStage('login'); }) : undefined} />,
       Locations: <ClientLocations />,
       Bookings: gateScreen('calendar-check', 'Sign in to see bookings'),
@@ -1016,6 +1025,7 @@ export function ClientPortal() {
   const screens = {
     Home: <ClientHome answers={answers} onOpen={openDetail} goSearch={goSearch} name={authName} live={live} nextClass={nextClass} goTab={setTab} />,
     Search: <ClientBrowse embedded onOpen={openDetail} onGate={() => {}} />,
+    Ask: <ChatAssistant onPickSlot={openSlotFromChat} />,
     Pricing: <ClientPricing onBook={goSearch} onBuy={isSupabaseConfigured ? startCheckout : undefined} purchased={purchased} live={live} onNeedAuth={() => setStage('login')} />,
     Locations: <ClientLocations />,
     Bookings: <ClientBookings extra={extraBookings} onRate={setRating} live={live} />,
