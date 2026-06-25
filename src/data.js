@@ -118,9 +118,9 @@ export const SCHEDULES = [
   { id: 'wknd', label: 'Weekends',      note: 'Sat & Sun' },
 ];
 export const LEVELS = [
-  { id: 'new',  label: 'New to pilates',  note: 'Just beginning' },
-  { id: 'some', label: 'Some experience', note: 'A handful of sessions' },
-  { id: 'exp',  label: 'Experienced',     note: 'A regular practice' },
+  { id: 'new',  label: 'New to pilates',  note: 'First time – under 5 sessions' },
+  { id: 'some', label: 'Some experience', note: 'Around 10–20 sessions' },
+  { id: 'exp',  label: 'Experienced',     note: '20+ sessions · practising weekly' },
 ];
 
 export const CLIENTS = [
