@@ -367,10 +367,7 @@ export function TeacherDetail({ t, onClose, onBook }) {
           </div>
         </div>
 
-        <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 18, lineHeight: 1.55, color: 'var(--espresso)', margin: '16px 0 4px' }}>{t.bio}</p>
-        <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--taupe)', margin: '0 0 18px', fontStyle: 'italic' }}>"{t.style}"</p>
-
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 18, marginTop: 18 }}>
           <div><div style={labelMini}>Specialisations</div><SpecChips items={t.specs} accent /></div>
         </div>
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 8 }}>
