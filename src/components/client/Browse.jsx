@@ -64,13 +64,13 @@ function HeroCarousel() {
 }
 
 const SESSION_TYPES = [
-  { id: 'reformer', name: 'Rehab', icon: 'activity', from: 900, blurb: 'Spring-loaded precision, clinical care' },
-  { id: 'contemporary', name: 'Core & Strength', icon: 'flame', from: 900, blurb: 'Dynamic, strength-building flow' },
-  { id: 'prenatal', name: 'Pre / Postnatal & Restore', icon: 'flower-2', from: 900, blurb: 'Gentle, intelligent, strengthening' },
-  { id: 'mat', name: 'Mobility', icon: 'wind', from: 900, blurb: 'Move well, far beyond the studio' },
-  { id: 'foundations', name: 'Posture & Alignment', icon: 'move-vertical', from: 450, blurb: 'Where a strong practice begins' },
-  { id: 'gyrotonic', name: '1:1 The GYROTONIC®', icon: 'orbit', from: 1000, blurb: 'Circular, flowing, full-body movement' },
-  { id: 'polestar', name: 'Polestar Mentoring', icon: 'compass', from: 1200, blurb: 'One-on-one mentoring in the Polestar method' },
+  { id: 'reformer', name: 'Rehab', icon: 'activity', from: 900, level: 1, blurb: 'Spring-loaded precision, clinical care' },
+  { id: 'contemporary', name: 'Core & Strength', icon: 'flame', from: 900, level: 4, blurb: 'Dynamic, strength-building flow' },
+  { id: 'prenatal', name: 'Pre / Postnatal & Restore', icon: 'flower-2', from: 900, level: 1, blurb: 'Gentle, intelligent, strengthening' },
+  { id: 'mat', name: 'Mobility', icon: 'wind', from: 900, level: 2, blurb: 'Move well, far beyond the studio' },
+  { id: 'foundations', name: 'Posture & Alignment', icon: 'move-vertical', from: 450, level: 1, blurb: 'Where a strong practice begins' },
+  { id: 'gyrotonic', name: '1:1 The GYROTONIC®', icon: 'orbit', from: 1000, level: 3, blurb: 'Circular, flowing, full-body movement' },
+  { id: 'polestar', name: 'Polestar Mentoring', icon: 'compass', from: 1200, level: 5, blurb: 'One-on-one mentoring in the Polestar method' },
 ];
 
 // Rank a teacher by how soon they're free (lower = sooner), from their `soon`
@@ -239,7 +239,13 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                   <img src={`assets/needs/${s.id}.jpg`} alt={s.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', lineHeight: 1.2, minHeight: '2.4em', display: 'flex', alignItems: 'flex-start' }}>{s.name}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', margin: '6px 0 12px', lineHeight: 1.45, flex: 1 }}>{s.blurb}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', margin: '6px 0 10px', lineHeight: 1.45, flex: 1 }}>{s.blurb}</div>
+                {s.level && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)' }}>Level</span>
+                    <span style={{ display: 'inline-flex', gap: 1 }}>{[1, 2, 3, 4, 5].map(i => <Icon key={i} n="star" size={11} color={i <= s.level ? 'var(--accent)' : 'var(--linen)'} sw={0} style={{ fill: i <= s.level ? 'var(--accent)' : 'var(--linen)' }} />)}</span>
+                  </div>
+                )}
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11.5, color: 'var(--accent)' }}>from {hkd(s.from)}/hr</div>
               </div>
             ))}
