@@ -36,6 +36,7 @@ function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onCon
   const [stage, setStage] = useState('review');
   const [pkg, setPkg] = useState('p11-10');
   const [method, setMethod] = useState('apple');
+  const [editCard, setEditCard] = useState(false); // show new-card fields only on request
   const [format, setFormat] = useState('1:1');
   const [mode, setMode] = useState(credits > 0 ? 'credit' : 'buy');
   const [, tick] = useState(0);
@@ -191,13 +192,18 @@ function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onCon
             <PayOption id="card" method={method} setMethod={setMethod} icon="credit-card" label="Credit / debit card" note="Visa ···· 8842" />
           </div>
           {method === 'card' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
-              <input placeholder="Card number" style={inputStyle} />
-              <div style={{ display: 'flex', gap: 9 }}>
-                <input placeholder="MM / YY" style={inputStyle} />
-                <input placeholder="CVC" style={inputStyle} />
+            editCard ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
+                <input placeholder="Card number" style={inputStyle} />
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <input placeholder="MM / YY" style={inputStyle} />
+                  <input placeholder="CVC" style={inputStyle} />
+                </div>
+                <button className="tap" onClick={() => setEditCard(false)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--taupe)' }}>Use saved card (Visa ···· 8842)</button>
               </div>
-            </div>
+            ) : (
+              <button className="tap" onClick={() => setEditCard(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}><Icon n="credit-card" size={14} color="var(--accent)" /> Change credit card</button>
+            )
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 14, fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>
             <Icon n="lock" size={13} color="var(--fg3)" /> Secured by Stripe · cancel free up to 24h before
