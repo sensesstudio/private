@@ -371,6 +371,7 @@ function AdminClients() {
 
 function AdminTeachers() {
   const { mobile } = useVP();
+  const [sel, setSel] = useState(null);
   const rows = TEACHERS.map(t => ({ t, done: BOOKINGS.filter(b => b.tId === t.id && b.status === 'completed').length }));
   const exportXls = () => downloadCSV('senses-teachers.csv',
     ['Name', 'Focus', 'Studio', 'Rate (HKD/hr)', 'Rating', 'Reviews', 'Experience (yrs)', 'Completed sessions'],
@@ -385,7 +386,7 @@ function AdminTeachers() {
             <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>{['Instructor', 'Focus', 'Studio', 'Rate', 'Rating', 'Sessions', 'Status'].map((h, hi) => <th key={hi} style={{ textAlign: ['Rate', 'Rating', 'Sessions'].includes(h) ? 'right' : 'left', padding: '14px 18px', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--fg3)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
             <tbody>
               {rows.map(({ t, done }, i) => (
-                <tr key={t.id} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+                <tr key={t.id} className="tap" onClick={() => setSel(t)} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border-soft)' : 'none', cursor: 'pointer' }}>
                   <td style={tdStyle}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Avatar t={t} size={34} /><span style={{ fontWeight: 500, color: 'var(--espresso)' }}>{t.name}</span></div></td>
                   <td style={tdStyle}>{t.headline}</td>
                   <td style={tdStyle}>{locName(t.locId)}</td>
@@ -399,6 +400,32 @@ function AdminTeachers() {
           </table>
         </div>
       </Card>
+
+      <Modal open={!!sel} onClose={() => setSel(null)} w={520}>
+        {sel && (
+          <div>
+            <div style={{ position: 'relative', height: 130 }}>
+              <div className={'app-ph ' + (sel.ph || '')} style={{ position: 'absolute', inset: 0, borderTopLeftRadius: 26, borderTopRightRadius: 26 }} />
+              {sel.photo && <img src={sel.photo} alt={sel.name} onError={e => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%', borderTopLeftRadius: 26, borderTopRightRadius: 26 }} />
+              <button className="tap" onClick={() => setSel(null)} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 999, background: 'rgba(250,247,243,.9)', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Icon n="x" size={17} color="var(--espresso)" /></button>
+            </div>
+            <div style={{ padding: '18px 24px 26px' }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 23, color: 'var(--espresso)', margin: 0 }}>{sel.name}</h2>
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--taupe)', marginTop: 3 }}>{sel.headline} · {(sel.locIds || [sel.locId]).map(locName).join(' · ')} · {hkd(sel.rate)}/hr · {sel.rating} ({sel.reviews})</div>
+
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '18px 0 6px' }}>Bio</div>
+              <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 15, lineHeight: 1.55, color: 'var(--espresso)', margin: 0 }}>{sel.bio}</p>
+              {sel.style && <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', margin: '6px 0 0', fontStyle: 'italic' }}>"{sel.style}"</p>}
+
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '18px 0 8px' }}>Specialisations</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>{sel.specs.map(s => <Pill key={s} color="var(--accent)" bg="var(--accent-tint)">{s}</Pill>)}</div>
+
+              <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '18px 0 8px' }}>Certifications</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{sel.certs.map(c => <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13.5, color: 'var(--espresso)' }}><Icon n="check-circle-2" size={15} color="var(--accent)" /> {c}</div>)}</div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
