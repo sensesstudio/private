@@ -922,7 +922,7 @@ const GUEST_MODE = true;
 export function ClientPortal() {
   const [stage, setStage] = useState(GUEST_MODE ? 'app' : 'browse');
   const [tab, setTab] = useState('Home');
-  const [answers, setAnswers] = useState({ age: '25–34', goals: ['rehab', 'posture'], level: 'some', injury: ['Lower back'], schedule: ['am'], location: ['central'] });
+  const [answers, setAnswers] = useState({ age: '25–34', goals: ['rehab', 'posture'], level: 'some', injury: ['Lower back'], schedule: ['am'], location: ['central'], pregnant: 'no', surgery: 'no' });
   const [detail, setDetail] = useState(null);
   const [booking, setBooking] = useState(null);
   const [rating, setRating] = useState(null);
