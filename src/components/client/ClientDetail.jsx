@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Icon, Button, Avatar, Stars, Skel, SpecChips, Pill, useVP, useLiveReviews, useFavs, toggleFav } from '../shared/index.jsx';
 import { hkd } from '../shared/index.jsx';
 import { TEACHERS, GOALS, PROGRESS_LOG, LOCATIONS } from '../../data.js';
-import { locName, teacherById } from '../../data.js';
+import { locName } from '../../data.js';
 import { isSupabaseConfigured } from '../../supabase/client.js';
 import { fetchReviews } from '../../supabase/queries.js';
 import { metaItem, labelMini } from '../../styles.js';
@@ -98,16 +98,7 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, g
   // Rank: favourites first, then teachers from your history, then by match.
   const sigScore = t => (favSet.includes(t.id) ? 2 : 0) + (historyIds.includes(t.id) ? 1 : 0);
   const suggested = [...onlineRanked].sort((a, b) => sigScore(b) - sigScore(a)).slice(0, (favSet.length || historyIds.length) ? 5 : 3);
-  const top = ranked[0];
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
-  const log = PROGRESS_LOG || [];
-  const latest = log[0];
-  const logTeacher = latest ? teacherById(latest.tId) : top;
-  const recentFocus = [...new Set(log.slice(0, 4).map(l => l.focus.split(/[—&]/)[0].trim()))].slice(0, 3);
-  const SESSIONS_DONE = 8, MILESTONE = 10;
-  const remaining = Math.max(0, MILESTONE - SESSIONS_DONE);
-  const pct = Math.min(100, Math.round((SESSIONS_DONE / MILESTONE) * 100));
-  const [showFull, setShowFull] = useState(false);
   const now = new Date();
   const dateLabel = `${now.toLocaleDateString('en-HK', { weekday: 'long' })} · ${now.getDate()} ${now.toLocaleDateString('en-HK', { month: 'long' })}`;
   const firstName = (live && name) ? name.split(' ')[0] : 'Mara';
