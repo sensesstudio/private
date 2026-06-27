@@ -106,8 +106,8 @@ export function ClientHome({ onOpen, goSearch, answers, name, live, nextClass, g
 
   return (
     <div style={{ padding: '8px 20px 28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px 0 14px' }}>
-        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 22, letterSpacing: '.34em', textTransform: 'uppercase', color: 'var(--espresso)', paddingLeft: '.34em' }}>Aligned</span>
+      <div style={{ padding: '2px 0 14px' }}>
+        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 22, letterSpacing: '.34em', textTransform: 'uppercase', color: 'var(--espresso)' }}>Aligned</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 4 }}>
         <div>
