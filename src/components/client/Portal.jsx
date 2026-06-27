@@ -348,7 +348,7 @@ function ProgressLog({ onClose }) {
   const merged = [...live, ...PROGRESS_LOG];
   const totalN = merged.length;
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -417,7 +417,7 @@ function PaymentPackages({ onClose, credits = 7 }) {
   const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' });
   const sectionLabel = { fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '22px 0 10px' };
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -581,7 +581,7 @@ function PreferencesSheet({ onClose }) {
     ['promos', 'Promotions & news', 'Occasional offers and studio updates'],
   ];
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)' }}>Preferences</div>
@@ -631,50 +631,9 @@ function PreferencesSheet({ onClose }) {
   );
 }
 
-function UpcomingSheet({ upcoming = [], onClose, onCancel, onReschedule }) {
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
-        <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
-        <div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)', lineHeight: 1 }}>Upcoming bookings</div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', marginTop: 3 }}>{upcoming.length} booked</div>
-        </div>
-      </div>
-      <div className="screen-scroll" style={{ flex: 1, minHeight: 0, padding: '16px 18px 28px' }}>
-        {upcoming.length === 0 ? (
-          <EmptyState icon="calendar-x" title="No upcoming bookings" body="When you book a private session it will appear here." />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-            {upcoming.map((b, idx) => (
-              <div key={b.id + idx} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-                  <Avatar t={b.t} size={50} radius={14} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
-                  {b.startsAt && (
-                    <button className="tap" onClick={() => addClassToCalendar({ teacherName: b.t.name, startsAt: b.startsAt, locName: locName(b.t.locId), address: locAddr(b.t.locId), format: b.format })} aria-label="Add to calendar" style={{ flex: 'none', width: 42, height: 42, cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12 }}><Icon n="calendar-plus" size={16} color="var(--accent)" /></button>
-                  )}
-                  <button className="tap" onClick={() => onReschedule && onReschedule(b.t)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}><Icon n="calendar-clock" size={14} color="var(--accent)" /> Reschedule</button>
-                  <button className="tap" onClick={() => onCancel && onCancel(b.id)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--ivory)', border: '1px solid var(--terracotta)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)' }}><Icon n="x" size={14} color="var(--terracotta)" /> Cancel</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '16px 0 0', lineHeight: 1.5 }}>Free cancellation up to 24 hours before your session.</p>
-      </div>
-    </div>
-  );
-}
-
 function SheetShell({ title, sub, onClose, children }) {
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -712,25 +671,56 @@ function FavouritesSheet({ favTeachers = [], onClose, onOpen }) {
   );
 }
 
-function PastSessionsSheet({ past = [], onClose, onRate }) {
+// Combined Upcoming + Past bookings in one sheet with a tab toggle.
+function BookingsSheet({ upcoming = [], past = [], initialTab = 'Upcoming', onClose, onCancel, onReschedule, onRate }) {
+  const [tab, setTab] = useState(initialTab);
   return (
-    <SheetShell title="Past sessions" sub={`${past.length} completed`} onClose={onClose}>
-      {past.length === 0 ? (
-        <EmptyState icon="clipboard-list" title="No past sessions" body="Your completed sessions will gather here over time." />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {past.map((b, idx) => (
-            <div key={b.id + idx} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 13, boxShadow: 'var(--shadow-sm)' }}>
-              <Avatar t={b.t} size={48} radius={13} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+    <SheetShell title="Bookings" sub={`${upcoming.length} upcoming · ${past.length} past`} onClose={onClose}>
+      <Segmented options={['Upcoming', 'Past']} value={tab} onChange={setTab} style={{ marginBottom: 16, width: '100%', display: 'flex' }} />
+      {tab === 'Upcoming' ? (
+        upcoming.length === 0 ? (
+          <EmptyState icon="calendar-x" title="No upcoming bookings" body="When you book a private session it will appear here." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            {upcoming.map((b, idx) => (
+              <div key={b.id + idx} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 14, boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                  <Avatar t={b.t} size={50} radius={14} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+                  {b.startsAt && (
+                    <button className="tap" onClick={() => addClassToCalendar({ teacherName: b.t.name, startsAt: b.startsAt, locName: locName(b.t.locId), address: locAddr(b.t.locId), format: b.format })} aria-label="Add to calendar" style={{ flex: 'none', width: 42, height: 42, cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12 }}><Icon n="calendar-plus" size={16} color="var(--accent)" /></button>
+                  )}
+                  <button className="tap" onClick={() => onReschedule && onReschedule(b.t)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}><Icon n="calendar-clock" size={14} color="var(--accent)" /> Reschedule</button>
+                  <button className="tap" onClick={() => onCancel && onCancel(b.id)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--ivory)', border: '1px solid var(--terracotta)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)' }}><Icon n="x" size={14} color="var(--terracotta)" /> Cancel</button>
+                </div>
               </div>
-              <button className="tap" onClick={() => { onClose(); onRate && onRate(b.t); }} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 13px', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, color: 'var(--accent)' }}><Icon n="star" size={13} color="var(--accent)" /> Rate</button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
+      ) : (
+        past.length === 0 ? (
+          <EmptyState icon="clipboard-list" title="No past sessions" body="Your completed sessions will gather here over time." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {past.map((b, idx) => (
+              <div key={b.id + idx} style={{ display: 'flex', alignItems: 'center', gap: 13, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 13, boxShadow: 'var(--shadow-sm)' }}>
+                <Avatar t={b.t} size={48} radius={13} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
+                </div>
+                <button className="tap" onClick={() => { onClose(); onRate && onRate(b.t); }} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 13px', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, color: 'var(--accent)' }}><Icon n="star" size={13} color="var(--accent)" /> Rate</button>
+              </div>
+            ))}
+          </div>
+        )
       )}
+      <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '16px 0 0', lineHeight: 1.5 }}>Free cancellation up to 24 hours before your session.</p>
     </SheetShell>
   );
 }
@@ -741,8 +731,8 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
   const [showPrefs, setShowPrefs] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
   const [showFavs, setShowFavs] = useState(false);
-  const [showPast, setShowPast] = useState(false);
   const [showProg, setShowProg] = useState(false);
+  const [showLoc, setShowLoc] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -896,7 +886,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Upcoming bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['heart', 'Favourite teachers', () => setShowFavs(true), favTeachers.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{favTeachers.length}</Pill> : null], ['history', 'Past sessions', () => setShowPast(true), null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['heart', 'Favourite teachers', () => setShowFavs(true), favTeachers.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{favTeachers.length}</Pill> : null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['map-pin', 'Studios & locations', () => setShowLoc(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -907,17 +897,18 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
       {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
       {showPrefs && <PreferencesSheet onClose={() => setShowPrefs(false)} />}
-      {showBookings && <UpcomingSheet upcoming={upcoming} onClose={() => setShowBookings(false)} onCancel={onCancelBooking} onReschedule={t => { setShowBookings(false); onReschedule && onReschedule(t); }} />}
+      {showLoc && <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll"><ClientLocations onBack={() => setShowLoc(false)} /></div>}
+      {showBookings && <BookingsSheet upcoming={upcoming} past={past} onClose={() => setShowBookings(false)} onCancel={onCancelBooking} onReschedule={t => { setShowBookings(false); onReschedule && onReschedule(t); }} onRate={onRate} />}
       {showFavs && <FavouritesSheet favTeachers={favTeachers} onClose={() => setShowFavs(false)} onOpen={onOpen} />}
-      {showPast && <PastSessionsSheet past={past} onClose={() => setShowPast(false)} onRate={onRate} />}
     </div>
   );
 }
 
-function ClientLocations() {
+function ClientLocations({ onBack }) {
   const { studios, live } = useStudios();
   return (
     <div style={{ padding: '8px 20px 28px' }}>
+      {onBack && <button className="tap" onClick={onBack} style={{ ...backLink, marginBottom: 6 }}><Icon n="arrow-left" size={16} /> Profile</button>}
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Locations</h1>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 4px' }}>Five studios across Hong Kong · your credits work at all of them.</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--fg3)', margin: 0, lineHeight: 1.7 }}>全港五間工作室 · 套票通用。</p>

@@ -121,7 +121,7 @@ function BrowseTeacher({ t, onOpen }) {
 export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   useSlots(); // reflect live slot availability
   const { mobile } = useVP();
-  const [seg, setSeg] = useState(embedded ? 'Find instructor' : 'Schedule');
+  const [seg, setSeg] = useState(embedded ? 'Find' : 'Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
   const [sort, setSort] = useState('match');
@@ -137,7 +137,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
     ? openSlotsForDay(0).map(s => ({ t: teacherById(s.teacherId), time: s.time })).filter(x => x.t && (x.t.locIds || [x.t.locId]).includes(studioView)).sort((a, b) => a.time.localeCompare(b.time))
     : [];
   const teachers = [...TEACHERS]
-    .filter(t => q === '' || (t.name + ' ' + t.headline + ' ' + t.specs.join(' ')).toLowerCase().includes(q.toLowerCase()))
+    .filter(t => q === '' || (t.name + ' ' + t.headline + ' ' + t.specs.join(' ') + ' ' + (t.langs || []).join(' ') + ' ' + (t.locIds || [t.locId]).map(locName).join(' ')).toLowerCase().includes(q.toLowerCase()))
     .filter(t => locFilter === 'any' || (t.locIds || [t.locId]).includes(locFilter))
     .filter(t => fLang === 'any' || (t.langs || []).includes(fLang))
     .filter(t => fNeed === 'any' || (NEED_KW[fNeed] || /$^/).test([...(t.specs || []), t.headline, ...(t.certs || [])].join(' ')))
@@ -201,15 +201,15 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
       )}
 
       <div style={{ flex: 'none', padding: '16px 20px 4px' }}>
-        <Segmented options={embedded ? ['Find instructor', 'By date'] : ['Schedule', 'Needs', 'Teachers', 'Studios']} value={seg} onChange={setSeg} style={{ display: 'flex', width: '100%' }} />
+        <Segmented options={embedded ? ['Find', 'By date'] : ['Schedule', 'Needs', 'Teachers', 'Studios']} value={seg} onChange={setSeg} style={{ display: 'flex', width: '100%' }} />
       </div>
 
       <div style={{ flex: 1, padding: '14px 20px 16px' }}>
-        {(seg === 'Teachers' || seg === 'Find instructor') && (
+        {(seg === 'Teachers' || seg === 'Find') && (
           <>
             <div style={{ position: 'relative', marginBottom: 12 }}>
               <Icon n="search" size={17} color="var(--fg3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search instructor name…" style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--ink)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px 12px 40px', outline: 'none' }} />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search teacher, studio or class…" style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14, color: 'var(--ink)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px 12px 40px', outline: 'none' }} />
             </div>
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '0 0 7px' }}>Studio</div>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -20px 14px', padding: '0 20px 4px' }} className="screen-scroll">
