@@ -12,6 +12,9 @@ import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { shareClass } from '../../share.js';
 import { buildProgressSuggestion } from '../../suggest.js';
+import { addClassToCalendar } from '../../calendar.js';
+
+const locAddr = (id) => (LOCATIONS.find(l => l.id === id) || {}).address || '';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
@@ -249,7 +252,8 @@ function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onCon
               <Button variant="soft" full size="lg" icon="user-plus" onClick={() => shareClass({ teacherName: t.name, dayLabel, slotTime, locName: locName(t.locId) })} style={{ marginBottom: 10 }}>邀請朋友一齊上 · Invite a friend</Button>
             </>
           )}
-          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, format, usedCredit, addCredits, pkgName: selectedPkg.name, amount })}>View my bookings</Button>
+          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, format, startsAt: slot ? slot.startsAt : null, usedCredit, addCredits, pkgName: selectedPkg.name, amount })}>View my bookings</Button>
+          <Button variant="soft" full size="lg" icon="calendar-plus" onClick={() => addClassToCalendar({ teacherName: t.name, startsAt: slot ? slot.startsAt : null, locName: locName(t.locId), address: locAddr(t.locId), format })} style={{ marginTop: 10 }}>Add to calendar</Button>
           <button className="tap" onClick={onClose} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--taupe)' }}>Done</button>
         </div>
       )}
@@ -652,6 +656,9 @@ function UpcomingSheet({ upcoming = [], onClose, onCancel, onReschedule }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+                  {b.startsAt && (
+                    <button className="tap" onClick={() => addClassToCalendar({ teacherName: b.t.name, startsAt: b.startsAt, locName: locName(b.t.locId), address: locAddr(b.t.locId), format: b.format })} aria-label="Add to calendar" style={{ flex: 'none', width: 42, height: 42, cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12 }}><Icon n="calendar-plus" size={16} color="var(--accent)" /></button>
+                  )}
                   <button className="tap" onClick={() => onReschedule && onReschedule(b.t)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--accent)' }}><Icon n="calendar-clock" size={14} color="var(--accent)" /> Reschedule</button>
                   <button className="tap" onClick={() => onCancel && onCancel(b.id)} style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--ivory)', border: '1px solid var(--terracotta)', borderRadius: 12, padding: '10px', minHeight: 42, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5, color: 'var(--terracotta)' }}><Icon n="x" size={14} color="var(--terracotta)" /> Cancel</button>
                 </div>
@@ -865,6 +872,9 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
                   <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--espresso)', lineHeight: 1.1 }}>{b.t.name}</div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
                 </div>
+                {b.startsAt && (
+                  <button className="tap" onClick={() => addClassToCalendar({ teacherName: b.t.name, startsAt: b.startsAt, locName: locName(b.t.locId), address: locAddr(b.t.locId), format: b.format })} aria-label="Add to calendar" style={{ flex: 'none', width: 40, height: 40, borderRadius: 999, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon n="calendar-plus" size={18} color="var(--accent)" /></button>
+                )}
               </div>
             ))}
           </div>
@@ -1108,7 +1118,7 @@ export function ClientPortal() {
   }
 
   const fmtClassDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' });
-  const demoUpcoming = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'confirmed').slice().sort((a, b) => a.date.localeCompare(b.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time }));
+  const demoUpcoming = live ? [] : BOOKINGS.filter(b => b.cId === 'c1' && b.status === 'confirmed').slice().sort((a, b) => a.date.localeCompare(b.date)).map(b => ({ id: b.id, t: teacherById(b.tId), dayLabel: fmtClassDate(b.date), slotTime: b.time, startsAt: new Date(b.date + 'T' + (b.time && b.time.length === 5 ? b.time : '09:00') + ':00') }));
   const upcomingAll = [...extraBookings, ...demoUpcoming].filter(b => !cancelled.includes(b.id));
   const nextClass = upcomingAll[0] || null;       // Home: just the next one
   const cancelBooking = (id) => { setCancelled(c => [...c, id]); setExtraBookings(b => b.filter(x => x.id !== id)); };
@@ -1140,7 +1150,7 @@ export function ClientPortal() {
           if (!info.usedCredit && info.amount) {
             recordPayment('c1', { id: 'pay' + Date.now(), date: new Date().toISOString().slice(0, 10), desc: info.pkgName, credits: info.addCredits || 0, amount: info.amount, method: 'Visa ···· 8842' });
           }
-          setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, format: info.format, status: 'confirmed' }, ...b]);
+          setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, format: info.format, startsAt: info.startsAt, status: 'confirmed' }, ...b]);
           setBooking(null); setDetail(null); setTab('Profile');
         }} />}
       </Sheet>
