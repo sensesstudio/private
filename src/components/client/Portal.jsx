@@ -11,6 +11,7 @@ import { signOut } from '../../supabase/auth.js';
 import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
 import { shareClass } from '../../share.js';
+import { buildProgressSuggestion } from '../../suggest.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
@@ -759,6 +760,8 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
   const doneInBlock = SESSIONS_DONE % STEP || STEP;
   const remaining = nextMilestone - SESSIONS_DONE;
   const progPct = Math.round((doneInBlock / STEP) * 100);
+  // Personalised suggestion from goals + health + progress + favourites.
+  const sg = showProgCard ? buildProgressSuggestion({ answers, favTeachers }) : null;
   return (
     <div style={{ padding: '8px 20px 28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '6px 0 20px' }}>
@@ -788,10 +791,10 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
               <div style={{ width: progPct + '%', height: '100%', background: 'var(--blush)', borderRadius: 999 }} />
             </div>
           </div>
-          {logTeacher && (
+          {sg && sg.line && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '14px 0 2px' }}>
-              <Icon n="bell" size={14} color="var(--blush)" style={{ marginTop: 1, flex: 'none' }} />
-              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)' }}>Keep building on <span style={{ color: 'var(--blush)' }}>{(recentFocus[0] || 'your foundations').toLowerCase()}</span> — book this week to hold your momentum.</span>
+              <Icon n="sparkles" size={14} color="var(--blush)" style={{ marginTop: 1, flex: 'none' }} />
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)' }}>{sg.line}</span>
             </div>
           )}
           <button className="tap" onClick={() => setShowProg(v => !v)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 12, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--blush)' }}>
@@ -817,6 +820,19 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--blush)', marginBottom: 1 }}>Recent focus areas</span>
                   {recentFocus.map(f => <span key={f} style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--cream)', background: 'rgba(250,247,243,.12)', padding: '5px 11px', borderRadius: 999 }}>{f}</span>)}
+                </div>
+              )}
+              {sg && sg.rec && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--blush)', marginBottom: 8 }}>Suggested for you next</div>
+                  <button className="tap" onClick={() => onOpen && onOpen(sg.rec.teacher)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(250,247,243,.1)', border: '1px solid rgba(250,247,243,.16)', borderRadius: 14, padding: 12 }}>
+                    <Avatar t={sg.rec.teacher} size={44} radius={12} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--cream)', lineHeight: 1.1 }}>{sg.rec.teacher.name}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, lineHeight: 1.4, color: 'rgba(250,247,243,.82)', marginTop: 3 }}>{sg.rec.reason}</div>
+                    </div>
+                    <Icon n="chevron-right" size={16} color="var(--blush)" style={{ flex: 'none' }} />
+                  </button>
                 </div>
               )}
               <button className="tap" onClick={() => setShowLog(true)} style={{ width: '100%', marginTop: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'rgba(250,247,243,.12)', border: 'none', borderRadius: 12, padding: '11px', minHeight: 44, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--cream)' }}><Icon n="clipboard-list" size={15} color="var(--cream)" /> See full progress log</button>
