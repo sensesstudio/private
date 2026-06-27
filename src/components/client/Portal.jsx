@@ -10,6 +10,7 @@ import * as db from '../../supabase/queries.js';
 import { signOut } from '../../supabase/auth.js';
 import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
+import { shareClass } from '../../share.js';
 import { inputStyle, sheetTitle, linkBtn, labelMini, backLink } from '../../styles.js';
 import { ClientBrowse } from './Browse.jsx';
 import { ClientNav, ClientLogin, Intake } from './ClientCore.jsx';
@@ -241,7 +242,13 @@ function BookingFlow({ t, day, slot, credits = 0, purchased = [], onClose, onCon
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 28, color: 'var(--espresso)', margin: '0 0 8px' }}>You're booked</h2>
           <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 14.5, color: 'var(--taupe)', margin: '0 0 4px', lineHeight: 1.5 }}>{t.name} · {fmtLabel} · {dayLabel} · {slotTime}</p>
           <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: '0 0 26px' }}>{locName(t.locId)} studio · {usedCredit ? `${Math.max(0, credits - 1)} credits remaining.` : 'pack added to your account.'} Calendar invite sent to your email.</p>
-          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, usedCredit, addCredits, pkgName: selectedPkg.name, amount })}>View my bookings</Button>
+          {format === '1:2' && (
+            <>
+              <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', margin: '0 0 10px' }}>It's a semi-private (1-on-2) — invite a friend to join you on the mat.</p>
+              <Button variant="soft" full size="lg" icon="user-plus" onClick={() => shareClass({ teacherName: t.name, dayLabel, slotTime, locName: locName(t.locId) })} style={{ marginBottom: 10 }}>邀請朋友一齊上 · Invite a friend</Button>
+            </>
+          )}
+          <Button variant="accent" full size="lg" onClick={() => onConfirmed({ t, dayLabel, slotTime, fmtLabel, format, usedCredit, addCredits, pkgName: selectedPkg.name, amount })}>View my bookings</Button>
           <button className="tap" onClick={onClose} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--taupe)' }}>Done</button>
         </div>
       )}
@@ -278,6 +285,7 @@ function ClientBookings({ extra, onRate, live }) {
                 <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)' }}>{b.t.name}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
                 {b.status === 'completed' && <button className="tap" onClick={() => onRate(b.t)} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', borderRadius: 999, padding: '7px 13px', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11.5, color: 'var(--accent)' }}><Icon n="star" size={13} color="var(--accent)" /> Rate session</button>}
+                {b.status === 'confirmed' && b.format === '1:2' && <button className="tap" onClick={() => shareClass({ teacherName: b.t.name, dayLabel: b.dayLabel, slotTime: b.slotTime, locName: locName(b.t.locId) })} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--accent-tint)', border: 'none', cursor: 'pointer', borderRadius: 999, padding: '7px 13px', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 11.5, color: 'var(--accent)' }}><Icon n="user-plus" size={13} color="var(--accent)" /> 邀請朋友一齊上</button>}
               </div>
               {b.status === 'confirmed'
                 ? <Pill color="var(--accent)" bg="var(--accent-tint)">Confirmed</Pill>
@@ -1047,7 +1055,7 @@ export function ClientPortal() {
           if (!info.usedCredit && info.amount) {
             recordPayment('c1', { id: 'pay' + Date.now(), date: new Date().toISOString().slice(0, 10), desc: info.pkgName, credits: info.addCredits || 0, amount: info.amount, method: 'Visa ···· 8842' });
           }
-          setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, status: 'confirmed' }, ...b]);
+          setExtraBookings(b => [{ id: 'new' + Date.now(), t: info.t, dayLabel: info.dayLabel, slotTime: info.slotTime, fmtLabel: info.fmtLabel, format: info.format, status: 'confirmed' }, ...b]);
           setBooking(null); setDetail(null); setTab('Profile');
         }} />}
       </Sheet>
