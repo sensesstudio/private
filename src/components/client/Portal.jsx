@@ -734,6 +734,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
   const [showBookings, setShowBookings] = useState(false);
   const [showFavs, setShowFavs] = useState(false);
   const [showPast, setShowPast] = useState(false);
+  const [showProg, setShowProg] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -746,6 +747,18 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
   const goalLabels = (answers.goals || []).map(g => (GOALS.find(x => x.id === g) || {}).label).filter(Boolean);
   const total = 10;
   const pct = Math.min(100, Math.round((credits / total) * 100));
+  // AI progress card — driven by the client's session history (demo uses the
+  // mock log; live users with no history yet don't see it).
+  const plog = PROGRESS_LOG || [];
+  const showProgCard = !live && plog.length > 0;
+  const latest = plog[0];
+  const logTeacher = latest ? teacherById(latest.tId) : null;
+  const recentFocus = [...new Set(plog.slice(0, 4).map(l => (l.focus || '').split(/[—&]/)[0].trim()).filter(Boolean))].slice(0, 3);
+  const SESSIONS_DONE = 28, STEP = 10;
+  const nextMilestone = (Math.floor(SESSIONS_DONE / STEP) + 1) * STEP;
+  const doneInBlock = SESSIONS_DONE % STEP || STEP;
+  const remaining = nextMilestone - SESSIONS_DONE;
+  const progPct = Math.round((doneInBlock / STEP) * 100);
   return (
     <div style={{ padding: '8px 20px 28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '6px 0 20px' }}>
@@ -755,6 +768,62 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
           <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)', marginTop: 3 }}>{memberLine}</div>
         </div>
       </div>
+
+      {showProgCard && (
+        <div style={{ borderRadius: 22, background: 'var(--espresso)', color: 'var(--cream)', padding: '20px 20px 18px', position: 'relative', overflow: 'hidden', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--blush)' }}>
+              <Icon n="sparkles" size={13} color="var(--blush)" /> Your progress
+            </div>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10.5, opacity: .7 }}>Last visit · 3 days ago</span>
+          </div>
+          <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, lineHeight: 1.35, color: 'var(--cream)', margin: '14px 0 14px' }}>
+            You're <span style={{ color: 'var(--blush)' }}>{remaining} session{remaining === 1 ? '' : 's'}</span> from your <span style={{ color: 'var(--blush)' }}>{nextMilestone}-session milestone</span>.
+          </p>
+          <div style={{ margin: '0 0 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11, opacity: .85, marginBottom: 6 }}>
+              <span>Towards {nextMilestone} sessions</span><span style={{ whiteSpace: 'nowrap' }}>{doneInBlock} / {STEP}</span>
+            </div>
+            <div style={{ height: 7, background: 'rgba(250,247,243,.2)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ width: progPct + '%', height: '100%', background: 'var(--blush)', borderRadius: 999 }} />
+            </div>
+          </div>
+          {logTeacher && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, margin: '14px 0 2px' }}>
+              <Icon n="bell" size={14} color="var(--blush)" style={{ marginTop: 1, flex: 'none' }} />
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)' }}>Keep building on <span style={{ color: 'var(--blush)' }}>{(recentFocus[0] || 'your foundations').toLowerCase()}</span> — book this week to hold your momentum.</span>
+            </div>
+          )}
+          <button className="tap" onClick={() => setShowProg(v => !v)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 12, fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--blush)' }}>
+            {showProg ? 'Hide details' : 'See full progress'} <Icon n={showProg ? 'chevron-up' : 'chevron-down'} size={13} color="var(--blush)" />
+          </button>
+          {showProg && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(250,247,243,.18)' }}>
+              {logTeacher && (
+                <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 15, lineHeight: 1.5, color: 'var(--cream)', margin: '0 0 12px' }}>
+                  Across <span style={{ color: 'var(--blush)' }}>{SESSIONS_DONE} sessions</span>, {logTeacher.name.split(' ')[0]} has guided you through <span style={{ color: 'var(--blush)' }}>{(recentFocus[0] || 'lower-back mobility').toLowerCase()}</span> — and it's paying off.
+                </p>
+              )}
+              {latest && logTeacher && (
+                <div style={{ display: 'flex', gap: 10, background: 'rgba(250,247,243,.1)', borderRadius: 14, padding: '12px 13px', marginBottom: 12 }}>
+                  <Icon n="quote" size={15} color="var(--blush)" style={{ marginTop: 2, flex: 'none' }} />
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cream)', fontStyle: 'italic' }}>"{(latest.note || '').split('. ')[0]}."</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 10.5, color: 'var(--blush)', marginTop: 6 }}>{logTeacher.name} · after session {SESSIONS_DONE}</div>
+                  </div>
+                </div>
+              )}
+              {recentFocus.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--blush)', marginBottom: 1 }}>Recent focus areas</span>
+                  {recentFocus.map(f => <span key={f} style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 11.5, color: 'var(--cream)', background: 'rgba(250,247,243,.12)', padding: '5px 11px', borderRadius: 999 }}>{f}</span>)}
+                </div>
+              )}
+              <button className="tap" onClick={() => setShowLog(true)} style={{ width: '100%', marginTop: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'rgba(250,247,243,.12)', border: 'none', borderRadius: 12, padding: '11px', minHeight: 44, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12, color: 'var(--cream)' }}><Icon n="clipboard-list" size={15} color="var(--cream)" /> See full progress log</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ borderRadius: 22, background: 'var(--espresso)', color: 'var(--cream)', padding: '22px 22px 20px', position: 'relative', overflow: 'hidden', marginBottom: 18 }}>
         <img src="assets/submark-black-trim.png" alt="" style={{ position: 'absolute', right: -14, top: -8, height: 110, filter: 'brightness(0) invert(1)', opacity: .1 }} />
