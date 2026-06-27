@@ -691,7 +691,8 @@ function BookingsSheet({ upcoming = [], past = [], initialTab = 'Upcoming', onCl
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--taupe)', marginTop: 2 }}>{b.dayLabel} · {b.slotTime} · {locName(b.t.locId)}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+                <button className="tap" onClick={() => shareClass({ teacherName: b.t.name, dayLabel: b.dayLabel, slotTime: b.slotTime, locName: locName(b.t.locId) })} style={{ width: '100%', marginTop: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '11px', minHeight: 44, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 12.5 }}><Icon n="user-plus" size={15} color="#fff" /> 邀請朋友一齊上 · Invite a friend</button>
+                <div style={{ display: 'flex', gap: 9, marginTop: 9 }}>
                   {b.startsAt && (
                     <button className="tap" onClick={() => addClassToCalendar({ teacherName: b.t.name, startsAt: b.startsAt, locName: locName(b.t.locId), address: locAddr(b.t.locId), format: b.format })} aria-label="Add to calendar" style={{ flex: 'none', width: 42, height: 42, cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--accent-tint)', border: '1px solid var(--accent)', borderRadius: 12 }}><Icon n="calendar-plus" size={16} color="var(--accent)" /></button>
                   )}
