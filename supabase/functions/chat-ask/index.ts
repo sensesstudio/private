@@ -43,6 +43,8 @@ studio (location): central (中環), cwb (Causeway Bay/銅鑼灣), qb (Quarry Ba
 teacher: one of t1 Hailey Saw, t2 Minna Ho, t3 Evanne Lam, t4 Vesta Ko, t5 Stacey Gim — only if the client names them; else null.
 language: instruction language the client wants — "Cantonese", "English", or "Mandarin"; else null.
 
+understood: true if the message is a genuine request to find / book a class. Set it to false for gibberish, spam, or anything off-topic (not about Pilates classes, times, teachers or studios). When understood is false, leave all the search fields null and make `reply` a short, friendly redirect in the client's language, e.g. "我淨係幫到手搵堂期空檔 😅 試下話我知邊日或者邊種堂？" / "I can only help with class availability — try telling me a class, day or studio.".
+
 reply: ONE short, warm sentence in the SAME language the client used (Cantonese → reply in 繁體中文, English → English). Do NOT list specific times or claim availability — the app shows the real slots right under your reply. Just acknowledge what you're looking for, e.g. "Let me check Reformer times for tomorrow afternoon —" / "幫你睇下聽日晏晝嘅 Reformer 位 —".`;
 
 const TOOL = {
@@ -52,6 +54,7 @@ const TOOL = {
     type: 'object',
     properties: {
       reply: { type: 'string', description: 'One short, warm sentence in the same language the client used. No specific times.' },
+      understood: { type: 'boolean', description: 'true if this is a real class-availability request; false for gibberish / off-topic / spam.' },
       need: { type: ['string', 'null'], enum: ['reformer', 'contemporary', 'prenatal', 'mat', 'foundations', 'gyrotonic', 'polestar', 'stott', null] },
       dayIdx: { type: ['integer', 'null'], description: '0=today, 1=tomorrow, 2=day after, null=unspecified' },
       daySpan: { type: ['integer', 'null'], description: 'Days to scan when dayIdx is null (3 default, 7 for "this week").' },
@@ -110,6 +113,7 @@ Deno.serve(async (req) => {
 
     const i = block.input as Record<string, unknown>;
     const reply = typeof i.reply === 'string' ? i.reply : null;
+    const understood = i.understood === false ? false : true; // default true
     const intent = {
       need: (i.need as string) ?? null,
       dayIdx: i.dayIdx === null || i.dayIdx === undefined ? null : Number(i.dayIdx),
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
       raw: message,
     };
 
-    return json({ intent, reply });
+    return json({ intent, reply, understood });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

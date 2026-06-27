@@ -83,3 +83,12 @@ export function parseQuery(text) {
 
   return intent;
 }
+
+// True when the parser recognised at least one booking signal. When false, the
+// message is likely gibberish / off-topic — the UI should ask the client to
+// rephrase rather than dump generic availability.
+export function hasSignal(intent) {
+  if (!intent) return false;
+  return !!(intent.need || intent.dayIdx != null || intent.timeOfDay ||
+    intent.studio || intent.teacher || intent.language || (intent.daySpan && intent.daySpan !== 3));
+}

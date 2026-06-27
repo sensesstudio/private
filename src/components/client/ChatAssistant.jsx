@@ -63,8 +63,8 @@ export function ChatAssistant({ onPickSlot }) {
     setMessages(m => [...m, { id: 'u' + Date.now(), role: 'user', text }]);
     setBusy(true);
     try {
-      const { reply, suggestions } = await askAssistant(text, []);
-      setMessages(m => [...m, { id: 'a' + Date.now(), role: 'assistant', text: reply, suggestions }]);
+      const { reply, suggestions, clarify } = await askAssistant(text, []);
+      setMessages(m => [...m, { id: 'a' + Date.now(), role: 'assistant', text: reply, suggestions, chips: clarify ? EXAMPLES : undefined }]);
     } catch {
       setMessages(m => [...m, { id: 'a' + Date.now(), role: 'assistant', text: 'Sorry — something went wrong. Please try again, or tap the WhatsApp button to reach us.' }]);
     } finally {
