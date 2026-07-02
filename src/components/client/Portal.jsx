@@ -10,6 +10,7 @@ import * as db from '../../supabase/queries.js';
 import { signOut } from '../../supabase/auth.js';
 import { startCheckout } from '../../supabase/checkout.js';
 import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../waiver.js';
+import { TERMS_SECTIONS, TERMS_TITLE } from '../../terms.js';
 import { shareClass } from '../../share.js';
 import { buildProgressSuggestion } from '../../suggest.js';
 import { addClassToCalendar } from '../../calendar.js';
@@ -348,7 +349,7 @@ function ProgressLog({ onClose }) {
   const merged = [...live, ...PROGRESS_LOG];
   const totalN = merged.length;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -417,7 +418,7 @@ function PaymentPackages({ onClose, credits = 7 }) {
   const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-HK', { day: 'numeric', month: 'short', year: 'numeric' });
   const sectionLabel = { fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--fg3)', margin: '22px 0 10px' };
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -581,7 +582,7 @@ function PreferencesSheet({ onClose }) {
     ['promos', 'Promotions & news', 'Occasional offers and studio updates'],
   ];
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 19, color: 'var(--espresso)' }}>Preferences</div>
@@ -633,7 +634,7 @@ function PreferencesSheet({ onClose }) {
 
 function SheetShell({ title, sub, onClose, children }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 'none', padding: '14px 18px 10px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-soft)' }}>
         <button className="tap" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--ivory)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' }}><Icon n="arrow-left" size={18} color="var(--espresso)" /></button>
         <div>
@@ -667,6 +668,30 @@ function FavouritesSheet({ favTeachers = [], onClose, onOpen }) {
           ))}
         </div>
       )}
+    </SheetShell>
+  );
+}
+
+function TermsSheet({ onClose }) {
+  return (
+    <SheetShell title={TERMS_TITLE} sub="Senses Studio" onClose={onClose}>
+      {TERMS_SECTIONS.map((s, i) => (
+        <div key={i} style={{ marginBottom: 18 }}>
+          {s.h && <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', margin: '0 0 8px' }}>{s.h}</div>}
+          {(s.paras || []).map((p, j) => <p key={j} style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, lineHeight: 1.6, color: 'var(--espresso)', margin: '0 0 9px' }}>{p}</p>)}
+          {(s.bullets || []).length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {s.bullets.map((b, j) => (
+                <div key={j} style={{ display: 'flex', gap: 9 }}>
+                  <span style={{ flex: 'none', width: 5, height: 5, borderRadius: 999, background: 'var(--accent)', marginTop: 8 }} />
+                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, lineHeight: 1.6, color: 'var(--espresso)' }}>{b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', margin: '4px 0 0', lineHeight: 1.5 }}>Questions? Tap the WhatsApp button to reach us.</p>
     </SheetShell>
   );
 }
@@ -734,6 +759,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
   const [showFavs, setShowFavs] = useState(false);
   const [showProg, setShowProg] = useState(false);
   const [showLoc, setShowLoc] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const displayName = live ? (name || 'Member') : 'Mara Whitfield';
   const initials = (live && name) ? name.split(/\s+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'MW';
   const memberLine = live ? 'New member' : 'Member since Jan 2024 · 28 sessions';
@@ -887,7 +913,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
             ? <Pill color="var(--sage)" bg="rgba(138,144,121,.16)">Signed</Pill>
             : <Pill color="var(--terracotta)" bg="rgba(185,117,91,.14)">Required</Pill>}
         </button>
-        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['heart', 'Favourite teachers', () => setShowFavs(true), favTeachers.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{favTeachers.length}</Pill> : null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['map-pin', 'Studios & locations', () => setShowLoc(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
+        {[['user-round', 'About me', onRestart, aboutPill], ['calendar-check', 'Bookings', () => setShowBookings(true), upcoming.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{upcoming.length}</Pill> : null], ['heart', 'Favourite teachers', () => setShowFavs(true), favTeachers.length ? <Pill color="var(--accent)" bg="var(--accent-tint)">{favTeachers.length}</Pill> : null], ['clipboard-list', 'Progress log', () => setShowLog(true), null], ['credit-card', 'Payment & packages', () => setShowPay(true), null], ['map-pin', 'Studios & locations', () => setShowLoc(true), null], ['settings', 'Preferences', () => setShowPrefs(true), null], ['file-text', 'Terms & Conditions', () => setShowTerms(true), null], [live ? 'log-out' : 'log-in', live ? 'Sign out' : 'Sign in', onAuth, null]].map(([ic, l, fn, badge], i, a) => (
           <button key={l} className="tap" onClick={fn} style={{ width: '100%', textAlign: 'left', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', minHeight: 56, border: 'none', borderBottom: i < a.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
             <Icon n={ic} size={18} color={i <= 2 ? 'var(--accent)' : 'var(--taupe)'} />
             <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: i <= 2 ? 500 : 400, fontSize: 14, color: i <= 2 ? 'var(--accent)' : 'var(--espresso)' }}>{l}</span>
@@ -898,7 +924,8 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       {showLog && <ProgressLog onClose={() => setShowLog(false)} />}
       {showPay && <PaymentPackages onClose={() => setShowPay(false)} credits={credits} />}
       {showPrefs && <PreferencesSheet onClose={() => setShowPrefs(false)} />}
-      {showLoc && <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll"><ClientLocations onBack={() => setShowLoc(false)} /></div>}
+      {showLoc && <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--cream)', overflow: 'auto' }} className="screen-scroll"><ClientLocations onBack={() => setShowLoc(false)} /></div>}
+      {showTerms && <TermsSheet onClose={() => setShowTerms(false)} />}
       {showBookings && <BookingsSheet upcoming={upcoming} past={past} onClose={() => setShowBookings(false)} onCancel={onCancelBooking} onReschedule={t => { setShowBookings(false); onReschedule && onReschedule(t); }} onRate={onRate} />}
       {showFavs && <FavouritesSheet favTeachers={favTeachers} onClose={() => setShowFavs(false)} onOpen={onOpen} />}
     </div>
