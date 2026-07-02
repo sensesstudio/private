@@ -74,14 +74,7 @@ export default function App() {
   return (
     <>
       <div id="chrome">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <img src="assets/submark-brown-trim.png" alt=""
-               style={{ height: 26, filter: 'brightness(0) invert(1)', opacity: .92 }} />
-          <div className="hide-mobile" style={{ lineHeight: 1 }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--cream)' }}>Senses Pilates</div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 8.5, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(245,239,234,.5)', marginTop: 2 }}>Body Strong · Mind Calm</div>
-          </div>
-        </div>
+        <img src="assets/logo5-trim.png" alt="Senses Pilates" style={{ height: 30 }} />
         {!CLIENT_ONLY && <PortalSwitch portal={portal} setPortal={go} />}
       </div>
       <div id="portal-root">

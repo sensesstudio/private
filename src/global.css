@@ -11,8 +11,8 @@ body { font-family: var(--font-sans); color: var(--ink); overscroll-behavior: no
 
 #chrome {
   flex: none; height: var(--chrome-h); z-index: 500;
-  background: var(--espresso); display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; box-sizing: border-box;
+  background: var(--cream); display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px; box-sizing: border-box;
 }
 #portal-root {
   flex: 1; min-height: 0; position: relative; background: var(--cream); overflow: hidden;
