@@ -21,7 +21,7 @@ const COMP = { client: ClientPortal, teacher: TeacherPortal, admin: AdminPortal 
 // CLIENT_ONLY hides the Teacher/Admin switcher so friends only see the student
 // portal. You can still reach the others by adding #teacher / #admin to the URL.
 // Set to false to show all three tabs again.
-const CLIENT_ONLY = true;
+const CLIENT_ONLY = false;
 
 const readHash = () => {
   const h = (location.hash || '#client').replace('#', '').split('/')[0];
