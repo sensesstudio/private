@@ -161,7 +161,7 @@ function TeacherLogin({ onIn }) {
           </div>
         </div>
       )}
-      <div style={{ width: mobile ? '100%' : 460, flex: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: mobile ? '0 28px' : '0 56px' }}>
+      <div style={{ width: mobile ? '100%' : 460, boxSizing: 'border-box', flex: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: mobile ? '0 28px' : '0 56px' }}>
         <Eyebrow>Instructor portal</Eyebrow>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--espresso)', margin: '12px 0 26px', lineHeight: 1.1 }}>Welcome back</h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 380 }}>
