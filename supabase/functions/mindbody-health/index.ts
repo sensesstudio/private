@@ -3,7 +3,36 @@
 // and no client data.
 import { db, envPresent, json, mb, staffToken } from '../_shared/mb.ts';
 
-Deno.serve(async () => {
+const HK_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Hong_Kong', hour: '2-digit', minute: '2-digit',
+});
+
+Deno.serve(async (req) => {
+  // ?day=YYYY-MM-DD → list that day's busy blocks (HK time) for spot-checking
+  // against the Mindbody schedule.
+  const day = new URL(req.url).searchParams.get('day');
+  if (day) {
+    try {
+      const from = new Date(`${day}T00:00:00+08:00`);
+      if (isNaN(from.getTime())) return json({ error: 'use ?day=YYYY-MM-DD' }, 400);
+      const to = new Date(from.getTime() + 86400_000);
+      const rows = await db().select(
+        'room_busy',
+        `select=studio_id,starts_at,ends_at&starts_at=gte.${from.toISOString()}&starts_at=lt.${to.toISOString()}&order=studio_id,starts_at`,
+      );
+      return json({
+        day,
+        busy_blocks: rows.map((r: any) => ({
+          studio: r.studio_id,
+          from: HK_TIME.format(new Date(r.starts_at)),
+          to: HK_TIME.format(new Date(r.ends_at)),
+        })),
+      });
+    } catch (e) {
+      return json({ error: String(e) }, 500);
+    }
+  }
+
   const out: Record<string, unknown> = { present: envPresent() };
   try {
     const token = await staffToken();
