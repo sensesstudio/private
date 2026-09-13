@@ -15,6 +15,9 @@ concurrency:
   group: supabase-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -101,3 +104,18 @@ jobs:
           echo
           echo "== mindbody-health =="
           curl -sS "$base/mindbody-health" | head -c 4000
+
+      - name: Publish smoke results as commit comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          base="https://$PROJECT_REF.supabase.co/functions/v1"
+          d=$(curl -sS "$base/mindbody-discover" | head -c 5500 || echo '(discover unreachable)')
+          h=$(curl -sS "$base/mindbody-health" | head -c 3000 || echo '(health unreachable)')
+          printf 'CI smoke results (run %s)\n\n### mindbody-discover\n```json\n%s\n```\n\n### mindbody-health\n```json\n%s\n```\n' \
+            "$GITHUB_RUN_ID" "$d" "$h" > /tmp/comment.md
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -f body="$(cat /tmp/comment.md)" > /dev/null
+          echo "commit comment posted"
