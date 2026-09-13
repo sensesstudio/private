@@ -2,12 +2,12 @@
 // slot store, plus a templated reply line. Deterministic — the source of truth
 // for availability stays on the client even when the AI parses the question.
 
-import { openSlotsForDay, daysForTeacher } from '../slots.js';
+import { openSlotsForDay, daysForTeacher, SLOT_WINDOW_DAYS } from '../slots.js';
 import { teacherById } from '../data.js';
 import { NEED_KW, SESSION_TYPES } from '../components/client/Browse.jsx';
 
-const BASE_DAY_IDX = 0; // app "today" = seeded BASE (2026-06-16); single point of change
-const WINDOW = 7;       // slots.js seeds a 7-day window
+const BASE_DAY_IDX = 0; // Hong Kong today in live mode.
+const WINDOW = SLOT_WINDOW_DAYS;
 const MAX = 5;          // suggestions per reply
 const PER_TEACHER = 2;
 
@@ -38,12 +38,12 @@ function scan(intent, dayIdxList, useTOD) {
     const raw = openSlotsForDay(dayIdx).slice().sort((a, b) => a.time.localeCompare(b.time));
     for (const r of raw) {
       const t = teacherById(r.teacherId);
-      if (!teacherMatches(t, intent)) continue;
+      if (!teacherMatches(t, intent) || (intent.studio && r.studioId && r.studioId !== intent.studio)) continue;
       if (useTOD && !inTimeOfDay(r.time, intent.timeOfDay)) continue;
       perTeacher[r.teacherId] = (perTeacher[r.teacherId] || 0) + 1;
       if (perTeacher[r.teacherId] > PER_TEACHER) continue;
       const day = daysForTeacher(r.teacherId)[dayIdx];
-      const slot = day && day.slots.find(s => s.time === r.time && s.status === 'open');
+      const slot = day && day.slots.find(s => (r.id ? s.id === r.id : s.time === r.time) && s.status === 'open');
       if (!slot) continue; // taken between enumerate and resolve
       out.push({ teacher: t, teacherId: r.teacherId, dayIdx, day, slot, time: r.time });
     }

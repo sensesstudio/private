@@ -1,0 +1,38 @@
+.live-scroll { height:100%; overflow:auto; background:var(--cream); }
+.live-section { max-width:1000px; margin:0 auto; padding:24px 22px 84px; color:var(--espresso); font-family:var(--font-sans); }
+.live-section h1, .live-section h2, .live-section h3 { font-family:var(--font-serif); font-weight:500; margin:12px 0; }
+.live-section h1 { font-size:30px; }
+.live-section p { line-height:1.65; font-size:14px; }
+.live-status { padding:12px 20px; background:var(--sand); color:var(--espresso); font:13px/1.6 var(--font-sans); }
+.live-status button { margin-left:10px; }
+.live-nav, .live-staff-head, .live-toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.live-nav { flex:none; padding:12px 20px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); justify-content:center; }
+.live-nav button, .live-dates button { font:13px var(--font-sans); min-height:44px; border:1px solid var(--border); background:var(--ivory); border-radius:12px; color:var(--espresso); padding:10px 16px; cursor:pointer; }
+.live-nav button[aria-pressed=true], .live-dates button[aria-pressed=true] { background:var(--accent); color:#fff; }
+.live-dates { display:flex; gap:8px; overflow:auto; padding:16px 0; }
+.live-dates button { flex:none; }
+.live-person { display:flex; align-items:center; gap:16px; margin-top:20px; }
+.live-person p { margin:4px 0; }
+.live-slot-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.live-slot-list button { text-align:left; padding:16px; border:1px solid var(--border); border-radius:14px; background:var(--ivory); color:var(--espresso); cursor:pointer; min-height:96px; }
+.live-slot-list span { display:block; margin-top:8px; font:12px var(--font-sans); }
+.live-slot-list button:disabled { opacity:.55; cursor:default; }
+.live-link { display:inline-block; background:var(--taupe); color:var(--cream); border:0; border-radius:14px; padding:14px 20px; text-decoration:none; font:14px var(--font-sans); cursor:pointer; }
+.live-login { max-width:500px; padding-top:50px; }
+.live-login form, .live-login label { display:flex; flex-direction:column; gap:12px; }
+.live-login form { gap:20px; }
+.live-staff-head { justify-content:space-between; padding:12px 22px; border-bottom:1px solid var(--border); font:14px var(--font-sans); }
+.live-toolbar { margin:18px 0; }
+.live-toolbar select { margin-left:10px; min-height:44px; background:var(--ivory); border:1px solid var(--border); border-radius:10px; padding:8px; color:var(--espresso); }
+.live-grid-scroll { overflow-x:auto; }
+.live-grid { width:100%; min-width:720px; border-spacing:5px; font:12px var(--font-sans); }
+.live-grid caption { text-align:left; padding:8px 0 16px; }
+.live-grid th { font-weight:500; padding:6px; }
+.live-grid td { padding:0; }
+.live-grid button { width:100%; min-height:44px; border:1px solid var(--border); border-radius:8px; background:var(--ivory); color:var(--espresso); font:11px var(--font-sans); cursor:pointer; }
+.live-grid button[data-state=open] { background:var(--accent); color:#fff; }
+.live-grid button[data-state=blocked] { background:var(--sand); border-style:dashed; }
+.live-grid button[data-state=reserved] { background:var(--taupe); color:#fff; }
+.live-grid button:disabled { opacity:.5; cursor:default; }
+.live-admin-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin:20px 0; }
+@media (max-width:600px) { .live-section { padding:20px 16px 90px; } .live-section h1 { font-size:25px; } .live-status { padding:10px 16px; } }

@@ -1,3 +1,5 @@
+import { LIVE_AVAILABILITY } from '../../features.js';
+import { slotById } from '../../slots.js';
 import { useState, useRef, useEffect } from 'react';
 import { Icon, Avatar } from '../shared/index.jsx';
 import { locName } from '../../data.js';
@@ -11,14 +13,15 @@ const EXAMPLES = [
 ];
 
 function SlotCard({ s, onPick }) {
+  const available = slotById(s.slot.id)?.status === 'open';
   return (
-    <button className="tap" onClick={() => onPick(s.teacherId, s.dayIdx, s.time)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 14, padding: 11, boxShadow: 'var(--shadow-sm)' }}>
+    <button className="tap" disabled={!available} onClick={() => onPick(s.teacherId, s.dayIdx, s.time, s.slot.id)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 14, padding: 11, boxShadow: 'var(--shadow-sm)' }}>
       <Avatar t={s.teacher} size={42} radius={12} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 14.5, color: 'var(--espresso)', lineHeight: 1.1 }}>{s.day.dow} {s.day.dom} · {s.time}</div>
-        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--taupe)', marginTop: 2 }}>{s.teacher.name} · {s.teacher.specs[0]} · {locName(s.teacher.locId)}</div>
+        <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--taupe)', marginTop: 2 }}>{s.teacher.name} · {s.teacher.specs[0]} · {locName(s.slot.studioId || s.teacher.locId)}</div>
       </div>
-      <span style={{ flex: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px' }}>Book</span>
+      <span style={{ flex: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px' }}>{!available ? 'Unavailable' : LIVE_AVAILABILITY ? 'View' : 'Book'}</span>
     </button>
   );
 }
@@ -77,6 +80,7 @@ export function ChatAssistant({ onPickSlot }) {
       <div style={{ padding: '8px 20px 6px' }}>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Ask Senses</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: 0 }}>Tell me what you're after — any language. I'll check live availability.</p>
+        {LIVE_AVAILABILITY && <a href="https://wa.me/85298818081" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '10px 0', color: 'var(--taupe)', fontSize: 13 }}>WhatsApp 真人查詢 · Contact the studio</a>}
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 13, padding: '14px 18px 16px' }}>
         {messages.map(m => <Bubble key={m.id} m={m} onChip={send} onPick={onPickSlot} />)}
