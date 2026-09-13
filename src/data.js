@@ -1,6 +1,8 @@
-// Senses Pilates — Mock data
+// Bundled demo catalogue; live mode starts without demo teachers.
+import { LIVE_AVAILABILITY } from './features.js';
+import { STUDIO_IDS } from './availability/model.js';
 
-export const LOCATIONS = [
+const DEMO_LOCATIONS = [
   { id: 'central', name: 'Central',      blurb: 'Refined energy in the heart of the city', note: 'Flagship · 3 reformer studios', address: '1701, 17/F, H Queen’s, 80 Queen’s Road Central' },
   { id: 'cwb',     name: 'Causeway Bay', blurb: 'Vibrant and social — always in motion',   note: 'Open late · 6 days',            address: '20/F, The Hedon, 11 Matheson Street, Causeway Bay' },
   { id: 'qb',      name: 'Quarry Bay',   blurb: 'Sea-view stillness above the harbour',    note: 'Harbour-view studio', sea: true, address: '1906, 19/F, Westlands Centre, 20 Westlands Road, Quarry Bay' },
@@ -8,7 +10,7 @@ export const LOCATIONS = [
   { id: 'lck',     name: 'Lai Chi Kok',  blurb: 'Quiet, local and grounded',               note: 'Neighbourhood studio',          address: 'B, 31/F, Billion Plaza II, 10 Cheung Yue Street, Lai Chi Kok' },
 ];
 
-export const TEACHERS = [
+const DEMO_TEACHERS = [
   {
     id: 't1', name: 'Hailey Saw', initials: 'HS', ph: '',
     headline: 'Reformer & rehabilitation',
@@ -74,7 +76,7 @@ const _REASONS = {
   t4: ['Mobility & strength', 'Flexible times', 'Athletic focus'],
   t5: ['Ideal for starting', 'Patient & clear', 'Alignment focus'],
 };
-TEACHERS.forEach(t => {
+DEMO_TEACHERS.forEach(t => {
   t.soon = _SOON[t.id];
   t.reasons = _REASONS[t.id];
   t.locIds = t.locIds || [t.locId]; // studios this teacher works at (defaults to their primary)
@@ -82,6 +84,15 @@ TEACHERS.forEach(t => {
   t.online = ['t1', 't2', 't4', 't5'].includes(t.id);
   t.responds = t.online ? 'Replies in minutes' : 'Replies within the hour';
 });
+
+export const LOCATIONS = LIVE_AVAILABILITY ? DEMO_LOCATIONS.filter(l => STUDIO_IDS.includes(l.id)) : DEMO_LOCATIONS;
+export const TEACHERS = LIVE_AVAILABILITY ? [] : DEMO_TEACHERS;
+// Preserve imported array identities; the shared availability store publishes changes.
+export function replaceLiveReferenceData(teachers, studios) {
+  if (!LIVE_AVAILABILITY) return;
+  TEACHERS.splice(0, TEACHERS.length, ...teachers);
+  if (studios) LOCATIONS.splice(0, LOCATIONS.length, ...STUDIO_IDS.flatMap(id => studios.filter(s => s.id === id)));
+}
 
 export const teacherById = (id) => TEACHERS.find(t => t.id === id);
 export const locName = (id) => (LOCATIONS.find(l => l.id === id) || {}).name || '';
@@ -140,7 +151,7 @@ const _bk = (id, cId, tId, date, time, status, type = 'Private') => {
   const t = teacherById(tId);
   return { id, cId, tId, date, time, status, type, locId: t.locId, amount: t.rate };
 };
-export const BOOKINGS = [
+export const BOOKINGS = LIVE_AVAILABILITY ? [] : [
   _bk('b01','c1','t1','2026-06-26','07:00','confirmed'),
   _bk('b02','c2','t2','2026-06-16','18:30','confirmed'),
   _bk('b03','c3','t1','2026-06-17','08:00','confirmed'),
