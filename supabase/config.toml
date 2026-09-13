@@ -1,0 +1,10 @@
+project_id = "private"
+
+[functions.mindbody-sync]
+verify_jwt = false
+
+[functions.mindbody-discover]
+verify_jwt = false
+
+[functions.mindbody-health]
+verify_jwt = false

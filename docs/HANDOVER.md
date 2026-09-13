@@ -115,4 +115,15 @@ All three portals read the same in-browser stores, so a change in one portal is 
 4. **Auth-gate Teacher/Admin portals** (they're openly switchable now — fine for demo only) and turn off `GUEST_MODE` at launch.
 5. Small: upload `public/assets/needs/polestar.jpg` + `stott.jpg` (currently 404 → gradient fallback); consider basic rate-limiting on `chat-ask`; demo dates are frozen to June 2026 until real data lands.
 
+---
+
+## 7. Mindbody integration (Phase 1 — in progress)
+Rooms are managed in Mindbody (site `5720465`); clients may only book when the room is free. Three client-bookable rooms map to existing studio rows: `KT - 30/F Private Pilates` → `kt`, `CWB - Private Pilates` → `cwb`, `Central - Private Pilates` → `central`.
+
+- **Credentials**: Supabase Edge Function secrets `MINDBODY_API_KEY` / `MINDBODY_SITE_ID` / `MINDBODY_STAFF_USER` / `MINDBODY_STAFF_PASS` (verified working — staff token PASS).
+- **Schema** (`supabase/migrations/0004_mindbody_rooms.sql`): `mindbody_rooms` (pattern→resource mapping, self-healing), `room_busy` (times only, no client data; world-readable, service-role-writable), `sync_state`, RPC `replace_room_busy` (atomic window swap).
+- **Functions** (`supabase/functions/`): `mindbody-sync` (every 5 min via pg_cron+pg_net, guarded by rotating `x-sync-key`; pulls 14 days of staff appointments + classes, filters to the 3 rooms), `mindbody-health` (public ops check), `mindbody-discover` (temporary diagnostics — remove after verification).
+- **CI** (`.github/workflows/supabase.yml`): on push to `main` touching `supabase/**` — applies migrations via the Management API (tracked in `_migrations`), deploys functions (`--use-api`, no Docker), rotates `SYNC_KEY`, reschedules the cron, smoke-tests endpoints. Requires repo secret `SUPABASE_ACCESS_TOKEN`.
+- **Next (Phase 2)**: frontend reads real slots — bookable = teacher slot ∩ no `room_busy` overlap ∩ not held/booked; app switches to the 3 real studios; work on branch `mindbody-sync`, demo untouched until acceptance.
+
 *Build: `npm run build` (Vite). Local: `npm run dev`. Serve prod: `npm start`.*
