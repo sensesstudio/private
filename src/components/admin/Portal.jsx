@@ -7,7 +7,9 @@ import { useClientStore, getClientProfile, pregnancyFromEDD } from '../../client
 import { tdStyle } from '../../styles.js';
 import { EmptyState } from '../client/ClientDetail.jsx';
 
-function Workspace({ title, nav, tab, setTab, children, headRight }) {
+export const ADMIN_NAV = [['layout-dashboard', 'Dashboard'], ['users-round', 'Clients'], ['flower-2', 'Teachers'], ['user-check', 'Approvals'], ['user-search', 'Prospects'], ['calendar', 'Bookings'], ['banknote', 'Payouts'], ['rotate-ccw', 'Refunds']];
+
+export function Workspace({ title, nav, tab, setTab, children, headRight }) {
   const { mobile } = useVP();
   if (mobile) {
     return (
@@ -20,17 +22,17 @@ function Workspace({ title, nav, tab, setTab, children, headRight }) {
           {headRight}
         </div>
         <div className="screen-scroll" style={{ flex: 1, minHeight: 0 }}>{children}</div>
-        <div style={{ flex: 'none', background: 'rgba(250,247,243,.95)', backdropFilter: 'blur(14px)', borderTop: '1px solid var(--border)', padding: '9px 12px calc(9px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'space-around', overflowX: 'auto' }}>
+        <nav aria-label={`${title} navigation`} style={{ flex: 'none', background: 'rgba(250,247,243,.95)', backdropFilter: 'blur(14px)', borderTop: '1px solid var(--border)', padding: '9px 12px calc(9px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'flex-start', overflowX: 'auto' }}>
           {nav.map(([ic, label]) => {
             const on = tab === label;
             return (
-              <button key={label} className="tap" onClick={() => setTab(label)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 6px', minWidth: 44, minHeight: 46, color: on ? 'var(--accent)' : 'var(--fg3)', flex: 'none' }}>
+              <button key={label} className="tap" aria-pressed={on} onClick={() => setTab(label)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 6px', minWidth: 44, minHeight: 46, color: on ? 'var(--accent)' : 'var(--fg3)', flex: '1 0 auto' }}>
                 <Icon n={ic} size={20} sw={on ? 2.2 : 1.7} />
                 <span style={{ fontFamily: 'var(--font-sans)', fontWeight: on ? 600 : 400, fontSize: 8.5, letterSpacing: '.02em', whiteSpace: 'nowrap' }}>{label}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
       </div>
     );
   }
@@ -44,11 +46,11 @@ function Workspace({ title, nav, tab, setTab, children, headRight }) {
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--fg3)', marginTop: 3 }}>{title}</div>
           </div>
         </div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <nav aria-label={`${title} navigation`} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {nav.map(([ic, label]) => {
             const on = tab === label;
             return (
-              <button key={label} className="tap" onClick={() => setTab(label)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 13, cursor: 'pointer', border: 'none', textAlign: 'left', background: on ? 'var(--accent-tint)' : 'transparent', color: on ? 'var(--accent)' : 'var(--taupe)', minHeight: 46 }}>
+              <button key={label} className="tap" aria-pressed={on} onClick={() => setTab(label)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 13, cursor: 'pointer', border: 'none', textAlign: 'left', background: on ? 'var(--accent-tint)' : 'transparent', color: on ? 'var(--accent)' : 'var(--taupe)', minHeight: 46 }}>
                 <Icon n={ic} size={19} sw={on ? 2.1 : 1.7} />
                 <span style={{ fontFamily: 'var(--font-sans)', fontWeight: on ? 600 : 400, fontSize: 13.5 }}>{label}</span>
               </button>
@@ -64,7 +66,7 @@ function Workspace({ title, nav, tab, setTab, children, headRight }) {
   );
 }
 
-function PageHead({ eyebrow, title, sub, right }) {
+export function PageHead({ eyebrow, title, sub, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
       <div>
@@ -77,7 +79,7 @@ function PageHead({ eyebrow, title, sub, right }) {
   );
 }
 
-function Stat({ icon, label, value, sub, tone = 'accent' }) {
+export function Stat({ icon, label, value, sub, tone = 'accent' }) {
   return (
     <Card pad={20} style={{ flex: 1, minWidth: 150 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -704,7 +706,7 @@ function AdminRefunds() {
 
 export function AdminPortal() {
   const [tab, setTab] = useState('Dashboard');
-  const nav = [['layout-dashboard', 'Dashboard'], ['users-round', 'Clients'], ['flower-2', 'Teachers'], ['user-check', 'Approvals'], ['user-search', 'Prospects'], ['calendar', 'Bookings'], ['banknote', 'Payouts'], ['rotate-ccw', 'Refunds']];
+  const nav = ADMIN_NAV;
 
   const screens = {
     Dashboard: <AdminDashboard setTab={setTab} />,

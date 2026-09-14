@@ -1,9 +1,30 @@
-# Phase 2a — live availability preview
+# Phase 2a — live availability
+
+## Owner corrections — 14 September 2026
+
+PR #1 was accepted and deployed to Railway; migration 0005 was applied by CI.
+The owner then clarified that the original Admin design must be preserved,
+all mock records removed from the live interface, and the interface kept
+English-only. Do not replace an existing portal's design when connecting data.
+
+The Admin correction reuses the original workspace, eight navigation sections,
+Dashboard cards, colours and typography. It opens on Dashboard; **Bookings →
+Room schedule** contains the live Mindbody room list. Today's occupied intervals
+also populate the Dashboard's studio breakdown and room list. Other management
+sections retain their place and layout with “Not connected yet” states and dashes
+for unknown metrics. They do not display mock clients, teachers, revenue,
+approvals, prospects, payouts or refunds, and do not simulate management actions.
+Staff authentication remains required. Client and instructor flows retain their
+current functionality; all newly added interface copy is English-only.
+
+The live catalogue also excludes the old sample packages, clients, applications,
+earnings, revenue and progress records. The explicitly labelled development demo
+remains isolated behind `VITE_LIVE_AVAILABILITY=false`; do not enable it on the
+live website. This frontend correction needs no database migration.
 
 This branch implements the handoff's **read path first** milestone. It is not the
 production booking launch. On 2026-09-14 the owner asked to stop showing demo data
-and show actual room bookings. This branch now defaults to real data. The current
-`main` / Railway deployment remains unchanged until the branch is accepted.
+and show actual room bookings. The accepted release now defaults to real data.
 
 ## What is connected
 
@@ -39,14 +60,15 @@ and show actual room bookings. This branch now defaults to real data. The curren
   overlap checks, idempotence and held/booked/history deletion protection.
   A teacher may open a session while its room is busy; the saved opening remains
   unavailable to clients until the room is free. The grid explains this state.
-- The live admin portal is role-gated and opens on **Room schedule**. It shows
+- The live admin portal is role-gated and opens on the original **Dashboard**.
+  **Bookings → Room schedule** shows
   Mindbody occupied intervals independently of teacher openings, filtered by
   studio and Hong Kong date, with last successful sync and read timestamps.
   Intervals crossing midnight appear on both affected days. Manual refresh
   rereads the shared snapshot; it does not trigger a Mindbody sync. Failed or
   stale reads retain the last records with an explicit warning, and an empty
-  unverified list never claims the room is free. The separate **Instructor
-  availability** tab retains actual instructor openings/counts.
+  unverified list never claims the room is free. Other Admin management sections
+  show unconnected states, as requested by the owner.
 - Room records contain only studios and times. They include classes and
   appointments, not a client booking ledger with names, class titles or payments.
   Client holds/bookings are not relabelled as imported Mindbody bookings.

@@ -97,7 +97,7 @@ export function replaceLiveReferenceData(teachers, studios) {
 export const teacherById = (id) => TEACHERS.find(t => t.id === id);
 export const locName = (id) => (LOCATIONS.find(l => l.id === id) || {}).name || '';
 
-export const PACKAGES = [
+export const PACKAGES = LIVE_AVAILABILITY ? [] : [
   // Private 1:1
   { id: 'p11-trial',  format: '1:1', name: 'Trial session', credits: 1,  price: 900,                validityMonths: 1, tag: 'Begin',       blurb: 'A single private to find your fit.' },
   { id: 'p11-single', format: '1:1', name: 'Single class',  credits: 1,  price: 1200,               validityMonths: 1, tag: '',            blurb: 'One private session, pay as you go.' },
@@ -134,7 +134,7 @@ export const LEVELS = [
   { id: 'exp',  label: 'Experienced',     note: '20+ sessions · practising weekly' },
 ];
 
-export const CLIENTS = [
+export const CLIENTS = LIVE_AVAILABILITY ? [] : [
   { id: 'c1',  name: 'Mara Whitfield',   initials: 'MW', goal: 'Rehab an injury',      joined: 'Jan 2024', sessions: 28, status: 'active', spend: 15400 },
   { id: 'c2',  name: 'Priya Nair',       initials: 'PN', goal: 'Build strength',        joined: 'Mar 2024', sessions: 19, status: 'active', spend: 9880 },
   { id: 'c3',  name: 'Daniel Koh',       initials: 'DK', goal: 'Posture & alignment',   joined: 'Nov 2023', sessions: 41, status: 'active', spend: 21300 },
@@ -174,22 +174,22 @@ export const BOOKINGS = LIVE_AVAILABILITY ? [] : [
   _bk('b20','c5','t3','2026-06-21','11:00','confirmed','Postnatal'),
 ];
 
-export const APPLICANTS = [
+export const APPLICANTS = LIVE_AVAILABILITY ? [] : [
   { id: 'a1', name: 'Yuki Mori',   initials: 'YM', headline: 'Reformer & flexibility', exp: 7, locId: 'central', certs: ['STOTT Reformer', 'BASI Mat'], applied: '2 days ago', ph: 'sage' },
   { id: 'a2', name: 'Carlos Vega', initials: 'CV', headline: 'Athletic conditioning',  exp: 5, locId: 'kt',      certs: ['Balanced Body', 'NASM-CPT'], applied: '4 days ago', ph: 'almond' },
   { id: 'a3', name: 'Mei Lin',     initials: 'ML', headline: 'Restorative & breath',   exp: 6, locId: 'qb',      certs: ['Restorative Yoga', 'Pre/Postnatal'], applied: '5 days ago', ph: 'taupe' },
 ];
 
-export const EARNINGS = [
+export const EARNINGS = LIVE_AVAILABILITY ? [] : [
   { m: 'Jan', v: 38200 }, { m: 'Feb', v: 41600 }, { m: 'Mar', v: 47900 },
   { m: 'Apr', v: 44300 }, { m: 'May', v: 52100 }, { m: 'Jun', v: 49400 },
 ];
-export const REVENUE = [
+export const REVENUE = LIVE_AVAILABILITY ? [] : [
   { m: 'Jan', v: 612 }, { m: 'Feb', v: 648 }, { m: 'Mar', v: 731 },
   { m: 'Apr', v: 705 }, { m: 'May', v: 812 }, { m: 'Jun', v: 768 },
 ];
 
-export const PROGRESS_LOG = [
+export const PROGRESS_LOG = LIVE_AVAILABILITY ? [] : [
   { id: 'pl10', n: 10, date: '2026-06-12', tId: 't1', focus: 'Lower-back mobility & core control', note: 'Great session — your pelvic stability has noticeably improved. Held the bridge with control today. Next time we\'ll add single-leg work to challenge it further.', posture: 'Pelvis sits more level when standing; mild right-shoulder elevation continuing to ease.' },
   { id: 'pl09', n: 9,  date: '2026-06-05', tId: 't1', focus: 'Hip hinge & posterior chain',         note: 'Hamstrings looser this week. Form on the hinge is clean now. Keep up the daily breathing drill — it\'s helping your rib position.', posture: 'Hip hinge now symmetric; lumbar curve well controlled under load.' },
   { id: 'pl08', n: 8,  date: '2026-05-28', tId: 't1', focus: 'Standing alignment & balance',         note: 'Balance work paid off — much steadier on the unstable surface. Slight tendency to grip the toes; we\'ll soften that next round.', posture: 'Standing sway reduced; slight toe-gripping on the left foot.' },

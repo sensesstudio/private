@@ -7,9 +7,8 @@ import { isSupabaseConfigured, supabase } from '../supabase/client.js';
 import { parseQuery, hasSignal } from './parse.js';
 import { findSlots, buildReply } from './query.js';
 
-// Shown when we can't make out a booking request (gibberish / off-topic). Kept
-// bilingual since we can't reliably detect the language of nonsense input.
-const CLARIFY = '唔好意思，我可能聽唔明 😅 你可以問我邊一日、邊間 studio 或者邊種堂（例如 Reformer）有冇位。\nSorry, I didn\'t quite catch that — try asking about a class, day or studio, e.g. "Reformer tomorrow afternoon". Or tap the WhatsApp button to reach us.';
+// The current interface is English-only, including clarification messages.
+const CLARIFY = 'Sorry, I didn\'t quite catch that — try asking about a class, day or studio, e.g. "Reformer tomorrow afternoon". Or tap the WhatsApp button to reach us.';
 
 export async function askAssistant(message, history = []) {
   let intent = null;
@@ -21,7 +20,7 @@ export async function askAssistant(message, history = []) {
       const { data, error } = await supabase.functions.invoke('chat-ask', { body: { message, history } });
       if (!error && data && data.intent) {
         intent = data.intent;
-        reply = data.reply || null;
+        reply = data.reply && !/[\u3400-\u9fff]/.test(data.reply) ? data.reply : null;
         if (typeof data.understood === 'boolean') understood = data.understood;
       }
     } catch { /* fall through to local parser */ }

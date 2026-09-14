@@ -8,7 +8,7 @@ import { askAssistant } from '../../chat/ask.js';
 
 const EXAMPLES = [
   'Any Reformer slots tomorrow afternoon?',
-  '聽日晏晝有冇 Reformer 位？',
+  'Morning sessions in Central this week',
   'Cantonese teacher in Causeway Bay this week',
 ];
 
@@ -52,7 +52,7 @@ function Bubble({ m, onChip, onPick }) {
 export function ChatAssistant({ onPickSlot }) {
   useSlots(); // re-render as availability changes
   const [messages, setMessages] = useState([
-    { id: 'seed', role: 'assistant', text: "Hi! Ask me about availability — in English or 中文. For example:", chips: EXAMPLES },
+    { id: 'seed', role: 'assistant', text: "Hi! Ask me about availability. For example:", chips: EXAMPLES },
   ]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -80,7 +80,7 @@ export function ChatAssistant({ onPickSlot }) {
       <div style={{ padding: '8px 20px 6px' }}>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)', margin: '6px 0 4px' }}>Ask Senses</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 13, color: 'var(--fg3)', margin: 0 }}>Tell me what you're after — any language. I'll check live availability.</p>
-        {LIVE_AVAILABILITY && <a href="https://wa.me/85298818081" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '10px 0', color: 'var(--taupe)', fontSize: 13 }}>WhatsApp 真人查詢 · Contact the studio</a>}
+        {LIVE_AVAILABILITY && <a href="https://wa.me/85298818081" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '10px 0', color: 'var(--taupe)', fontSize: 13 }}>Contact the studio on WhatsApp</a>}
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 13, padding: '14px 18px 16px' }}>
         {messages.map(m => <Bubble key={m.id} m={m} onChip={send} onPick={onPickSlot} />)}
