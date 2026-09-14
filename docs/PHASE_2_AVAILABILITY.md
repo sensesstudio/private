@@ -136,6 +136,19 @@ and do not put service-role keys into Vite variables.
 
 ## Validation
 
+### Admin room day view (14 September 2026)
+
+The default Bookings view follows the owner's reference: three room columns
+(Kwun Tong, Causeway Bay, Central), hourly rows from 07:00 to 22:00 HKT, exact
+partial-hour free gaps and occupied continuations. Daily free totals merge
+overlapping source intervals. Each room must have a fresh, mapped, fully covered
+day before any gap is labelled FREE; otherwise availability is unconfirmed.
+Previous/Today/Next and date selection cover the existing 14-day window. The
+List toggle retains all daily source intervals, including those outside grid
+hours. The existing Admin shell and English-only interface are preserved.
+Mindbody supplies room times only, so no client names, session types or payment
+instructions from the reference are added. This feature makes no backend writes.
+
 - `npm test`: availability/timezone/expiry/reconnect tests and execution of the
   actual migration on embedded PostgreSQL, including RLS and guarded RPC cases.
 - `npm run test:e2e`: desktop and mobile Chromium journeys against isolated fake

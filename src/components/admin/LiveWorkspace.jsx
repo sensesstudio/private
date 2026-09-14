@@ -88,7 +88,7 @@ export function LiveAdminWorkspace({ account, session }) {
   const badge = <div className="admin-account"><div className="admin-account-identity"><span className="admin-account-mark">S</span><div className="hide-mobile"><strong>{account.full_name || 'Studio Ops'}</strong><span>Studio Ops</span></div></div>
     <Button variant="ghost" size="sm" onClick={session.logout}>Sign out</Button>
   </div>;
-  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Bookings' ? <div className="admin-page"><PageHead eyebrow="All studios" title="Bookings" sub="Mindbody room occupancy" /><Card pad={0}><RoomSchedule embedded /></Card></div> : <UnconnectedSection section={tab} />;
+  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
   return <Workspace title="Admin" nav={ADMIN_NAV} tab={tab} setTab={setTab} headRight={badge}>
     {session.error && <p className="admin-panel-note" role="alert">{session.error}</p>}
     <div key={tab}>{content}</div>

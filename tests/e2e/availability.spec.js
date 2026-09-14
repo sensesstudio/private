@@ -156,7 +156,8 @@ test('admin sees synced room occupancy without teacher openings and filters Hong
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Room schedule' })).toBeVisible();
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Private room availability' })).toBeVisible();
   await expect(page.getByText('Room schedule is up to date', { exact: false })).toBeVisible();
   await expect(page.locator('.room-table tbody tr')).toHaveCount(2);
   expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
@@ -164,7 +165,8 @@ test('admin sees synced room occupancy without teacher openings and filters Hong
   await expect(page.locator('.room-table')).toContainText('00:30');
   await page.getByLabel('Room studio', { exact: true }).selectOption('cwb');
   await expect(page.getByText('No occupied intervals for this selection.', { exact: false })).toBeVisible();
-  await page.getByLabel('Room date', { exact: true }).selectOption('2026-10-01');
+  await page.getByLabel('Room date', { exact: true }).fill('2026-10-01');
+  await page.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
   await expect(page.locator('.room-table')).toContainText('12:00');
   await expect(page.locator('.room-table')).toContainText('Causeway Bay');
@@ -182,6 +184,7 @@ test('admin refresh replaces room records and a failed read preserves records wi
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
+  await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
   api.setFailure(true);
   await page.getByRole('button', { name: 'Refresh list', exact: true }).click();
@@ -223,11 +226,49 @@ test('admin keeps the original workspace and all eight sections without mock man
   }
   await nav.getByRole('button', { name: 'Dashboard', exact: true }).click();
   await page.getByRole('button', { name: 'Room schedule', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Room schedule', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Private room availability', exact: true })).toBeVisible();
   await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Admin sign-in' })).toBeVisible();
   await expect(nav).toHaveCount(0);
   expect(api.writes).toEqual([]);
   expect(errors).toEqual([]);
+});
+
+test('room day view shows three hourly columns, partial gaps and safe stale states', async ({ page }, testInfo) => {
+  const api = await setup(page, { role: 'admin' });
+  api.data.room_busy = [{ studio_id: 'cwb', starts_at: '2026-09-30T01:30:00Z', ends_at: '2026-09-30T02:30:00Z' }];
+  await page.goto('/#admin');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password-only');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Day view', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.room-day-grid tbody tr')).toHaveCount(15);
+  await expect(page.locator('.room-column-name')).toHaveText(['Kwun Tong private room', 'Causeway Bay private room', 'Central private room']);
+  await expect(page.locator('td[data-studio="cwb"][data-hour="09:00"]')).toContainText('Free 09:00–09:30');
+  await expect(page.locator('td[data-studio="cwb"][data-hour="09:00"]')).toContainText('09:30–10:30 · Occupied');
+  await expect(page.locator('td[data-studio="cwb"][data-hour="10:00"]')).toContainText('Until 10:30');
+  await expect(page.locator('td[data-studio="cwb"][data-hour="10:00"]')).toContainText('Free 10:30–11:00');
+  await expect(page.locator('th[data-studio="cwb"]')).toContainText('14 of 15 hours free');
+  await expect(page.getByRole('button', { name: 'Previous day', exact: true })).toBeDisabled();
+  await page.screenshot({ path: `test-results/room-grid-${testInfo.project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Next day', exact: true }).click();
+  await expect(page.getByLabel('Room date', { exact: true })).toHaveValue('2026-10-01');
+  await expect(page.locator('th[data-studio="cwb"]')).toContainText('15 of 15 hours free');
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page.getByLabel('Room date', { exact: true })).toHaveValue('2026-09-30');
+  api.setFailure(true);
+  await page.getByRole('button', { name: 'Refresh list', exact: true }).click();
+  await expect(page.getByText('Latest schedule unavailable;', { exact: false })).toBeVisible();
+  await expect(page.locator('.room-segment-free')).toHaveCount(0);
+  await expect(page.locator('.room-free-total')).toHaveText(['Availability unconfirmed', 'Availability unconfirmed', 'Availability unconfirmed']);
+  await expect(page.locator('.room-segment-busy').first()).toContainText('Last read');
+  api.setFailure(false); api.data.sync.last_ok_at = '2026-09-30T01:00:00Z';
+  await page.getByRole('button', { name: 'Refresh list', exact: true }).click();
+  await expect(page.getByText('Room sync is overdue;', { exact: false })).toBeVisible();
+  await expect(page.locator('.room-segment-free')).toHaveCount(0);
+  expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
+  expect(api.writes).toEqual([]);
 });
