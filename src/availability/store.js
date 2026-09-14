@@ -5,12 +5,13 @@ import { projectSlots, mapTeachers } from './model.js';
 export function createAvailabilityStore({ load, subscribe, references = () => {}, now = Date.now }) {
   let snapshot = null, fetchedAt = 0, failed = false, pending = false, queued = false;
   let generation = 0, active = false, cleanup, poll, clock;
-  let state = { slots: [], loading: true, error: null, snapshot: null };
+  let state = { slots: [], loading: true, refreshing: false, fetchedAt: null, error: null, snapshot: null };
   const listeners = new Set();
   const publish = () => {
     const slots = projectSlots(snapshot, { now: now(), fetchedAt, failed });
     references(mapTeachers(snapshot?.teachers, slots), snapshot?.studios);
-    state = { slots, loading: !snapshot && pending, error: failed ? 'availability_unavailable' : null, snapshot };
+    state = { slots, loading: !snapshot && pending, refreshing: pending, fetchedAt: snapshot ? fetchedAt : null,
+      error: failed ? 'availability_unavailable' : null, snapshot };
     listeners.forEach(fn => fn());
   };
   async function refresh() {

@@ -142,3 +142,51 @@ test('Ask matches the actual studio and disables an earlier suggestion when the 
   await expect(card).toBeDisabled();
   await expect(card).toContainText('Unavailable');
 });
+
+test('admin sees synced room occupancy without teacher openings and filters Hong Kong days', async ({ page }) => {
+  const api = await setup(page, { role: 'admin' });
+  api.data.teachers = []; api.data.slots = [];
+  api.data.room_busy.push(
+    { studio_id: 'central', starts_at: '2026-09-29T15:30:00Z', ends_at: '2026-09-29T16:30:00Z' },
+    { studio_id: 'cwb', starts_at: '2026-10-01T04:00:00Z', ends_at: '2026-10-01T05:00:00Z' },
+  );
+  await page.goto('/#admin');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password-only');
+  await page.getByRole('button', { name: '登入 · Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '房間日程 · Room schedule' })).toBeVisible();
+  await expect(page.getByText('Room schedule is up to date', { exact: false })).toBeVisible();
+  await expect(page.locator('.room-table tbody tr')).toHaveCount(2);
+  await expect(page.locator('.room-table')).toContainText('23:30');
+  await expect(page.locator('.room-table')).toContainText('00:30');
+  await page.getByLabel('Room studio', { exact: true }).selectOption('cwb');
+  await expect(page.getByText('No occupied intervals for this selection.', { exact: false })).toBeVisible();
+  await page.getByLabel('Room date', { exact: true }).selectOption('2026-10-01');
+  await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
+  await expect(page.locator('.room-table')).toContainText('12:00');
+  await expect(page.locator('.room-table')).toContainText('Causeway Bay');
+  await expect(page.getByText('Client names and class titles are not imported.', { exact: false })).toBeVisible();
+  await page.screenshot({ path: `test-results/admin-rooms-${test.info().project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: '導師時段 · Instructor availability', exact: true }).click();
+  await expect(page.getByText('No active instructors yet.', { exact: false })).toBeVisible();
+});
+
+test('admin refresh replaces room records and a failed read preserves records with a warning', async ({ page }) => {
+  const api = await setup(page, { role: 'admin' });
+  await page.goto('/#admin');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password-only');
+  await page.getByRole('button', { name: '登入 · Sign in', exact: true }).click();
+  await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
+  api.setFailure(true);
+  await page.getByRole('button', { name: '更新列表 · Refresh list', exact: true }).click();
+  await expect(page.getByText('Latest schedule unavailable;', { exact: false })).toBeVisible();
+  await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
+  api.setFailure(false); api.data.room_busy = [];
+  await page.getByRole('button', { name: '更新列表 · Refresh list', exact: true }).click();
+  await expect(page.getByText('No occupied intervals for this selection.', { exact: false })).toBeVisible();
+  api.data.sync.last_ok_at = '2026-09-30T01:00:00Z';
+  await page.getByRole('button', { name: '更新列表 · Refresh list', exact: true }).click();
+  await expect(page.getByText('Room sync is overdue;', { exact: false })).toBeVisible();
+  await expect(page.getByText('No occupied intervals for this selection.', { exact: false })).toHaveCount(0);
+});

@@ -79,6 +79,7 @@ export default function App() {
     <>
       <div id="chrome">
         <img src="assets/logo5-trim.png" alt="Senses Pilates" style={{ height: 30 }} />
+        {!LIVE_AVAILABILITY && <span className="demo-label">示範資料 · Demo</span>}
         {!CLIENT_ONLY && <PortalSwitch portal={portal} setPortal={go} />}
       </div>
       <div id="portal-root">

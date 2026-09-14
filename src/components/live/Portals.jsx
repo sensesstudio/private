@@ -10,6 +10,7 @@ import { syncCovers } from '../../availability/model.js';
 import { supabase } from '../../supabase/client.js';
 import { inputStyle } from '../../styles.js';
 import './live.css';
+import { RoomSchedule } from './RoomSchedule.jsx';
 
 function AvailabilityStatus() {
   const { loading, error, snapshot } = useLiveAvailability();
@@ -206,5 +207,12 @@ function AdminAvailability() {
   </section>;
 }
 export function LiveAdminPortal() {
-  return <div className="live-scroll"><StaffGate role="admin">{() => <AdminAvailability />}</StaffGate></div>;
+  const [tab, setTab] = useState('rooms');
+  return <div className="live-scroll"><StaffGate role="admin">{() => <>
+    <nav className="live-nav live-admin-nav" aria-label="Admin navigation">
+      <button aria-pressed={tab === 'rooms'} onClick={() => setTab('rooms')}>房間日程 · Room schedule</button>
+      <button aria-pressed={tab === 'availability'} onClick={() => setTab('availability')}>導師時段 · Instructor availability</button>
+    </nav>
+    {tab === 'rooms' ? <RoomSchedule /> : <AdminAvailability />}
+  </>}</StaffGate></div>;
 }

@@ -1,12 +1,15 @@
 # Phase 2a — live availability preview
 
 This branch implements the handoff's **read path first** milestone. It is not the
-production booking launch. `main` / Railway remain the demo until acceptance.
+production booking launch. On 2026-09-14 the owner asked to stop showing demo data
+and show actual room bookings. This branch now defaults to real data. The current
+`main` / Railway deployment remains unchanged until the branch is accepted.
 
 ## What is connected
 
-- `VITE_LIVE_AVAILABILITY=true` selects the live preview. The default is `false`;
-  setting Supabase credentials alone does not activate it. A missing connection,
+- Real data is selected by default (or `VITE_LIVE_AVAILABILITY=true`). Only an
+  explicit `VITE_LIVE_AVAILABILITY=false` enables the labelled development demo.
+  A missing connection,
   an empty database or a failed read never substitutes demo teachers or sessions.
 - `src/slots.js` retains `useSlots`, `daysForTeacher`, `openSlotsForDay`,
   `slotById` and the existing demo mutator names. In live mode the simulated
@@ -36,9 +39,19 @@ production booking launch. `main` / Railway remain the demo until acceptance.
   overlap checks, idempotence and held/booked/history deletion protection.
   A teacher may open a session while its room is busy; the saved opening remains
   unavailable to clients until the room is free. The grid explains this state.
-- The live admin portal is role-gated and shows real availability counts and
-  active instructors. Existing demo admin/teacher/client features remain
-  accessible only when the preview flag is off.
+- The live admin portal is role-gated and opens on **Room schedule**. It shows
+  Mindbody occupied intervals independently of teacher openings, filtered by
+  studio and Hong Kong date, with last successful sync and read timestamps.
+  Intervals crossing midnight appear on both affected days. Manual refresh
+  rereads the shared snapshot; it does not trigger a Mindbody sync. Failed or
+  stale reads retain the last records with an explicit warning, and an empty
+  unverified list never claims the room is free. The separate **Instructor
+  availability** tab retains actual instructor openings/counts.
+- Room records contain only studios and times. They include classes and
+  appointments, not a client booking ledger with names, class titles or payments.
+  Client holds/bookings are not relabelled as imported Mindbody bookings.
+- Demo admin/teacher/client features are accessible only through explicit demo
+  mode. Fake histories, credits, teachers and revenue are absent from real mode.
 
 ## Database changes
 
@@ -63,9 +76,11 @@ and do not put service-role keys into Vite variables.
    site's existing Auth provisioning triggers and realtime settings. The local
    embedded-PostgreSQL test covers schema/RLS/RPC behaviour but cannot reproduce
    Supabase hosting, realtime delivery, cron or real concurrent database sessions.
-3. After owner acceptance, merge via GitHub. CI applies 0005; read the workflow
-   result and existing commit smoke comment. Keep the production frontend's
-   `VITE_LIVE_AVAILABILITY` unset/false initially.
+3. Before merging, explicitly set the production frontend's
+   `VITE_LIVE_AVAILABILITY=false` in Railway while staging is validated: an unset
+   flag NOW selects real data. After owner acceptance, merge via GitHub. CI applies
+   0005; read the workflow result and existing commit smoke comment. Verify the
+   migration before rebuilding production with `VITE_LIVE_AVAILABILITY=true`.
 4. In a separate Railway preview service, select the accepted branch/commit and
    provide `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and
    `VITE_LIVE_AVAILABILITY=true`. Rebuild because Vite variables are build-time.
@@ -103,9 +118,10 @@ and do not put service-role keys into Vite variables.
   actual migration on embedded PostgreSQL, including RLS and guarded RPC cases.
 - `npm run test:e2e`: desktop and mobile Chromium journeys against isolated fake
   API responses: client date/studio selection, blocked rooms, teacher login and
-  edits, client/admin access denial, empty/stale/failed reads and recovery.
-- `npm run build`: default demo build. `VITE_LIVE_AVAILABILITY=true npm run build`:
-  preview build. Neither command connects to a real database.
+  edits, client/admin access denial, empty/stale/failed reads and recovery, admin
+  room filters, cross-midnight blocks, refresh and stale empty-list handling.
+- `npm run build`: default real-data build. `VITE_LIVE_AVAILABILITY=false npm run
+  build`: explicit demo build. Neither command connects to a real database.
 
 Browser binaries are installed with `npx playwright install chromium`. An
 existing Chromium binary can be selected with

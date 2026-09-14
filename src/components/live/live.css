@@ -35,4 +35,27 @@
 .live-grid button[data-state=reserved] { background:var(--taupe); color:#fff; }
 .live-grid button:disabled { opacity:.5; cursor:default; }
 .live-admin-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin:20px 0; }
+.live-admin-nav { justify-content:flex-start; border-top:0; border-bottom:1px solid var(--border); }
+.room-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.room-heading p { margin:8px 0 18px; }
+.room-sync { background:var(--sand); border-radius:16px; padding:16px 20px; margin:12px 0 24px; }
+.room-sync>p:first-child { font-weight:600; margin-top:0; }
+.room-sync[data-state=warning] { border-left:4px solid var(--taupe); }
+.room-sync dl { display:flex; flex-wrap:wrap; gap:16px 36px; margin:12px 0; }
+.room-sync dt { font-size:12px; color:var(--taupe); }
+.room-sync dd { margin:6px 0 0; font-size:14px; font-variant-numeric:tabular-nums; }
+.room-sync p:last-child { margin-bottom:0; font-size:12px; }
+.room-filters { display:flex; gap:16px; flex-wrap:wrap; }
+.room-filters label { display:flex; flex:1 1 220px; flex-direction:column; gap:8px; font-size:13px; min-width:0; }
+.room-filters select { width:100%; min-width:0; min-height:46px; border:1px solid var(--border); border-radius:12px; background:var(--ivory); color:var(--espresso); font:14px var(--font-sans); padding:10px 12px; }
+.room-table-scroll { overflow-x:auto; }
+.room-table { width:100%; min-width:560px; border-collapse:collapse; font:13px var(--font-sans); }
+.room-table caption { text-align:left; padding:12px 0; color:var(--taupe); }
+.room-table th, .room-table td { text-align:left; padding:16px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.room-table th { font-weight:500; }
+.room-table thead { background:var(--sand); }
+.room-table time { font-variant-numeric:tabular-nums; }
+.room-table strong { display:inline-block; margin-top:6px; font-size:17px; font-weight:500; }
+.room-empty { padding:24px 0; }
+.room-explanation { color:var(--taupe); }
 @media (max-width:600px) { .live-section { padding:20px 16px 90px; } .live-section h1 { font-size:25px; } .live-status { padding:10px 16px; } }
