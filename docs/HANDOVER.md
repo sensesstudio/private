@@ -127,3 +127,14 @@ Rooms are managed in Mindbody (site `5720465`); clients may only book when the r
 - **Next (Phase 2)**: frontend reads real slots — bookable = teacher slot ∩ no `room_busy` overlap ∩ not held/booked; app switches to the 3 real studios; work on branch `mindbody-sync`, demo untouched until acceptance.
 
 *Build: `npm run build` (Vite). Local: `npm run dev`. Serve prod: `npm start`.*
+
+## Phase 2a development branch
+
+See [`PHASE_2_AVAILABILITY.md`](./PHASE_2_AVAILABILITY.md) for the real-data
+availability preview, authenticated teacher edits, validation and rollout gates.
+As requested on 2026-09-14, this branch now defaults to real data; explicit
+`VITE_LIVE_AVAILABILITY=false` is required for the labelled development demo.
+Admin opens on a date/studio-filtered Mindbody room occupancy list with sync
+timestamps. The live deployment has not yet changed. Booking confirmation and
+Mindbody write-back are subsequent milestones; see the updated rollout sequence
+before merging because an unset frontend flag now selects real data.

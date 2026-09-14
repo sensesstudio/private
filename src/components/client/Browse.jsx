@@ -1,3 +1,5 @@
+import { LIVE_AVAILABILITY } from '../../features.js';
+import { availabilityDays } from '../../availability/time.js';
 import { useState } from 'react';
 import { Icon, Eyebrow, Avatar, Stars, Segmented, useVP } from '../shared/index.jsx';
 import { EmptyState } from './ClientDetail.jsx';
@@ -104,7 +106,7 @@ function BrowseTeacher({ t, onOpen }) {
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--taupe)', marginTop: 2, ...ell }}>{t.headline}</div>
           </div>
         </div>
-        <Stars value={t.rating} reviews={t.reviews} size={12} />
+        {!LIVE_AVAILABILITY && <Stars value={t.rating} reviews={t.reviews} size={12} />}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, ...ell }}><Icon n="map-pin" size={12} /> {locName(t.locId)}</span>
           <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', flex: 'none' }}>{hkd(t.rate)}<span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10.5, color: 'var(--fg3)' }}>/hr</span></span>
@@ -118,13 +120,13 @@ function BrowseTeacher({ t, onOpen }) {
   );
 }
 
-export function ClientBrowse({ onGate, onOpen, embedded = false }) {
+export function ClientBrowse({ onGate, onOpen, embedded = false, onPickSlot }) {
   useSlots(); // reflect live slot availability
   const { mobile } = useVP();
   const [seg, setSeg] = useState(embedded ? 'Find' : 'Schedule');
   const [day, setDay] = useState(0);
   const [monthOff, setMonthOff] = useState(0);
-  const [sort, setSort] = useState('match');
+  const [sort, setSort] = useState(LIVE_AVAILABILITY ? 'name' : 'match');
   const [locFilter, setLocFilter] = useState('any');
   const [q, setQ] = useState('');          // teacher name search
   const [fLang, setFLang] = useState('any'); // medium of instruction
@@ -134,7 +136,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const [studioView, setStudioView] = useState(null); // a studio drilled into under Studios
   const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
   const studioSlots = studioView
-    ? openSlotsForDay(0).map(s => ({ t: teacherById(s.teacherId), time: s.time })).filter(x => x.t && (x.t.locIds || [x.t.locId]).includes(studioView)).sort((a, b) => a.time.localeCompare(b.time))
+    ? openSlotsForDay(0).map(s => ({ ...s, t: teacherById(s.teacherId), time: s.time })).filter(x => x.t && (LIVE_AVAILABILITY ? x.studioId === studioView : (x.t.locIds || [x.t.locId]).includes(studioView))).sort((a, b) => a.time.localeCompare(b.time))
     : [];
   const teachers = [...TEACHERS]
     .filter(t => q === '' || (t.name + ' ' + t.headline + ' ' + t.specs.join(' ') + ' ' + (t.langs || []).join(' ') + ' ' + (t.locIds || [t.locId]).map(locName).join(' ')).toLowerCase().includes(q.toLowerCase()))
@@ -144,7 +146,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
       if (sort === 'price') return b.rate - a.rate;
-      if (sort === 'soon') return soonRank(a) - soonRank(b);
+      if (sort === 'soon') return LIVE_AVAILABILITY ? (a.nextStartsAt ?? Infinity) - (b.nextStartsAt ?? Infinity) : soonRank(a) - soonRank(b);
       return b.match - a.match;
     });
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -154,19 +156,22 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
   const mYear = baseYear + Math.floor((baseMonth + monthOff) / 12);
   const daysInMonth = new Date(mYear, mIdx + 1, 0).getDate();
   const startDom = monthOff === 0 ? 16 : 1;
-  const daysList = [];
-  for (let dom = startDom; dom <= daysInMonth; dom++) {
+  const daysList = LIVE_AVAILABILITY ? availabilityDays() : [];
+  for (let dom = startDom; !LIVE_AVAILABILITY && dom <= daysInMonth; dom++) {
     const dt = new Date(mYear, mIdx, dom);
     const iso = `${mYear}-${String(mIdx + 1).padStart(2, '0')}-${String(dom).padStart(2, '0')}`;
     daysList.push({ dow: DOW[dt.getDay()], dom, iso, holiday: HK_HOLIDAYS_2026[iso] });
   }
-  const goMonth = (delta) => { const next = monthOff + delta; if (next < 0 || next > 11) return; setMonthOff(next); setDay(0); };
+  const goMonth = (delta) => { if (LIVE_AVAILABILITY) return; const next = monthOff + delta; if (next < 0 || next > 11) return; setMonthOff(next); setDay(0); };
   const perTeacher = {};
-  const schedule = openSlotsForDay(day + monthOff)
-    .filter(s => { perTeacher[s.teacherId] = (perTeacher[s.teacherId] || 0) + 1; return perTeacher[s.teacherId] <= 2; })
-    .map(s => ({ t: teacherById(s.teacherId), time: s.time }))
-    .filter(x => x.t && (schedLoc === 'any' || (x.t.locIds || [x.t.locId]).includes(schedLoc)) && (schedTeacher === 'any' || x.t.id === schedTeacher))
+  const selectedDate = daysList[day]?.iso;
+  const selectedOffset = LIVE_AVAILABILITY ? daysList[day]?.key
+    : Math.round((new Date(`${selectedDate}T00:00:00+08:00`) - new Date('2026-06-16T00:00:00+08:00')) / 86400000);
+  const schedule = openSlotsForDay(selectedOffset)
+    .map(s => ({ ...s, t: teacherById(s.teacherId), time: s.time }))
+    .filter(x => x.t && (schedLoc === 'any' || (LIVE_AVAILABILITY ? x.studioId === schedLoc : (x.t.locIds || [x.t.locId]).includes(schedLoc))) && (schedTeacher === 'any' || x.t.id === schedTeacher))
     .sort((a, b) => a.time.localeCompare(b.time))
+    .filter(s => { perTeacher[s.teacherId] = (perTeacher[s.teacherId] || 0) + 1; return perTeacher[s.teacherId] <= 2; })
     .slice(0, 14);
   const schedSelectStyle = { width: '100%', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12.5, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 30px 10px 14px', minHeight: 42 };
 
@@ -180,7 +185,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
           </div>
 
           <div style={{ flex: 'none', padding: '8px 20px 0' }}>
-            <Eyebrow>Private Pilates · 5 studios · Hong Kong</Eyebrow>
+            <Eyebrow>Private Pilates · {LOCATIONS.length} studios · Hong Kong</Eyebrow>
             <h1 style={{ margin: '10px 0 0', lineHeight: 1.06 }}>
               <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--espresso)' }}>Book your </span>
               <span style={{ fontFamily: 'var(--font-script)', fontSize: 34, color: 'var(--taupe)' }}>private pilates</span>
@@ -236,7 +241,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
               <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12.5, color: 'var(--fg3)' }}>{teachers.length} instructor{teachers.length === 1 ? '' : 's'}</span>
               <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <select value={sort} onChange={e => setSort(e.target.value)} style={{ appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 34px 9px 14px', boxShadow: 'var(--shadow-sm)' }}>
-                  <option value="match">Top match</option>
+                  {!LIVE_AVAILABILITY && <option value="match">Top match</option>}
                   <option value="soon">Available earliest</option>
                   <option value="name">Name A–Z</option>
                   <option value="price">Price: high to low</option>
@@ -255,7 +260,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                       <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1.1 }}>{t.name}</div>
                       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 12, color: 'var(--taupe)', margin: '2px 0 5px', ...ell }}>{t.headline}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Stars value={t.rating} reviews={t.reviews} size={11} />
+                        {!LIVE_AVAILABILITY && <Stars value={t.rating} reviews={t.reviews} size={11} />}
                         <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11, color: 'var(--fg3)', display: 'inline-flex', alignItems: 'center', gap: 3, minWidth: 0, ...ell }}><Icon n="map-pin" size={11} /> {locName(t.locId)}</span>
                       </div>
                     </div>
@@ -318,7 +323,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {studioSlots.map((sl, i) => (
-                  <div key={i} className="tap" onClick={() => onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0', borderBottom: i < studioSlots.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+                  <div key={i} className="tap" onClick={() => onPickSlot && sl.id ? onPickSlot(sl) : onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0', borderBottom: i < studioSlots.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
                     <div style={{ width: 56, flex: 'none' }}>
                       <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)' }}>{sl.time}</div>
                       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10, color: 'var(--fg3)' }}>60 min</div>
@@ -327,7 +332,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{sl.t.specs[0]}</div>
                       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>Private · 60 min</div>
                     </div>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>Book</span>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>{LIVE_AVAILABILITY ? 'View' : 'Book'}</span>
                   </div>
                 ))}
               </div>
@@ -342,9 +347,9 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                 <span className="live-dot" /> Live availability
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <button className="tap" onClick={() => goMonth(-1)} disabled={monthOff === 0} style={{ width: 32, height: 32, borderRadius: 999, display: 'grid', placeItems: 'center', cursor: monthOff === 0 ? 'not-allowed' : 'pointer', background: 'var(--ivory)', border: '1px solid var(--border)', opacity: monthOff === 0 ? .4 : 1 }}><Icon n="chevron-left" size={16} color="var(--espresso)" /></button>
-                <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', minWidth: 116, textAlign: 'center' }}>{MONTHS[mIdx]} {mYear}</span>
-                <button className="tap" onClick={() => goMonth(1)} disabled={monthOff >= 11} style={{ width: 32, height: 32, borderRadius: 999, display: 'grid', placeItems: 'center', cursor: monthOff >= 11 ? 'not-allowed' : 'pointer', background: 'var(--ivory)', border: '1px solid var(--border)', opacity: monthOff >= 11 ? .4 : 1 }}><Icon n="chevron-right" size={16} color="var(--espresso)" /></button>
+                <button className="tap" onClick={() => goMonth(-1)} disabled={LIVE_AVAILABILITY || monthOff === 0} style={{ width: 32, height: 32, borderRadius: 999, display: LIVE_AVAILABILITY ? 'none' : 'grid', placeItems: 'center', cursor: monthOff === 0 ? 'not-allowed' : 'pointer', background: 'var(--ivory)', border: '1px solid var(--border)', opacity: monthOff === 0 ? .4 : 1 }}><Icon n="chevron-left" size={16} color="var(--espresso)" /></button>
+                <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', minWidth: 116, textAlign: 'center' }}>{LIVE_AVAILABILITY ? 'Next 14 days · HK time' : `${MONTHS[mIdx]} ${mYear}`}</span>
+                <button className="tap" onClick={() => goMonth(1)} disabled={LIVE_AVAILABILITY || monthOff >= 11} style={{ width: 32, height: 32, borderRadius: 999, display: LIVE_AVAILABILITY ? 'none' : 'grid', placeItems: 'center', cursor: monthOff >= 11 ? 'not-allowed' : 'pointer', background: 'var(--ivory)', border: '1px solid var(--border)', opacity: monthOff >= 11 ? .4 : 1 }}><Icon n="chevron-right" size={16} color="var(--espresso)" /></button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -367,7 +372,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
               {daysList.map((d, i) => {
                 const on = day === i;
                 return (
-                  <button key={i} title={d.holiday || ''} className="tap" onClick={() => setDay(i)} style={{ flex: 'none', width: 50, textAlign: 'center', padding: '9px 0', borderRadius: 15, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : (d.holiday ? 'var(--terracotta)' : 'var(--border)')), background: on ? 'var(--accent)' : (d.holiday ? 'rgba(185,117,91,.10)' : 'var(--ivory)') }}>
+                  <button key={i} title={d.iso + (d.holiday ? ' · ' + d.holiday : '')} className="tap" onClick={() => setDay(i)} style={{ flex: 'none', width: 50, textAlign: 'center', padding: '9px 0', borderRadius: 15, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--accent)' : (d.holiday ? 'var(--terracotta)' : 'var(--border)')), background: on ? 'var(--accent)' : (d.holiday ? 'rgba(185,117,91,.10)' : 'var(--ivory)') }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: on ? 'rgba(255,255,255,.85)' : (d.holiday ? 'var(--terracotta)' : 'var(--fg3)') }}>{d.dow}</div>
                     <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 18, color: on ? '#fff' : (d.holiday ? 'var(--terracotta)' : 'var(--espresso)'), marginTop: 2 }}>{d.dom}</div>
                     <div style={{ width: 5, height: 5, borderRadius: 999, margin: '3px auto 0', background: d.holiday ? (on ? '#fff' : 'var(--terracotta)') : 'transparent' }} />
@@ -383,7 +388,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
             )}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {schedule.map((sl, i) => (
-                <div key={i} className="tap" onClick={() => onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', borderBottom: i < schedule.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
+                <div key={i} className="tap" onClick={() => onPickSlot && sl.id ? onPickSlot(sl) : onOpen(sl.t)} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 0', borderBottom: i < schedule.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
                   <div style={{ width: 50, flex: 'none' }}>
                     <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)' }}>{sl.time}</div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 10, color: 'var(--fg3)' }}>60 min</div>
@@ -391,9 +396,9 @@ export function ClientBrowse({ onGate, onOpen, embedded = false }) {
                   <Avatar t={sl.t} size={42} radius={12} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--espresso)' }}>{sl.t.name}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>{sl.t.specs[0]} · {locName(sl.t.locId)}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)' }}>{sl.t.specs[0]} · {locName(sl.studioId || sl.t.locId)}</div>
                   </div>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>Book</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11, color: '#fff', background: 'var(--accent)', borderRadius: 999, padding: '6px 13px', flex: 'none' }}>{LIVE_AVAILABILITY ? 'View' : 'Book'}</span>
                 </div>
               ))}
               {schedule.length === 0 && (

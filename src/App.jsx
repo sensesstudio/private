@@ -1,3 +1,5 @@
+import { LIVE_AVAILABILITY } from './features.js';
+import { LiveClientPortal, LiveTeacherPortal, LiveAdminPortal } from './components/live/Portals.jsx';
 import { useState, useEffect } from 'react';
 import { ClientPortal } from './components/client/Portal.jsx';
 import { TeacherPortal } from './components/teacher/Portal.jsx';
@@ -16,7 +18,9 @@ const PORTALS = [
   { id: 'admin',   label: 'Admin',   icon: 'layout-dashboard' },
 ];
 
-const COMP = { client: ClientPortal, teacher: TeacherPortal, admin: AdminPortal };
+const COMP = LIVE_AVAILABILITY
+  ? { client: LiveClientPortal, teacher: LiveTeacherPortal, admin: LiveAdminPortal }
+  : { client: ClientPortal, teacher: TeacherPortal, admin: AdminPortal };
 
 // CLIENT_ONLY hides the Teacher/Admin switcher so friends only see the student
 // portal. You can still reach the others by adding #teacher / #admin to the URL.
@@ -32,7 +36,7 @@ function PortalSwitch({ portal, setPortal }) {
   return (
     <div className="pswitch">
       {PORTALS.map(p => (
-        <button key={p.id} className={portal === p.id ? 'on' : ''} onClick={() => setPortal(p.id)}>
+        <button key={p.id} aria-label={p.label} aria-pressed={portal === p.id} className={portal === p.id ? 'on' : ''} onClick={() => setPortal(p.id)}>
           <Icon n={p.icon} size={15} sw={1.8} color="currentColor" />
           <span className="plabel">{p.label}</span>
         </button>
@@ -75,6 +79,7 @@ export default function App() {
     <>
       <div id="chrome">
         <img src="assets/logo5-trim.png" alt="Senses Pilates" style={{ height: 30 }} />
+        {!LIVE_AVAILABILITY && <span className="demo-label">示範資料 · Demo</span>}
         {!CLIENT_ONLY && <PortalSwitch portal={portal} setPortal={go} />}
       </div>
       <div id="portal-root">

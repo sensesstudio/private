@@ -6,3 +6,5 @@ dist/
 .env.*
 !.env.example
 .vite/
+test-results/
+playwright-report/
