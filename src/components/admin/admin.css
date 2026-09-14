@@ -1,0 +1,51 @@
+.live-admin-root { height:100%; position:relative; overflow:auto; background:var(--cream); }
+.admin-page { padding:34px 40px 40px; max-width:1180px; margin:0 auto; box-sizing:border-box; }
+.admin-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+.admin-dashboard-panels { display:grid; grid-template-columns:1.5fr 1fr; gap:18px; margin-bottom:18px; }
+.admin-card-title { font:500 20px var(--font-serif); color:var(--espresso); margin:0; }
+.admin-muted { font:300 12.5px/1.6 var(--font-sans); color:var(--fg3); margin:6px 0 16px; }
+.admin-pending-chart { min-height:200px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:1px solid var(--border-soft); color:var(--taupe); text-align:center; }
+.admin-pending-chart p { font:400 16px var(--font-serif); margin:16px 0 6px; }
+.admin-pending-chart span { font:300 12px/1.6 var(--font-sans); }
+.admin-studio-counts { display:flex; flex-direction:column; gap:20px; margin:22px 0; }
+.admin-studio-count-label { display:flex; justify-content:space-between; gap:12px; font:400 13px var(--font-sans); color:var(--espresso); margin-bottom:8px; }
+.admin-studio-count-label strong { font-weight:500; color:var(--taupe); }
+.admin-studio-bar { height:7px; border-radius:999px; background:var(--sand); overflow:hidden; }
+.admin-studio-bar span { display:block; height:100%; border-radius:999px; background:var(--accent); }
+.admin-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 22px; border-bottom:1px solid var(--border-soft); }
+.admin-card-head h2 { font-size:18px; }
+.admin-room-row { display:flex; align-items:center; gap:12px; padding:13px 22px; border-bottom:1px solid var(--border-soft); }
+.admin-room-row:last-child { border-bottom:0; }
+.admin-room-row>div { flex:1; min-width:0; }
+.admin-room-row strong { display:block; font:500 13.5px var(--font-sans); color:var(--espresso); }
+.admin-room-row div>span { display:block; font:300 12px var(--font-sans); color:var(--fg3); margin-top:5px; }
+.admin-room-icon { width:36px; height:36px; border-radius:11px; background:var(--accent-tint); display:grid; place-items:center; flex:none; }
+.admin-panel-note { padding:18px 22px; margin:0; color:var(--taupe); font:300 13px/1.7 var(--font-sans); }
+.admin-account { display:flex; flex-direction:column; gap:12px; align-items:flex-start; min-width:0; }
+.admin-account-identity { display:flex; gap:9px; align-items:center; }
+.admin-account-mark { width:34px; height:34px; border-radius:999px; background:var(--espresso); color:var(--cream); display:grid; place-items:center; font:600 14px var(--font-serif); flex:none; }
+.admin-account strong { display:block; font:500 12px var(--font-sans); color:var(--espresso); overflow-wrap:anywhere; }
+.admin-account .hide-mobile span { display:block; margin-top:4px; font:300 11px var(--font-sans); color:var(--fg3); }
+.admin-subnav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.admin-subnav button { font:500 12px var(--font-sans); color:var(--taupe); background:transparent; border:1px solid var(--border); border-radius:999px; padding:9px 15px; min-height:40px; cursor:pointer; }
+.admin-subnav button[aria-pressed=true] { color:#fff; background:var(--accent); border-color:var(--accent); }
+.admin-table-scroll { overflow-x:auto; }
+.admin-table { width:100%; min-width:680px; border-collapse:collapse; }
+.admin-table th { text-align:left; padding:14px 18px; border-bottom:1px solid var(--border); font:600 10.5px var(--font-sans); letter-spacing:.1em; text-transform:uppercase; color:var(--fg3); white-space:nowrap; }
+.admin-table td { padding:14px 18px; border-bottom:1px solid var(--border-soft); font:300 13px/1.6 var(--font-sans); color:var(--taupe); }
+.admin-instructor { display:flex; align-items:center; gap:10px; }
+.admin-instructor strong { color:var(--espresso); font-weight:500; }
+.admin-empty-panel { text-align:center; padding:38px 24px; color:var(--taupe); font:300 14px/1.8 var(--font-sans); }
+.admin-empty-panel p { max-width:480px; margin:16px auto 0; }
+.admin-page .room-schedule-embedded { max-width:none; padding:22px; }
+.admin-page .room-schedule-embedded h2 { font-size:22px; }
+.admin-availability>.live-section { padding:0; max-width:none; }
+@media (max-width:759px) {
+  .admin-page { padding:20px 18px 28px; }
+  .admin-stats { grid-template-columns:1fr 1fr; }
+  .admin-dashboard-panels { grid-template-columns:1fr; }
+  .admin-account { flex-direction:row; align-items:center; gap:4px; }
+  .admin-account-identity { display:none; }
+  .admin-card-head, .admin-room-row { padding-left:16px; padding-right:16px; }
+  .admin-page .room-schedule-embedded { padding:18px 14px; }
+}
