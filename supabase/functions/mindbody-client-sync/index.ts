@@ -34,7 +34,7 @@ Deno.serve(async req => {
     // Upstream errors may contain PII. Persist only a fixed error code.
     try { await d.rpc('apply_mindbody_client_sync', { p_started: started, p_results: [], p_error: true }); } catch { /* retry next scheduled run */ }
     const message = error instanceof Error ? error.message : '';
-    const allowed = ['invalid_date','invalid_service_identity','duplicate_service_identity','incomplete_services','pagination_limit'];
+    const allowed = ['invalid_date','client_id_missing','client_id_mismatch','service_id_invalid','duplicate_service_identity','incomplete_services','pagination_limit'];
     const reason = allowed.includes(message) ? message : /(?:clientservices|usertoken\/issue) (\d{3})/.exec(message)?.[1] || 'unavailable';
     return reply({ error: 'client_sync_failed', stage, reason }, 503);
   }

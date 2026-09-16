@@ -8,11 +8,14 @@ export function hkDate(value) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
 export function normalizeService(s, allowedClients) {
-  const clientId = typeof s.ClientId === 'string' ? s.ClientId : '';
-  if (!allowedClients.has(clientId) || !Number.isSafeInteger(s.Id) || s.Id <= 0) throw new Error('invalid_service_identity');
+  const clientId = typeof s.ClientId === 'string' ? s.ClientId : Number.isSafeInteger(s.ClientId) ? String(s.ClientId) : '';
+  if (!clientId) throw new Error('client_id_missing');
+  if (!allowedClients.has(clientId)) throw new Error('client_id_mismatch');
+  const serviceId = typeof s.Id === 'string' && /^[1-9]\d*$/.test(s.Id) ? s.Id : Number.isSafeInteger(s.Id) && s.Id > 0 ? String(s.Id) : null;
+  if (!serviceId) throw new Error('service_id_invalid');
   if (!Number.isSafeInteger(s.Count) || !Number.isSafeInteger(s.Remaining) || s.Count < 0 || s.Remaining < 0 || s.Remaining > s.Count) return null;
   if (s.Returned === true || !s.PaymentDate || !s.ExpirationDate || typeof s.Name !== 'string') return null;
-  return { client_id: clientId, service_id: String(s.Id), name: s.Name, total: s.Count, remaining: s.Remaining,
+  return { client_id: clientId, service_id: serviceId, name: s.Name, total: s.Count, remaining: s.Remaining,
     purchase_date: hkDate(s.PaymentDate), expiry_date: hkDate(s.ExpirationDate), current: s.Current === true };
 }
 export function matchServices(packages, services, links = []) {
@@ -35,22 +38,33 @@ export function matchServices(packages, services, links = []) {
   });
 }
 export async function fetchServices(mb, token, clientIds, start, end) {
+  // Some site responses omit ClientId even though the SDK advertises it.
+  // A single explicit ClientId query provides the verified ownership context.
+  // Bound concurrency keeps the scheduled job within its runtime budget.
   const all = [];
-  for (let batch = 0; batch < clientIds.length; batch += 20) {
-    const ids = clientIds.slice(batch, batch + 20), allowed = new Set(ids);
-    let offset = 0;
-    for (;;) {
-      const q = new URLSearchParams({ 'request.startDate': `${start}T00:00:00`, 'request.endDate': `${end}T23:59:59`,
-        'request.showActiveOnly': 'false', 'request.useActivateDate': 'false', 'request.limit': '200', 'request.offset': String(offset) });
-      ids.forEach(id => q.append('request.clientIds', id));
-      const data = await mb(`/client/clientservices?${q}`, token);
-      const rows = data?.ClientServices, total = data?.PaginationResponse?.TotalResults;
-      if (!Array.isArray(rows) || !Number.isSafeInteger(total) || total < 0 || (rows.length === 0 && offset < total)) throw new Error('incomplete_services');
-      for (const raw of rows) { const s = normalizeService(raw, allowed); if (s) all.push(s); }
-      offset += rows.length;
-      if (offset >= total) break;
-      if (offset >= 10000) throw new Error('pagination_limit');
+  let next = 0;
+  async function worker() {
+    while (next < clientIds.length) {
+      const clientId = clientIds[next++], allowed = new Set([clientId]);
+      let offset = 0;
+      for (;;) {
+        const q = new URLSearchParams({ 'request.clientId': clientId,
+          'request.startDate': `${start}T00:00:00`, 'request.endDate': `${end}T23:59:59`,
+          'request.showActiveOnly': 'false', 'request.useActivateDate': 'false', 'request.limit': '200', 'request.offset': String(offset) });
+        const data = await mb(`/client/clientservices?${q}`, token);
+        const rows = data?.ClientServices, total = data?.PaginationResponse?.TotalResults;
+        if (!Array.isArray(rows) || !Number.isSafeInteger(total) || total < 0 || (rows.length === 0 && offset < total)) throw new Error('incomplete_services');
+        for (const raw of rows) {
+          // Never replace an explicit foreign client ID with the requested ID.
+          const s = normalizeService({ ...raw, ClientId: raw.ClientId == null || raw.ClientId === '' ? clientId : raw.ClientId }, allowed);
+          if (s) all.push(s);
+        }
+        offset += rows.length;
+        if (offset >= total) break;
+        if (offset >= 10000) throw new Error('pagination_limit');
+      }
     }
   }
+  await Promise.all(Array.from({length:Math.min(4,clientIds.length)},worker));
   return all;
 }
