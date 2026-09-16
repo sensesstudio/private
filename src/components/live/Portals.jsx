@@ -17,6 +17,7 @@ import { ClientAccount } from './ClientAccount.jsx';
 import { EmptyPanel, StudioLocations } from './ClientProfile.jsx';
 import { LiveTeacherWorkspace } from './TeacherWorkspace.jsx';
 import { GoogleReturnNotice } from './GoogleSignIn.jsx';
+import { ClientOnboarding } from './ClientOnboarding.jsx';
 
 function AvailabilityStatus() {
   const { loading, error, snapshot } = useLiveAvailability();
@@ -80,10 +81,12 @@ export function LiveClientPortal() {
     {[['home','home','Home'],['browse','calendar-plus','Book'],['ask','sparkles','Match for me'],['pricing','tag','Pricing'],['account','user','Profile']].map(([key,icon,label])=><button key={key} aria-pressed={tab===key} onClick={()=>navigate(key)}><Icon n={icon} size={21}/><span>{label}</span></button>)}
   </nav>} overlay={slotId && <SessionPreview slotId={slotId} onClose={() => setSlotId(null)} />}>
     <GoogleReturnNotice />
+    <ClientOnboarding>
     {(tab==='browse' || tab==='ask') && <AvailabilityStatus />}
     {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab==='locations' ? <section className="live-section"><Button variant="soft" onClick={()=>navigate('home')}>Back to Home</Button><h1>Studios & locations</h1><StudioLocations/></section> : tab === 'account' || tab==='home' ? <ClientAccount key={tab} mode={tab==='home' ? 'home' : 'profile'} onNavigate={navigate} onOpen={setInstructor}/> : tab === 'pricing' ? <ClientPricing onBrowse={() => navigate('browse')} /> : tab === 'ask' ?
       <ChatAssistant onPickSlot={(teacher, day, time, id) => { const s = slotById(id); if (s) pick(s); }} /> :
       <ClientBrowse embedded onOpen={t => setInstructor(t.id)} onPickSlot={pick} />}
+    </ClientOnboarding>
   </PhoneFrame>;
 }
 

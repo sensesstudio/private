@@ -1,3 +1,4 @@
+import { ClientSubmittedDetails } from './ClientSubmittedDetails.jsx';
 import { ClientEditor } from './ClientEditor.jsx';
 import { ClientLoginAccess } from './ClientLoginAccess.jsx';
 import { useMemo, useState } from 'react';
@@ -8,15 +9,17 @@ import { filterClients, groupClients, packageStatus, sortClients } from '../../a
 
 const PAGE_SIZE = 25;
 const SORT_COLUMNS = [
-  { key: 'name', width: 14, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
-  { key: 'credits', width: 8, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
-  { key: 'packages', width: 9, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
-  { key: 'package_names', width: 15, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
-  { key: 'last_visit', width: 10, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
-  { key: 'next_visit', width: 13, label: 'Next visit date', asc: 'Next visit: earliest first', desc: 'Next visit: latest first' },
-  { key: 'private_lifetime', width: 9, label: 'Private lifetime', asc: 'Private lifetime: fewest first', desc: 'Private lifetime: most first' },
-  { key: 'expiry', width: 10, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
-  { key: 'status', width: 12, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
+  { key: 'name', width: 13, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
+  { key: 'credits', width: 6, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
+  { key: 'packages', width: 6, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
+  { key: 'package_names', width: 14, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
+  { key: 'last_visit', width: 8, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
+  { key: 'next_visit', width: 10, label: 'Next visit date', asc: 'Next visit: earliest first', desc: 'Next visit: latest first' },
+  { key: 'private_lifetime', width: 8, label: 'Private lifetime', asc: 'Private lifetime: fewest first', desc: 'Private lifetime: most first' },
+  { key: 'expiry', width: 8, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
+  { key: 'intake', width: 9, label: 'Intake', asc: 'Intake: pending first', desc: 'Intake: completed first' },
+  { key: 'waiver', width: 9, label: 'Waiver', asc: 'Waiver: unsigned first', desc: 'Waiver: signed first' },
+  { key: 'status', width: 9, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
 ];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
@@ -54,6 +57,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
     <Card pad={22}>
       <dl className="admin-client-fields">
         <Field label="Client ID">{client.id}</Field><Field label="Phone">{client.phone}</Field><Field label="Email">{client.email}</Field>
+        {client.record?.signup_source === 'google' && <><Field label="Registration">Google sign-up</Field><Field label="Profile">{client.record.profile_completed_at ? 'Complete' : 'Awaiting contact details'}</Field></>}
         <Field label="Credits left / total">{client.credits} / {client.totalCredits}</Field>
         <Field label="Last visit date">{lastVisit(client)}</Field>
         <Field label="Next visit date"><NextVisit client={client} details /></Field>
@@ -61,6 +65,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Package status"><Status packages={client.packages} asOf={asOf} /></Field>
       </dl>
     </Card>
+    <ClientSubmittedDetails client={client}/>
     <div className="admin-client-login"><ClientLoginAccess key={client.id} client={client} /></div>
     <div className="admin-client-package-head admin-client-packages-title"><h2 className="admin-card-title">Packages</h2><Button size="sm" onClick={() => onEdit('package', null)}>Add package</Button></div>
     {client.duplicates > 0 && <p className="admin-client-notice">Possible duplicate rows are preserved and included in totals. Check the source before using these balances.</p>}
@@ -75,7 +80,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Days to expiry">{p.days_to_expiry}</Field>
       </dl>
     </Card>)}</div>
-    <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last and next visit dates are from the latest client CSV. Studio records include admin updates. These balances are separate from online booking credits.</p>
+    <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last and next visit dates are from the latest client CSV. Studio records include admin updates and client submissions. These balances are separate from online booking credits.</p>
   </>;
 }
 
@@ -109,12 +114,13 @@ export function AdminClients() {
       right={<div className="admin-editor-actions"><Button size="sm" disabled={loading || error} onClick={() => setEditor({ kind: 'client', record: null })}>Add client</Button><Button variant="soft" size="sm" icon="refresh-cw" disabled={loading} onClick={() => { setSelectedId(null); refresh(); }}>Refresh clients</Button></div>} />
     {data && <>
       <SyncStatus sync={data.sync} />
-      <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last and next visit dates are from the client CSV. Studio records include admin updates. Package status as of {date(asOf)}.</p>
+      <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last and next visit dates are from the client CSV. Studio records include admin updates and client submissions. Package status as of {date(asOf)}.</p>
       {duplicates > 0 && <p className="admin-client-notice">{duplicates} possible duplicate {duplicates === 1 ? 'row is' : 'rows are'} included in totals. Open a client to review their packages.</p>}
       <div className="admin-client-tools">
         <label className="admin-client-search"><Icon n="search" size={17} /><input aria-label="Search clients" placeholder="Search name, phone, email, ID or package…" value={query} onChange={e => { setQuery(e.target.value); setPage(0); }} /></label>
         <select aria-label="Filter clients" value={filter} onChange={e => { setFilter(e.target.value); setPage(0); }}>
           <option value="all">All clients</option><option value="expiring">Expiring within 30 days</option><option value="duplicates">Possible duplicates</option>
+          <option value="intake_pending">Intake not submitted</option><option value="waiver_pending">Waiver not signed</option><option value="google">Google sign-ups</option><option value="incomplete">Awaiting contact details</option>
         </select>
         <label className="admin-client-sort-label">Sort
           <select aria-label="Sort clients" value={sort} onChange={e => changeSort(e.target.value)}>
@@ -136,12 +142,15 @@ export function AdminClients() {
           <tbody>{visible.map(client => <tr key={client.id}>
             <td><button className="admin-client-name" onClick={() => setSelectedId(client.id)}>{client.name}<Icon n="chevron-right" size={14} /></button>
               <span className="admin-client-contact">{client.email || client.phone || 'No contact details'}</span>
+              {client.record?.signup_source === 'google' && <span className="admin-client-contact">Google sign-up{!client.record.profile_completed_at && ' · Awaiting contact details'}</span>}
               {client.duplicates > 0 && <span className="admin-client-duplicate">Possible duplicate</span>}
             </td>
             <td>{client.credits} <span className="admin-client-secondary">/ {client.totalCredits}</span></td>
             <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td>
             <td className="admin-client-package-names">{client.packages.length ? client.packages.map((pack, index) => <span key={pack.id || pack.source_row || index}>{pack.package_name}</span>) : '—'}</td>
             <td>{lastVisit(client)}</td><td><NextVisit client={client} /></td><td>{client.privateLifetime ?? '—'}<span className="admin-client-contact">sessions attended</span></td><td>{date(client.nextExpiry)}</td>
+            <td>{client.record?.portal_profile?.intake_completed_at ? 'Submitted' : 'Not submitted'}</td>
+            <td>{client.record?.waiver_signatures?.length ? 'Signed' : 'Not signed'}</td>
             <td><Status packages={client.packages} asOf={asOf} /></td>
           </tr>)}</tbody>
         </table></div>

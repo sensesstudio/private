@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { clientDirectoryFixture } from '../fixtures/client-import.js';
+import { WAIVER_SECTIONS, WAIVER_TITLE } from '../../src/waiver.js';
 import { pricingPackages } from '../fixtures/pricing.js';
 
 const now = '2026-09-30T02:00:00Z';
@@ -26,6 +27,8 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
   const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
   const accountApi = { link:null, needsPassword:true, calls:[] };
+  const profileApi = {failed:false,saves:[],signatures:[],data:{contact:{name:'Example Package Holder',email:'holder@example.test',phone:'+85255550001'},profile:{profile_version:1},waiver_document:{version:'2026-09-16',title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}},waiver_signatures:[]}};
+  const onboardingApi = { profile:{status:'ready'}, saves:[], failed:false };
   const googleApi = { enabled:false, authorize:[], exchanges:[], error:false };
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
@@ -48,6 +51,30 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
       if (googleApi.error) callback.hash='error=access_denied&error_description=Private-provider-error';
       else callback.searchParams.set('code','synthetic-oauth-code');
       return route.fulfill({status:302,headers:{location:callback.href},body:''});
+    }
+    if(path.endsWith('/my_client_profile')) return respond(profileApi.data);
+    if(path.endsWith('/save_my_client_profile')) {
+      const input=route.request().postDataJSON();profileApi.saves.push(input);
+      if(profileApi.failed)return respond({message:'unavailable'},503);
+      Object.assign(profileApi.data.profile,input.p_details,{profile_version:input.p_version+1,updated_at:now});
+      if(input.p_section==='about') {profileApi.data.profile.intake_completed_at=now;Object.assign(profileApi.data.contact,{name:input.p_details.name,phone:input.p_details.phone});}
+      if(input.p_section==='preferences')profileApi.data.profile.preferences_updated_at=now;
+      return respond(profileApi.data);
+    }
+    if(path.endsWith('/sign_my_client_waiver')) {
+      const input=route.request().postDataJSON();profileApi.signatures.push(input);
+      profileApi.data.waiver_signatures=[{id:'synthetic-signature',signed_name:input.p_name,participant_name:profileApi.data.contact.name,version:input.p_version,signer_capacity:input.p_capacity,signed_at:now}];
+      Object.assign(profileApi.data.profile,{waiver_signed_at:now,waiver_version:input.p_version,waiver_signed_name:input.p_name,profile_version:profileApi.data.profile.profile_version+1});
+      return respond(profileApi.data);
+    }
+    if(path.endsWith('/client_waiver_documents'))return respond({title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}});
+    if (path.endsWith('/ensure_my_client_profile')) return respond(onboardingApi.profile);
+    if (path.endsWith('/complete_my_client_profile')) {
+      const input=route.request().postDataJSON();onboardingApi.saves.push(input);
+      if(onboardingApi.failed) return respond({message:'unavailable'},503);
+      onboardingApi.profile={status:'ready'};Object.assign(profileApi.data.contact,{name:input.p_name,phone:input.p_phone,email:'new@example.test'});
+      accountApi.needsPassword=false;accountApi.records={status:'active',name:input.p_name,packages:[]};
+      return respond({status:'ready'});
     }
     if (path.endsWith('/studio_client_accounts')) return respond(accountApi.link);
     if (path.endsWith('/client-accounts')) {
@@ -118,7 +145,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -641,8 +668,8 @@ test('prototype pages retain navigation and never display sample client records'
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await page.getByRole('button',{name:'See full progress',exact:true}).click();
   await expect(page.getByText('28 sessions recorded so far. Your next milestone is 30 sessions.',{exact:true})).toBeVisible();
-  for(const [label,text] of [['About me','Your details'],['Bookings','Upcoming'],['Favourite teachers','Saved favourites are not connected yet.'],['Progress log','Your session story'],['Payment & packages','Payment history'],['Studios & locations','Central'],['Preferences','Booking reminders'],['Terms & Conditions','Re-scheduling'],['Liability waiver','Online signing and your waiver status are not connected yet.']]) {
-    await page.getByRole('button',{name:label,exact:true}).click();
+  for(const [label,text] of [['About me','Your details'],['Bookings','Upcoming'],['Favourite teachers','Choose the instructors you would like to save.'],['Progress log','Your session story'],['Payment & packages','Payment history'],['Studios & locations','Central'],['Preferences','Booking reminders'],['Terms & Conditions','Re-scheduling'],['Liability waiver','Please read and sign your waiver']]) {
+    await page.getByRole('button',{name:label==='Liability waiver' ? /^Liability waiver/ : label,exact:label!=='Liability waiver'}).click();
     await expect(page.getByText(text,{exact:false}).first()).toBeVisible();
     await page.getByRole('button',{name:'Profile',exact:true}).first().click();
   }
@@ -758,4 +785,117 @@ test('An expired Google callback cannot reveal a client account',async({page})=>
   await expect(page).toHaveURL(/\?account=1#client$/);
   await expect(page.getByRole('heading',{name:'My account'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
+});
+
+
+for (const destination of ['account','pricing']) test(`new Google customer completes contact details from ${destination}`,async({page},testInfo)=>{
+  const api=await setup(page,{role:'client'});api.googleApi.enabled=true;
+  api.onboardingApi.profile={status:'onboarding_required',name:'New Google customer',email:'new@example.test',phone:''};
+  await page.goto(`/?${destination}=1`);
+  if(destination==='pricing') await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('button',{name:'Continue with Google'}).click();
+  await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toBeVisible();
+  await expect(page.getByLabel('Email',{exact:true})).toHaveValue('new@example.test');
+  await expect(page.getByLabel('Email',{exact:true})).toHaveAttribute('readonly','');
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toBeVisible();
+  await page.getByLabel('Full name',{exact:true}).fill('New customer');
+  await page.getByLabel('Mobile number',{exact:true}).fill('5555');
+  await page.getByRole('button',{name:'Save and continue'}).click();
+  await expect(page.getByRole('alert')).toContainText('including the country code');
+  expect(api.onboardingApi.saves).toEqual([]);
+  await page.getByLabel('Mobile number',{exact:true}).fill('+852 5555 0001');
+  await page.screenshot({path:`test-results/new-google-client-${destination}-${testInfo.project.name}.png`,fullPage:true});
+  api.onboardingApi.failed=true;
+  await page.getByRole('button',{name:'Save and continue'}).click();
+  await expect(page.getByRole('alert')).toContainText('could not save');
+  await expect(page.getByLabel('Mobile number',{exact:true})).toHaveValue('+852 5555 0001');
+  api.onboardingApi.failed=false;
+  await page.getByRole('button',{name:'Save and continue'}).click();
+  await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toHaveCount(0);
+  expect(api.onboardingApi.saves.at(-1)).toEqual({p_name:'New customer',p_phone:'+85255550001'});
+  expect(api.paymentApi.checkouts).toEqual([]);
+  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toHaveCount(0);
+});
+
+test('Google email conflict requests studio help without exposing or creating packages',async({page})=>{
+  const api=await setup(page,{role:'client'});api.googleApi.enabled=true;api.onboardingApi.profile={status:'link_required'};
+  await page.goto('/?account=1');await page.getByRole('button',{name:'Continue with Google'}).click();
+  await expect(page.getByRole('heading',{name:'Connect your studio record'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Contact the studio'})).toHaveAttribute('href','https://wa.me/85298818081');
+  await expect(page.locator('body')).not.toContainText('Example Private 10');
+  expect(api.onboardingApi.saves).toEqual([]);
+});
+
+test('admin finds Google sign-ups without packages and sees their contact details',async({page})=>{
+  const api=await setup(page,{role:'admin'});
+  api.clientDirectory.clients ??= [];
+  api.clientDirectory.clients.push({id:'google:synthetic',client_name:'New Google customer',phone:'+85255550001',email:'new@example.test',signup_source:'google',profile_completed_at:now,version:2});
+  api.accountApi.link={login_email:'new@example.test',password_changed_at:null};
+  await page.goto('/#admin');
+  await page.getByLabel('Email',{exact:true}).fill('admin@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();
+  await page.getByLabel('Filter clients').selectOption('google');
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await page.getByLabel('Filter clients').selectOption('incomplete');
+  await expect(page.getByText('No clients match your search.')).toBeVisible();
+  await page.getByLabel('Filter clients').selectOption('google');
+  await page.getByRole('button',{name:'New Google customer',exact:true}).click();
+  await expect(page.getByText('+85255550001',{exact:true})).toBeVisible();
+  await expect(page.getByText('Active · Google sign-in enabled')).toBeVisible();
+  await expect(page.getByText('0 package records',{exact:true})).toBeVisible();
+});
+
+
+test('client intake, preferences, favourites and signed waiver persist and are visible in admin details',async({page,browser},testInfo)=>{
+  const api=await setup(page,{role:'client'});api.accountApi.needsPassword=false;
+  await page.goto('/?account=1');
+  await page.getByLabel('Email',{exact:true}).fill('holder@example.test');await page.getByLabel('Password',{exact:true}).fill('SyntheticPassword123');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('button',{name:'About me',exact:true}).click();
+  await page.getByLabel('Full name',{exact:true}).fill('Updated client');
+  await page.getByLabel('Mobile number',{exact:true}).fill('+85255550099');
+  for(const label of ['Build strength','35–44','Some experience','English','Knees','Early morning','Central'])await page.getByRole('button',{name:label,exact:true}).click();
+  await page.getByLabel('Instructor notes').fill('Synthetic client preference');
+  await page.getByRole('group',{name:'Are you pregnant?'}).getByRole('button',{name:'No',exact:true}).click();
+  await page.getByRole('group',{name:'Any recent surgery?'}).getByRole('button',{name:'Yes',exact:true}).click();
+  await page.getByRole('group',{name:'Has a doctor cleared you to exercise?'}).getByRole('button',{name:'No',exact:true}).click();
+  api.profileApi.failed=true;await page.getByRole('button',{name:'Save my details'}).click();
+  await expect(page.getByRole('alert')).toContainText('could not be saved');await expect(page.getByLabel('Instructor notes')).toHaveValue('Synthetic client preference');
+  api.profileApi.failed=false;await page.getByRole('button',{name:'Save my details'}).click();
+  await expect(page.getByRole('status')).toContainText('Saved.');
+  await page.reload();await page.getByRole('button',{name:'About me',exact:true}).click();
+  await expect(page.getByLabel('Instructor notes')).toHaveValue('Synthetic client preference');
+  await expect(page.getByRole('button',{name:'Build strength',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.screenshot({path:`test-results/client-intake-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();
+  await page.getByRole('button',{name:'Preferences',exact:true}).click();
+  await page.getByRole('checkbox',{name:/Booking reminders/}).check();await page.getByRole('button',{name:'Save preferences'}).click();await expect(page.getByRole('status')).toContainText('Saved.');
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.getByRole('button',{name:'Favourite teachers',exact:true}).click();
+  await page.getByRole('button',{name:'Test Instructor',exact:true}).click();await page.getByRole('button',{name:'Save favourites'}).click();await expect(page.getByRole('status')).toContainText('Saved.');
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.getByRole('button',{name:/^Liability waiver/}).click();
+  await expect(page.getByRole('button',{name:'Agree & sign'})).toBeDisabled();
+  await page.getByRole('region',{name:'Waiver document'}).evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  await page.getByRole('checkbox',{name:/I have read/}).check();await page.getByLabel('Signing as').selectOption('self');await page.getByLabel('Full legal name').fill('Synthetic signer');await page.getByRole('button',{name:'Agree & sign'}).click();
+  await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();
+  await page.reload();await page.getByRole('button',{name:/^Liability waiver/}).click();await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();
+  expect(api.profileApi.signatures).toHaveLength(1);
+  expect(api.profileApi.signatures[0]).toEqual({p_version:'2026-09-16',p_name:'Synthetic signer',p_capacity:'self',p_agreed:true});
+  expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toContain('Synthetic client preference');
+  const context=await browser.newContext();const admin=await context.newPage();
+  const adminApi=await setup(admin,{role:'admin'});
+  adminApi.clientDirectory.clients=[{id:'synthetic-submitted',client_name:'Updated client',email:'holder@example.test',phone:'+85255550099',version:1,portal_profile:api.profileApi.data.profile,waiver_signatures:api.profileApi.data.waiver_signatures,favourite_teachers:[{id:teacherId,name:'Test Instructor'}]}];
+  adminApi.clientDirectory.rows=[];
+  await admin.goto('/#admin');await admin.getByLabel('Email',{exact:true}).fill('admin@example.test');await admin.getByLabel('Password',{exact:true}).fill('synthetic');await admin.getByRole('button',{name:'Sign in',exact:true}).click();
+  await admin.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();
+  await expect(admin.locator('tbody')).toContainText('Submitted');await expect(admin.locator('tbody')).toContainText('Signed');
+  await admin.getByRole('button',{name:'Updated client',exact:true}).click();
+  for(const text of ['Synthetic client preference','Synthetic signer','Test Instructor','Build strength'])await expect(admin.getByText(text,{exact:true})).toBeVisible();
+  await admin.getByText('View signed document · 2026-09-16',{exact:true}).click();
+  await expect(admin.getByRole('heading',{name:'Assumption of Risk'})).toBeVisible();
+  await context.close();
 });

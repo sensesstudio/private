@@ -69,3 +69,11 @@
 .teacher-layout { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:18px; }
 @media(min-width:900px) { .live-nav.prototype-nav { padding-inline:max(20px,calc((100% - 900px)/2)); } }
 @media(max-width:500px) { .profile-dark { padding:20px; }.profile-dark h2 { font-size:21px; }.profile-card-meta { gap:7px; }.profile-setting { align-items:flex-start; flex-direction:column; gap:8px; } }
+
+.profile-edit-form label { display:flex; flex-direction:column; gap:8px; margin:12px 0; font-size:13px; }
+.profile-edit-form .profile-consent { flex-direction:row; align-items:flex-start; line-height:1.6; }
+.profile-option-grid button:not(:disabled) { cursor:pointer; }
+.profile-option-grid button[aria-pressed=true] { background:var(--ivory); border-color:var(--taupe); color:var(--espresso); }
+.profile-option-grid button[aria-pressed=true] .profile-option-circle { background:var(--taupe); border-color:var(--taupe); box-shadow:inset 0 0 0 3px var(--ivory); }
+.profile-waiver-scroll { max-height:400px; overflow:auto; padding:20px; border:1px solid var(--border); border-radius:18px; background:var(--ivory); }
+.profile-edit-form input[type=checkbox],.profile-setting input[type=checkbox] { width:20px; height:20px; flex:none; accent-color:var(--taupe); }
