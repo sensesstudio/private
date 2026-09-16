@@ -9,7 +9,8 @@ import { temporaryPassword, validNewPassword } from '../supabase/functions/clien
 test('client account ownership is explicit; password gate, role checks and raw CRM isolation hold in SQL',async t=>{
   const db=new PGlite();t.after(()=>db.close());
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
-    create schema auth;create table auth.users(id uuid primary key);
+    create schema auth;create table auth.users(id uuid primary key);create table auth.sessions(id uuid primary key,user_id uuid,created_at timestamptz default clock_timestamp(),not_after timestamptz);
+    create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('session_id',current_setting('request.jwt.claim.session_id',true)) $$;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema public,auth to anon,authenticated,service_role;`);
   const migration=async name=>(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8')).replace(/create extension if not exists (pgcrypto|pg_cron|pg_net);/g,'');
@@ -21,14 +22,14 @@ test('client account ownership is explicit; password gate, role checks and raw C
   await db.exec(await migration('20260916070412_admin_client_csv.sql'));
   const ids={admin:'11111111-0000-4000-8000-000000000001',one:'11111111-0000-4000-8000-000000000002',two:'11111111-0000-4000-8000-000000000003',teacher:'11111111-0000-4000-8000-000000000004'};
   for (const [kind,id] of Object.entries(ids)) {
-    await db.query('insert into auth.users values($1)',[id]);
+    await db.query('insert into auth.users values($1)',[id]);await db.query('insert into auth.sessions(id,user_id) values($1,$1)',[id]);
     await db.query('insert into profiles(id,role,full_name,email) values($1,$2,$3,$4)',[id,kind==='one'||kind==='two' ? 'client' : kind,`Synthetic ${kind}`,kind==='one' ? 'holder@example.test' : `${kind}@example.test`]);
   }
-  const as=async(role,id='')=>db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${role};`);
+  const as=async(role,id='')=>db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);select set_config('request.jwt.claim.session_id','${id}',false);set role ${role};`);
   await as('service_role');
   await db.query('select import_admin_client_packages($1,$2,$3,$4)', ['synthetic.csv','c'.repeat(64),'2026-09-30',JSON.stringify(rawClientRows)]);
   await db.exec('reset role');
-  for (const name of ['20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql']) await db.exec(await migration(name));
+  for (const name of ['20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql']) await db.exec(await migration(name));
   const first=rawClientRows[0].ClientId,second=rawClientRows[3].ClientId;
   await db.query("update admin_client_packages set private_sessions_lifetime=case when client_id=$1 then 14 else 0 end, raw_data=raw_data || jsonb_build_object('Private_sessions_lifetime',case when client_id=$1 then '14' else '0' end)",[first]);
   await as('authenticated',ids.admin);
@@ -69,18 +70,36 @@ test('client account ownership is explicit; password gate, role checks and raw C
   await as('authenticated',ids.two);const other=await snapshot();assert.equal(other.name,'Other Client');assert.equal(other.packages.length,1);
   assert.equal(JSON.stringify(other).includes('Example Package Holder'),false);
   await as('authenticated',ids.admin);assert.equal((await db.query('select * from studio_client_accounts')).rows.length,2);
+  const begin=(reset=true,actor=ids.admin,user=ids.one)=>db.query('select begin_client_password_operation($1,$2,$3) op',[user,actor,reset]);
+  const finish=(op,ok=true,actor=ids.admin)=>db.query('select finish_client_password_operation($1,$2,$3,$4)',[ids.one,actor,op,ok]);
+  await assert.rejects(begin(),/permission denied/);
+  await as('service_role');
+  await assert.rejects(begin(true,ids.one),/admin_access_required/);
+  await assert.rejects(begin(true,ids.admin,ids.teacher),/client_account_required/);
+  const op=(await begin()).rows[0].op;
+  await assert.rejects(begin(),/password_operation_in_progress/);
+  await assert.rejects(finish(ids.two),/password_operation_changed/);
+  await finish(op);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
+  await as('service_role');const change=(await begin(false,ids.one)).rows[0].op;await finish(change,true,ids.one);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
+  await db.exec('reset role');await db.query('update auth.sessions set created_at=clock_timestamp() where id=$1',[ids.one]);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'active');
+  await db.exec('reset role');await db.query("update auth.sessions set not_after=now()-interval '1 minute' where id=$1",[ids.one]);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
 });
 
-function fixture({role='admin',linked=false,createError=false,bindError=false,verify=true}={}) {
+function fixture({role='admin',linked=false,createError=false,bindError=false,verify=true,passwordError=false,lockError=false}={}) {
   const calls=[];
   const admin={auth:{getUser:async token=>token==='valid' ? {data:{user:{id:'caller',email:'holder@example.test'}}} : {error:{}},admin:{
+    getUserById:async id=>({data:{user:{id,email:'holder@example.test'}}}),
     createUser:async input=>{calls.push(['create',input]);return createError ? {error:{}} : {data:{user:{id:'new-user'}}};},
     deleteUser:async id=>{calls.push(['delete',id]);return {};},
-    updateUserById:async(id,input)=>{calls.push(['password',id,input]);return {};},
-  }},rpc:async(name,input)=>{calls.push(['rpc',name,input]);return bindError ? {error:{}} : {};},
+    updateUserById:async(id,input)=>{calls.push(['password',id,input]);return passwordError ? {error:{}} : {};},
+  }},rpc:async(name,input)=>{calls.push(['rpc',name,input]);return bindError || (lockError && name==='begin_client_password_operation') ? {error:{}} : {data:name==='begin_client_password_operation' ? 'operation' : true};},
   from(table){let update=false;const query={select(){return query;},eq(){return query;},is(){return query;},update(input){update=true;calls.push(['activate',input]);return query;},
     single:async()=>({data:table==='profiles' ? {role} : {id:'crm-one',client_name:'Synthetic Client',email:'holder@example.test',version:1}}),
-    maybeSingle:async()=>({data:linked ? {user_id:'caller',password_changed_at:null} : null}),
+    maybeSingle:async()=>({data:linked ? {user_id:'caller',login_email:'holder@example.test',password_changed_at:null} : null}),
     then(resolve,reject){return Promise.resolve(update ? {} : {data:[]}).then(resolve,reject);}};return query;}};
   return {calls,handler:clientAccountsHandler({admin,verifyPassword:async(...args)=>{calls.push(['verify',...args]);return verify;}})};
 }
@@ -103,7 +122,20 @@ test('first password change is authenticated, verifies current password, changes
     const f=fixture(options);assert.ok((await f.handler(request(body))).status>=400);assert.equal(f.calls.some(c=>c[0]==='password'||c[0]==='activate'),false);
   }
   const f=fixture({role:'client',linked:true});assert.equal((await f.handler(request({...body,password:body.currentPassword}))).status,400);assert.equal((await f.handler(request(body))).status,200);
-  assert.deepEqual(f.calls.map(c=>c[0]),['verify','password','activate']);assert.equal(f.calls[1][1],'caller');
+  assert.deepEqual(f.calls.map(c=>c[0]),['rpc','verify','password','rpc']);assert.equal(f.calls[2][1],'caller');
   assert.equal(validNewPassword('123456789012','something'),false);assert.equal(validNewPassword('a'.repeat(73)+'1','something'),false);
   const passwords=new Set(Array.from({length:100},()=>temporaryPassword()));assert.equal(passwords.size,100);
+});
+
+test('admin reset requires confirmation and targets the linked account; failures never activate access',async()=>{
+  const reset={action:'reset-password',clientId:'crm-one',email:'holder@example.test',confirmReset:true,temporaryPassword:'Sample123*',userId:'someone-else'};
+  for(const options of [{role:'client',linked:true},{role:'teacher',linked:true},{linked:false},{linked:true,lockError:true}]) {
+    const f=fixture(options);assert.ok((await f.handler(request(reset))).status>=400);assert.equal(f.calls.some(c=>c[0]==='password'),false);
+  }
+  const f=fixture({linked:true});assert.equal((await f.handler(request({...reset,confirmReset:false}))).status,400);
+  assert.equal((await f.handler(request({...reset,email:'other@example.test'}))).status,409);
+  const res=await f.handler(request(reset));assert.equal(res.status,200);assert.equal((await res.json()).temporary_password,'Sample123*');
+  assert.equal(f.calls.find(c=>c[0]==='password')[1],'caller');assert.equal(f.calls[0][2].p_reset,true);
+  const fail=fixture({linked:true,passwordError:true});assert.equal((await fail.handler(request(reset))).status,400);assert.equal(fail.calls.at(-1)[2].p_success,false);
+  const custom=fixture();assert.equal((await custom.handler(request({...create,temporaryPassword:'Sample123*'}))).status,200);assert.equal(custom.calls[0][1].password,'Sample123*');
 });

@@ -13,3 +13,7 @@ export function validNewPassword(password, current) {
   return typeof password === 'string' && password.length >= 12 && password.length <= 72 &&
     new TextEncoder().encode(password).length <= 72 && /[a-z]/i.test(password) && /[0-9]/.test(password) && password !== current;
 }
+export function validTemporaryPassword(password) {
+  return typeof password === 'string' && password.length >= 8 &&
+    new TextEncoder().encode(password).length <= 72 && /[a-z]/i.test(password) && /[0-9]/.test(password);
+}

@@ -44,6 +44,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.endsWith('/client-accounts')) {
       const input=route.request().postDataJSON();accountApi.calls.push(input);
       if (input.action==='create') { accountApi.link={login_email:'holder@example.test',password_changed_at:null};return respond({email:'holder@example.test',temporary_password:'SyntheticMapleTea4826'}); }
+      if (input.action==='reset-password') { accountApi.needsPassword=true;return respond({email:'holder@example.test',temporary_password:input.temporaryPassword || 'SyntheticResetTea4826'}); }
       accountApi.needsPassword=false;return respond({ok:true});
     }
     if (path.endsWith('/my_client_account')) return respond(accountApi.needsPassword ? {status:'password_required'} : {
@@ -564,9 +565,17 @@ test('admin assigns a client login once and keeps temporary credentials out of s
   expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toMatch(/SyntheticMapleTea4826|holder@example.test/);
   await page.getByRole('button',{name:'Back to clients',exact:true}).click();
   await page.getByRole('button',{name:'Example Package Holder',exact:true}).click();
-  await expect(page.getByText('Created · Waiting for first password change',{exact:true})).toBeVisible();
+  await expect(page.getByText('Created · Waiting for password change',{exact:true})).toBeVisible();
   await expect(page.getByText('SyntheticMapleTea4826',{exact:true})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Create login',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Reset password',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Confirm reset',exact:true})).toBeDisabled();
+  await page.getByLabel('Temporary password',{exact:true}).fill('Sample123*');
+  await page.getByRole('checkbox',{name:/Reset the password for/}).check();
+  await page.getByRole('button',{name:'Confirm reset',exact:true}).click();
+  await expect(page.getByText('Sample123*',{exact:true})).toBeVisible();
+  expect(api.accountApi.calls.at(-1)).toEqual({action:'reset-password',clientId:'1000000000000000000001',email:'holder@example.test',confirmReset:true,temporaryPassword:'Sample123*'});
+  expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toContain('Sample123*');
 });
 
 test('client changes temporary password before seeing own packages and visit dates',async({page},testInfo)=>{

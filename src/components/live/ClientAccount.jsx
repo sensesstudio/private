@@ -39,7 +39,7 @@ function ClientRecords({ onPasswordSaved }) {
     if (!background) setState({loading:true,data:null,error:false});
     try {
       const {data,error}=await supabase.rpc('my_client_account').abortSignal(request.signal);
-      if (error || !['active','not_linked','password_required'].includes(data?.status)) throw new Error('unavailable');
+      if (error || !['active','not_linked','password_required','sign_in_required'].includes(data?.status)) throw new Error('unavailable');
       if (!request.signal.aborted) setState({loading:false,data,error:false});
     } catch { if (!request.signal.aborted) setState({loading:false,data:null,error:true}); }
   },[]);
@@ -52,6 +52,7 @@ function ClientRecords({ onPasswordSaved }) {
   if (state.loading) return <p role="status">Loading your account…</p>;
   if (state.error) return <div role="alert"><p>Your records could not be loaded.</p><Button onClick={()=>refresh()}>Retry</Button></div>;
   if (data.status==='not_linked') return <p>Your login is not linked to a studio client record yet. Contact the studio to connect your packages and visits.</p>;
+  if (data.status==='sign_in_required') return <p>Your session is no longer current. Please sign out and sign in again with your latest password.</p>;
   if (data.status==='password_required') return <SetPassword onSaved={onPasswordSaved} />;
   return <>
     <p className="client-account-welcome">Welcome, {data.name}.</p>
