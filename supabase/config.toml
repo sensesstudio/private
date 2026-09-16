@@ -19,3 +19,7 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Server-only cron authenticates with x-sync-key.
+[functions.mindbody-client-sync]
+verify_jwt = false

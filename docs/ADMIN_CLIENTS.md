@@ -42,3 +42,44 @@ records are not exposed through `availability_snapshot` or realtime feeds.
 Tests use synthetic fixtures only. Database tests cover RLS, role restrictions,
 idempotency, rollback, blank values and long IDs. Desktop/mobile tests cover
 search, full package details, pagination, failures, empty imports and sign-out.
+
+## Editable studio records and automatic Mindbody readings (16 September 2026)
+
+Admin → Clients supports Add client, then Edit client / Add package / Edit package
+inside a client's detail view. Clients may have no packages. New manual IDs are
+server-generated; imported Mindbody client IDs stay immutable text. These are CRM
+records, not Auth accounts, Stripe charges or online booking credits.
+
+`studio_clients` / `studio_client_packages` are backfilled from the latest CSV.
+Original imports and all raw fields remain immutable. New CSV snapshots remain
+source evidence; they do **not** overwrite edited studio records automatically.
+Future CSV imports need explicit reconciliation against these working records.
+Admin-only RLS, restricted column grants, validated RPCs, optimistic versions and
+append-only audit history in `private.studio_client_changes` protect edits. No deletes.
+
+`mindbody-client-sync` runs server-side every 15 minutes with `x-sync-key`. It pages
+GetClientServices for the imported clients, including exhausted/inactive services,
+and stores only matching readings in admin-only `mindbody_package_links`.
+Initial matching requires exact normalized package name + purchase date + original
+session count within the same ClientId, with exactly one candidate on both sides.
+Then the purchase-specific ClientService.Id is retained across later updates.
+ProductId is not a purchase identity. Ambiguous CSV duplicates remain flagged and
+unmatched. Missing matches never become zero balances. No source rows are deleted.
+Manual clients/packages are not automatically linked, and new unrelated Mindbody
+purchases are not imported into the directory by this sync.
+
+Mindbody remaining/count/expiry are authoritative for matched packages; local
+recorded values remain available separately. Matched identity/balance fields must
+be changed in Mindbody. Monetary values and historical visits remain labelled
+**Recorded**, since GetClientServices is not a payment or visit-history report.
+The displayed sessions used = Count − Remaining (consumed units, not an attendance
+list). An API error retains the last readings, with a delayed-update warning.
+
+The mounted Admin Clients view reads the private directory every 60 seconds while
+visible, and on focus. Refresh is optional. Editing forms retain their draft while
+background updates arrive. No CRM data is stored in localStorage or the public
+availability feed. Closing the page does not stop the server cron.
+
+Primary API reference: Mindbody's official Public API SDK,
+https://github.com/mindbody/Mindbody-API-SDKs/tree/main/PublicAPI,
+`ClientServiceWithActivationType`, `GetClientServices`.

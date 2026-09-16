@@ -68,6 +68,60 @@ test('CSV import preserves all source fields, duplicates and identifiers; only a
   await as('anon');
   const publicData = JSON.stringify((await db.query('select availability_snapshot() as data')).rows[0].data);
   for (const privateValue of ['Example Package Holder','holder@example.test','00123456789','1000000000000000000001']) assert.equal(publicData.includes(privateValue), false);
+  await db.exec('reset role');
+  await db.exec(await migration('20260916081040_admin_client_editing.sql'));
+  await db.exec(await migration('20260916081703_mindbody_client_packages.sql'));
+  const saveClient = (id, version, name = 'Synthetic Added Client') => db.query('select save_studio_client($1,$2,$3) as id', [id,version,JSON.stringify({client_name:name,phone:'001234000',email:'new@example.test',visits_since_jun:0})]);
+  const pack = { package_name:'Synthetic manual pack', credits_left:3,total_credits:5,purchase_amount_hkd:500,remaining_value_hkd:300,purchase_date:'2026-09-01',expiry_date:'2026-12-01' };
+  const savePack = (id,version,client,details=pack) => db.query('select save_studio_client_package($1,$2,$3,$4) as id',[id,version,client,JSON.stringify(details)]);
+  await as('anon');
+  await assert.rejects(saveClient(null,null),/permission denied/);
+  await assert.rejects(db.query('select * from studio_clients'),/permission denied/);
+  for (const role of ['client','teacher']) {
+    await as('authenticated',ids[role]);
+    await assert.rejects(saveClient(null,null),/admin_access_required/);
+    await assert.rejects(savePack(null,null,stored[0].client_id),/admin_access_required/);
+    assert.deepEqual((await db.query('select * from studio_clients')).rows,[]);
+    assert.deepEqual((await db.query('select * from mindbody_package_links')).rows,[]);
+    await assert.rejects(db.query("insert into studio_clients(client_name) values('Blocked')"),/row-level security|admin_access_required/);
+  }
+  await as('authenticated',ids.admin);
+  let live = (await db.query('select admin_client_directory() as data')).rows[0].data;
+  assert.equal(live.clients.length,2); assert.equal(live.rows.length,4);
+  const added = (await saveClient(null,null)).rows[0].id;
+  assert.match(added,/^manual:/);
+  live = (await db.query('select admin_client_directory() as data')).rows[0].data;
+  assert.equal(groupClients(live.rows,live.clients).find(c=>c.id===added).packages.length,0);
+  await saveClient(added,1,'Synthetic Edited Client');
+  await assert.rejects(saveClient(added,1,'Lost edit'),/record_changed_reload/);
+  const addedPack=(await savePack(null,null,added)).rows[0].id;
+  await savePack(addedPack,1,added,{...pack,credits_left:2});
+  await assert.rejects(savePack(addedPack,1,added),/record_changed_reload/);
+  await assert.rejects(savePack(addedPack,2,stored[0].client_id),/record_changed_reload/);
+  await assert.rejects(savePack(null,null,added,{...pack,credits_left:6}),/check constraint/);
+  await assert.rejects(savePack(null,null,added,{...pack,expiry_date:'2025-01-01'}),/check constraint/);
+  await assert.rejects(db.query('delete from studio_clients'),/permission denied/);
+  await assert.rejects(db.query("update studio_clients set version=99"),/permission denied/);
+  await assert.rejects(db.query('select * from private.studio_client_changes'),/permission denied/);
+  await assert.rejects(db.query("select apply_mindbody_client_sync(now(),'[]',false)"),/permission denied/);
+  const linked=live.rows[0];
+  await as('service_role');
+  const syncResult=[{package_id:linked.id,version:linked.version,status:'synced',service_id:'12345',remaining:1,total:10,expiry_date:'2027-02-01',current:true}];
+  await db.query('select apply_mindbody_client_sync($1,$2,false)', ['2026-09-30T02:00:00Z',JSON.stringify(syncResult)]);
+  await db.query('select apply_mindbody_client_sync($1,$2,true)', ['2026-09-30T02:15:00Z','[]']);
+  // A delayed older response cannot overwrite a newer sync status.
+  await db.query('select apply_mindbody_client_sync($1,$2,false)', ['2026-09-30T01:00:00Z',JSON.stringify([{...syncResult[0],remaining:9}])]);
+  await as('authenticated',ids.admin);
+  live=(await db.query('select admin_client_directory() as data')).rows[0].data;
+  const synced=live.rows.find(p=>p.id===linked.id);
+  assert.equal(synced.credits_left,1); assert.equal(synced.expiry_date,'2027-02-01');
+  assert.equal(synced.recorded.credits_left,linked.credits_left); assert.equal(live.sync.failed,true);
+  await assert.rejects(savePack(linked.id,linked.version,linked.client_id,pack),/edit_linked_package_in_mindbody/);
+  await db.exec('reset role');
+  assert.equal((await db.query('select count(*)::int n from private.studio_client_changes')).rows[0].n,4);
+  assert.deepEqual((await db.query('select raw_data from admin_client_packages order by source_row')).rows.map(r=>r.raw_data),rawClientRows);
+  assert.equal((await db.query('select count(*)::int n from credit_ledger')).rows[0].n,0);
+
 });
 
 test('client summaries keep all packages, count visits once, preserve missing values and filter the snapshot', () => {

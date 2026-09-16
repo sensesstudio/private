@@ -66,7 +66,7 @@ jobs:
       - name: Deploy edge functions
         run: |
           set -euo pipefail
-          for fn in mindbody-health mindbody-discover mindbody-sync admin-room-details create-checkout stripe-webhook; do
+          for fn in mindbody-health mindbody-discover mindbody-sync mindbody-client-sync admin-room-details create-checkout stripe-webhook; do
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --no-verify-jwt --use-api
           done
 
@@ -81,6 +81,10 @@ jobs:
           select cron.schedule('mindbody-sync', '*/5 * * * *', format(
             'select net.http_post(url:=%L, headers:=jsonb_build_object(''x-sync-key'', %L, ''Content-Type'', ''application/json''), body:=''{}''::jsonb, timeout_milliseconds:=30000)',
             'https://$PROJECT_REF.supabase.co/functions/v1/mindbody-sync', '$KEY'));
+          do \$\$ begin perform cron.unschedule('mindbody-client-sync'); exception when others then null; end \$\$;
+          select cron.schedule('mindbody-client-sync', '*/15 * * * *', format(
+            'select net.http_post(url:=%L, headers:=jsonb_build_object(''x-sync-key'', %L, ''Content-Type'', ''application/json''), body:=''{}''::jsonb, timeout_milliseconds:=120000)',
+            'https://$PROJECT_REF.supabase.co/functions/v1/mindbody-client-sync', '$KEY'));
           EOSQL
           )
           curl -sS --fail-with-body -X POST \
@@ -94,6 +98,10 @@ jobs:
           echo "== first sync run =="
           curl -sS -X POST -H "x-sync-key: $KEY" \
             "https://$PROJECT_REF.supabase.co/functions/v1/mindbody-sync" | head -c 4000
+
+          echo "== first client package sync (counts only) =="
+          curl -sS --max-time 140 -X POST -H "x-sync-key: $KEY" \
+            "https://$PROJECT_REF.supabase.co/functions/v1/mindbody-client-sync" | head -c 1000
 
       - name: Smoke tests
         run: |
