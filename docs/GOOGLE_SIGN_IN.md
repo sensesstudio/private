@@ -4,6 +4,8 @@ The client Profile login and Pricing sign-in sheet use Supabase Google OAuth
 with PKCE. The button checks `/auth/v1/settings` and stays disabled with an
 honest message until the Google provider is enabled. Existing email sign-in
 continues to work. No Google client secret belongs in GitHub or Vite variables.
+The deployment enables Google if its OAuth credentials are already stored in
+Supabase. Otherwise it leaves the provider disabled until dashboard setup.
 
 ## One-time dashboard setup
 

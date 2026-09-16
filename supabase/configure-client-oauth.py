@@ -1,7 +1,7 @@
 """Add exact client OAuth returns during the main-branch deployment.
 
-Preserve all existing providers and URLs. Provider credentials are configured
-in the Supabase dashboard; never print the Management API configuration.
+Preserve existing provider credentials and URLs. Enable Google if its OAuth
+credentials are already configured; never print the API configuration.
 """
 import json
 import os
@@ -26,10 +26,15 @@ for destination in ('account', 'pricing'):
     if url not in urls:
         urls.append(url)
 updated = ','.join(urls)
+patch = {}
 if updated != (config.get('uri_allow_list') or ''):
-    request('PATCH', {'uri_allow_list': updated})
+    patch['uri_allow_list'] = updated
+if config.get('external_google_client_id') and config.get('external_google_secret'):
+    patch['external_google_enabled'] = True
+if patch:
+    request('PATCH', patch)
 verified = request('GET')
 if not set(urls).issubset(set((verified.get('uri_allow_list') or '').split(','))):
     raise SystemExit('Client OAuth redirect verification failed.')
 print('Client OAuth redirects are configured.')
-print('Google provider enabled.' if verified.get('external_google_enabled') else 'Google provider needs activation in the Supabase dashboard.')
+print('Google provider enabled.' if verified.get('external_google_enabled') else 'Google OAuth credentials need setup in the Supabase dashboard.')
