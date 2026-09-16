@@ -44,6 +44,7 @@ export function sortClients(clients, key, direction, asOf) {
   const value = client => {
     if (key === 'credits') return client.credits;
     if (key === 'packages') return client.packages.length;
+    if (key === 'package_names') return client.packages.map(p => p.package_name).sort(collator.compare).join('\n') || null;
     if (key === 'visits') return /^\d+$/.test(String(client.visits)) ? Number(client.visits) : null;
     if (key === 'expiry') return client.nextExpiry;
     if (key === 'status') return packageStatus(client.packages, asOf);

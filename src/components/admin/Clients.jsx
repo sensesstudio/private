@@ -10,6 +10,7 @@ const SORT_COLUMNS = [
   { key: 'name', label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
   { key: 'credits', label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
   { key: 'packages', label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
+  { key: 'package_names', label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
   { key: 'visits', label: 'Recorded visits since Jun', asc: 'Visits: fewest first', desc: 'Visits: most first' },
   { key: 'expiry', label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
   { key: 'status', label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
@@ -123,7 +124,9 @@ export function AdminClients() {
               {client.duplicates > 0 && <span className="admin-client-duplicate">Possible duplicate</span>}
             </td>
             <td>{client.credits} <span className="admin-client-secondary">/ {client.totalCredits}</span></td>
-            <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td><td>{client.visits}</td><td>{date(client.nextExpiry)}</td>
+            <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td>
+            <td className="admin-client-package-names">{client.packages.length ? client.packages.map((pack, index) => <span key={pack.id || pack.source_row || index}>{pack.package_name}</span>) : '—'}</td>
+            <td>{client.visits}</td><td>{date(client.nextExpiry)}</td>
             <td><Status packages={client.packages} asOf={asOf} /></td>
           </tr>)}</tbody>
         </table></div>
