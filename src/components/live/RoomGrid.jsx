@@ -2,6 +2,8 @@ import { roomDayGrid } from '../../availability/rooms.js';
 import { hkTime } from '../../availability/time.js';
 import { locName } from '../../data.js';
 
+import { RoomBookingDetails } from './RoomBookingDetails.jsx';
+
 const ORDER = ['kt', 'cwb', 'central'];
 const freeLabel = minutes => {
   if (minutes == null) return 'Availability unconfirmed';
@@ -9,7 +11,7 @@ const freeLabel = minutes => {
   return rest ? `${whole}h ${rest}m of 15 hours free` : `${whole} of 15 hours free`;
 };
 
-export function RoomGrid({ state, day, studio }) {
+export function RoomGrid({ state, day, studio, details }) {
   const columns = ORDER.filter(id => studio === 'all' || studio === id).map(id => roomDayGrid(state, day, id));
   return <div className="room-day-scroll" role="region" aria-label="Hourly room availability" tabIndex={0}>
     <table className="room-day-grid">
@@ -29,6 +31,7 @@ export function RoomGrid({ state, day, studio }) {
                 {segment.kind === 'busy' ? <>
                   <strong>{segment.continues ? `↳ Until ${hkTime(segment.actualEnd)}` : `${hkTime(segment.actualStart)}–${hkTime(segment.actualEnd)}`} · Occupied</strong>
                   {!segment.continues && <span>{col.current ? 'Mindbody' : 'Last read · Unconfirmed'}</span>}
+                  <RoomBookingDetails details={details} studio={col.studioId} start={segment.start} end={segment.end} />
                 </> : segment.kind === 'free' ? fullFree ? <strong>FREE</strong> : <span>Free {hkTime(segment.start)}–{hkTime(segment.end)}</span> : <span>UNCONFIRMED</span>}
               </div>)}
             </div>

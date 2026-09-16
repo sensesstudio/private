@@ -6,6 +6,8 @@ import { useLiveAvailability } from '../../availability/live.js';
 import { roomBlocksForDay, roomScheduleStatus } from '../../availability/rooms.js';
 import { hkDateKey, hkTime } from '../../availability/time.js';
 import { LOCATIONS, locName } from '../../data.js';
+import { useAdminRoomDetails } from '../../availability/adminRoomDetails.js';
+import { RoomBookingDetails } from '../live/RoomBookingDetails.jsx';
 import './admin.css';
 
 // Use the original Admin workspace and design components. Live panels only
@@ -14,6 +16,7 @@ function Dashboard({ go }) {
   const state = useLiveAvailability();
   const today = hkDateKey(new Date());
   const rows = roomBlocksForDay(state.snapshot, today);
+  const details = useAdminRoomDetails(today, state.snapshot?.sync?.last_ok_at);
   const current = roomScheduleStatus(state, today) === 'current';
   const max = Math.max(1, ...LOCATIONS.map(l => rows.filter(r => r.studio_id === l.id).length));
   return <div className="admin-page">
@@ -51,7 +54,7 @@ function Dashboard({ go }) {
       {!current && <p className="admin-panel-note">Saved records may be outdated.</p>}
       {rows.slice(0, 6).map((row, i) => <div key={`${row.studio_id}-${row.starts_at}-${i}`} className="admin-room-row">
         <span className="admin-room-icon"><Icon n="calendar" size={18} color="var(--accent)" /></span>
-        <div><strong>{locName(row.studio_id)}</strong><span>{hkTime(row.starts_at)}–{hkTime(row.ends_at)} HKT</span></div>
+        <div><strong>{locName(row.studio_id)}</strong><span>{hkTime(row.starts_at)}–{hkTime(row.ends_at)} HKT</span><RoomBookingDetails details={details} studio={row.studio_id} start={row.starts_at} end={row.ends_at} exact /></div>
         <Pill color="var(--taupe)" bg="var(--sand)">Mindbody</Pill>
       </div>)}
       {!rows.length && <p className="admin-panel-note">{current ? 'No occupied intervals today.' : 'Today’s schedule is unconfirmed.'}</p>}

@@ -20,7 +20,7 @@ function makeSnapshot() {
   };
 }
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
-  const data = makeSnapshot(); let fail = failed; const writes = [], websockets = [];
+  const data = makeSnapshot(); let fail = failed, detailsFail = false; const detailReads = []; const writes = [], websockets = [];
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
   await page.clock.setFixedTime(new Date(now));
@@ -35,6 +35,12 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/admin-room-details')) {
+      const { day } = route.request().postDataJSON(); detailReads.push(day);
+      if (role !== 'admin') return respond({ error: 'admin_access_required' }, 403);
+      if (detailsFail) return respond({ error: 'details_unavailable' }, 503);
+      return respond({ day, fetched_at: now, rows: data.room_busy.map(r => ({ ...r, state: 'current', kind: 'Appointment', status: 'Confirmed', client_names: ['Fixture Client'], client_count: 1, missing_names: 0 })) });
+    }
     if (path.endsWith('/availability_snapshot')) return fail ? respond({ message: 'unavailable' }, 503) : respond(data);
     if (path.endsWith('/set_teacher_availability')) {
       const input = route.request().postDataJSON(); writes.push(input);
@@ -54,7 +60,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -170,7 +176,7 @@ test('admin sees synced room occupancy without teacher openings and filters Hong
   await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
   await expect(page.locator('.room-table')).toContainText('12:00');
   await expect(page.locator('.room-table')).toContainText('Causeway Bay');
-  await expect(page.getByText('Client names and class titles are not imported.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Client details are visible only to admins', { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/admin-rooms-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Teachers', exact: true }).click();
   await expect(page.getByText('Instructor management is not connected yet.', { exact: false })).toBeVisible();
@@ -271,4 +277,33 @@ test('room day view shows three hourly columns, partial gaps and safe stale stat
   await expect(page.locator('.room-segment-free')).toHaveCount(0);
   expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
   expect(api.writes).toEqual([]);
+});
+
+
+test('admin client names appear on dashboard, grid and list, and disappear after failed refresh or sign-out', async ({ page }) => {
+  const api = await setup(page, { role: 'admin' });
+  await page.goto('/#admin');
+  expect(api.detailReads).toHaveLength(0);
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.locator('.admin-room-row')).toContainText('Fixture Client');
+  await expect(page.locator('.admin-room-row')).toContainText('Appointment · Confirmed');
+  await page.getByRole('button', { name: 'Room schedule', exact: true }).click();
+  await expect(page.locator('.room-day-grid')).toContainText('Fixture Client');
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page.locator('.room-table')).toContainText('Fixture Client');
+  api.setDetailsFailure(true);
+  await page.getByRole('button', { name: 'Refresh list', exact: true }).click();
+  await expect(page.locator('.room-table')).toContainText('Client details unavailable');
+  await expect(page.getByText('Fixture Client', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
+  api.setDetailsFailure(false);
+  await page.getByRole('button', { name: 'Refresh list', exact: true }).click();
+  await expect(page.locator('.room-table')).toContainText('Fixture Client');
+  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain('Fixture Client');
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Admin sign-in' })).toBeVisible();
+  await expect(page.getByText('Fixture Client', { exact: true })).toHaveCount(0);
+  expect(api.writes).toHaveLength(0);
 });

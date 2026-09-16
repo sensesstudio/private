@@ -162,3 +162,25 @@ Browser binaries are installed with `npx playwright install chromium`. An
 existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` in constrained development environments.
 The automated workflow uses no production secrets and performs no deployment.
+
+## Admin client details (16 September 2026)
+
+Dashboard room rows, the day grid and List now load client names and booking
+status through `admin-room-details`. The endpoint verifies the access token
+against Supabase Auth and the protected `profiles.role = admin` before any
+Mindbody query. It only resolves references already present in the selected
+Hong Kong day's synced rooms within the existing 14-day window. Appointment
+clients and non-cancelled class visits are resolved to display names; empty
+class rosters are distinct from missing names or an unavailable roster.
+Changed room/time, cancelled and waitlisted source records cannot label an old
+busy interval as a current booking. Failed reads remove displayed names.
+
+Private responses use no-store; names stay in component memory, are cleared on
+sign-out/unmount, and are never added to public snapshots, database tables,
+browser storage, logs or deployment smoke output. Room occupancy continues to
+use the existing five-minute sync; private details refresh separately while
+Admin is open. The existing design and English interface copy are retained.
+Deploy the new edge function through the existing main-branch workflow; no
+migration or manual Supabase deployment is needed. Tests cover verified-role
+access, private field minimization, date/source matching, class roster states,
+and desktop/mobile names, refresh failure and sign-out.

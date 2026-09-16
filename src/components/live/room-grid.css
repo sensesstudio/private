@@ -59,3 +59,8 @@
   .room-day-grid { min-width:730px; }
   .room-day-grid th:first-child { width:45px; }
 }
+
+.room-booking-details, .room-booking-entry { display: block; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; font-weight: 400; }
+.room-booking-entry + .room-booking-entry { margin-top: 6px; }
+.room-booking-entry > span { display: block; }
+.admin-room-row .room-booking-details { margin-top: 4px; }

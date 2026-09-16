@@ -38,8 +38,8 @@ export async function staffToken(): Promise<string> {
   return d.AccessToken as string;
 }
 
-export async function mb(path: string, token?: string): Promise<any> {
-  const r = await fetch(`${BASE}${path}`, { headers: headers(token) });
+export async function mb(path: string, token?: string, signal?: AbortSignal): Promise<any> {
+  const r = await fetch(`${BASE}${path}`, { headers: headers(token), signal });
   if (!r.ok) throw new Error(`${path.split('?')[0]} ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return await r.json();
 }
