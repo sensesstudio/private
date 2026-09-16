@@ -5,6 +5,7 @@ import { useAccount } from '../../supabase/useAccount.js';
 import { clientAccountAction } from '../../supabase/clientAccounts.js';
 import { LiveClientProfile, ClientHomeFrame } from './ClientProfile.jsx';
 import { inputStyle } from '../../styles.js';
+import { GoogleSignIn } from './GoogleSignIn.jsx';
 
 function SetPassword({ onSaved }) {
   const [current,setCurrent]=useState(''), [password,setPassword]=useState(''), [confirm,setConfirm]=useState('');
@@ -52,7 +53,7 @@ function ClientRecords({ onPasswordSaved, onLogout, onNavigate, mode, email, onO
   if (state.loading) return <>{signOut}<p role="status">Loading your account…</p></>;
   if (state.error) return <>{signOut}<div role="alert"><p>Your records could not be loaded.</p><Button onClick={()=>refresh()}>Retry</Button></div></>;
   if (data.status==='not_linked') return <>{signOut}<p>Your login is not linked to a studio client record yet. Contact the studio to connect your packages and visits.</p></>;
-  if (data.status==='sign_in_required') return <>{signOut}<p>Your session is no longer current. Please sign out and sign in again with your latest password.</p></>;
+  if (data.status==='sign_in_required') return <>{signOut}<p>Your session is no longer current. Please sign out and sign in again.</p></>;
   if (data.status==='password_required') return <>{signOut}<SetPassword onSaved={onPasswordSaved} /></>;
   return <LiveClientProfile data={data} email={email} onLogout={onLogout} onNavigate={onNavigate} mode={mode} onOpen={onOpen}/>;
 }
@@ -76,7 +77,8 @@ export function ClientAccount({mode="profile",onNavigate,onOpen}) {
   return <section className="live-section client-account prototype-client-section">
     {!account.user && <h1>My account</h1>}
     {account.loading ? <p role="status">Checking account…</p> : !account.user ? <div className="client-account-form">
-      <p>Sign in with the email and password provided by the studio to view your packages and visits.</p>
+      <p>Sign in to view your packages and visits.</p>
+      <GoogleSignIn disabled={busy} />
       <form onSubmit={login}>
         <label>Email<input aria-label="Email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} style={inputStyle} /></label>
         <label>Password<input aria-label="Password" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} style={inputStyle} /></label>

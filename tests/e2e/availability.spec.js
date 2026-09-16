@@ -26,6 +26,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
   const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
   const accountApi = { link:null, needsPassword:true, calls:[] };
+  const googleApi = { enabled:false, authorize:[], exchanges:[], error:false };
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
   await page.clock.setFixedTime(new Date(now));
@@ -40,6 +41,14 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/settings')) return respond({external:{google:googleApi.enabled,email:true}});
+    if (path.endsWith('/authorize')) {
+      const url=new URL(route.request().url());googleApi.authorize.push(Object.fromEntries(url.searchParams));
+      const callback=new URL(url.searchParams.get('redirect_to'));
+      if (googleApi.error) callback.hash='error=access_denied&error_description=Private-provider-error';
+      else callback.searchParams.set('code','synthetic-oauth-code');
+      return route.fulfill({status:302,headers:{location:callback.href},body:''});
+    }
     if (path.endsWith('/studio_client_accounts')) return respond(accountApi.link);
     if (path.endsWith('/client-accounts')) {
       const input=route.request().postDataJSON();accountApi.calls.push(input);
@@ -99,6 +108,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     }
     const userId = role === 'teacher' ? teacherId : clientId;
     if (path.endsWith('/token')) {
+      if (new URL(route.request().url()).searchParams.get('grant_type')==='pkce') googleApi.exchanges.push(route.request().postDataJSON());
       const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
       const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: userId, role: 'authenticated', exp: 9999999999 })}.test-signature`;
       return respond({ access_token: token, refresh_token: 'test-refresh', token_type: 'bearer', expires_in: 3600, user: { id: userId, aud: 'authenticated', role: 'authenticated', email: 'test@example.test', app_metadata: {}, user_metadata: {} } });
@@ -108,7 +118,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -687,4 +697,65 @@ test('progress distinguishes zero attendance, a new milestone and unknown record
   await expect(page.getByText('Your session is no longer current.',{exact:false})).toBeVisible();
   await expect(page.getByLabel('Your progress')).toHaveCount(0);
   await expect(page.getByText('Synthetic Empty Client',{exact:true})).toHaveCount(0);
+});
+
+
+test('Google stays unavailable until configured; email sign-in remains usable',async({page})=>{
+  const api=await setup(page,{role:'client'});
+  await page.goto('/?account=1');
+  await expect(page.getByRole('button',{name:'Continue with Google'})).toBeDisabled();
+  await expect(page.getByText('Google sign-in is coming soon. Please use email for now.')).toBeVisible();
+  await page.getByRole('textbox',{name:'Email',exact:true}).fill('holder@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('SyntheticPassword123');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Choose your own password'})).toBeVisible();
+  expect(api.googleApi.authorize).toEqual([]);
+});
+
+for (const destination of ['account','pricing']) test(`Google PKCE returns to ${destination} without starting a payment`,async({page},testInfo)=>{
+  const api=await setup(page,{role:'client'});api.googleApi.enabled=true;api.accountApi.needsPassword=false;
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`/?${destination}=1`);
+  if(destination==='pricing') await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Continue with Google'})).toBeEnabled();
+  if(destination==='account') await page.screenshot({path:`test-results/google-sign-in-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Continue with Google'}).click();
+  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`\\?${destination}=1#client$`));
+  expect(api.googleApi.authorize).toHaveLength(1);
+  const params=api.googleApi.authorize[0];
+  expect(params.provider).toBe('google');expect(params.code_challenge_method).toBe('s256');
+  expect(params.code_challenge.length).toBeGreaterThan(30);
+  expect(params.redirect_to).toBe(`http://127.0.0.1:4173/?${destination}=1&oauth=google`);
+  expect(api.googleApi.exchanges).toHaveLength(1);
+  expect(api.googleApi.exchanges[0].auth_code).toBe('synthetic-oauth-code');
+  expect(api.googleApi.exchanges[0].code_verifier.length).toBeGreaterThan(30);
+  expect(api.paymentApi.checkouts).toEqual([]);
+  if(destination==='account') {
+    await expect(page.getByRole('heading',{name:'Choose your own password'})).toHaveCount(0);
+    await page.getByRole('button',{name:'Payment & packages'}).click();
+    await expect(page.locator('.client-account-packages')).toContainText('Example Private 10');
+  }
+  expect(errors).toEqual([]);
+});
+
+test('Google cancellation returns a safe message and allows another attempt',async({page})=>{
+  const api=await setup(page,{role:'client'});api.googleApi.enabled=true;api.googleApi.error=true;
+  await page.goto('/?account=1');
+  await page.getByRole('button',{name:'Continue with Google'}).click();
+  await expect(page.getByRole('alert')).toHaveText('Google sign-in was not completed. You can try again or sign in with email.');
+  await expect(page).toHaveURL(/\?account=1#client$/);
+  await expect(page.getByRole('button',{name:'Continue with Google'})).toBeEnabled();
+  expect(api.googleApi.exchanges).toEqual([]);
+  await expect(page.locator('body')).not.toContainText('Private-provider-error');
+});
+
+test('An expired Google callback cannot reveal a client account',async({page})=>{
+  await setup(page,{role:'client'});
+  await page.route('**/auth/v1/token?grant_type=pkce',route=>route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'invalid_grant',error_description:'Synthetic expired callback'})}));
+  await page.goto('/?account=1&oauth=google&code=expired-synthetic-code');
+  await expect(page.getByRole('alert')).toContainText('Google sign-in could not be completed.');
+  await expect(page).toHaveURL(/\?account=1#client$/);
+  await expect(page.getByRole('heading',{name:'My account'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
 });
