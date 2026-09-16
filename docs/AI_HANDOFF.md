@@ -57,3 +57,15 @@ Work on branch `mindbody-sync` (or similar); do not break the live demo until ac
 - Cantonese-first owner (non-technical): explain in plain 廣東話, offer step-by-step clicks for any dashboard task, never ask them to run terminal commands.
 - Never print secret values anywhere (chat, logs, commit comments). Repo is public.
 - Commit style: small, descriptive; heavy changes on branches; `main` = live site.
+
+## SleekFlow Prospects
+
+Admin → Prospects imports only contacts with the exact (case-insensitive) **Private - Prospect** label. Admins connect using the masked Platform API key field; the edge handler checks the key/label, then saves the key to Supabase Vault. Never put a provider key or exported contact/message data into this public repository.
+
+The scheduled `sleekflow-prospect-sync` runs every 15 minutes (minutes 7/22/37/52), with manual sync throttled to one attempt per minute. It reads the official Hong Kong API host `https://api.sleekflow.io`, `/api/labels` and `/api/contact/dynamicSearch`. The latter includes labels and the latest message in each page; its documented response contains the misspelled `lables` / `lastestMessage` fields. Both spellings are accepted. Since the public API does not specify label filter operators, the worker scans contact pages and retains only matches. API quota usage scales with account size (200 contacts/page, up to 10,000 total). There is no message sending or write-back to SleekFlow.
+
+Source fields (name, mobile, latest message, contact time) are independent from remarks, next action date and the five follow-up statuses. A complete snapshot archives contacts that no longer have the label; archived notes remain under “Label removed”. Partial/failed/overlapping syncs cannot archive contacts or overwrite local follow-up. The worker lease and admin edit version prevent stale writes. “Confirmed booking” is a CRM status only, not a booking operation.
+
+All records/settings are in the private schema, accessed through current-session admin RPCs or service-only worker RPCs. RPC wrappers in public are invokers. The UI never persists prospect records or API keys in browser storage. Latest conversation is a text preview, not a complete chat transcript; attachment contents are not downloaded. Provider errors are reduced to fixed codes.
+
+Live importing requires the studio administrator to enter their SleekFlow Platform API key in the deployed connection form. Synthetic test fixtures verify the documented contract; they do not establish that a particular production API key or plan has access. Official reference: https://apidoc.sleekflow.io/docs/platform-api/branches/main/hhpzcos4fmvyf-search-contacts-with-dynamic-included-fields .

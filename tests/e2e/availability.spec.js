@@ -29,6 +29,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   const accountApi = { link:null, needsPassword:true, calls:[] };
   const activityApi={failed:false,reads:[],progress:[],payments:[],packages:[]};
   const authApi={role,failed:false,delay:0,reads:0};
+  const prospectApi={data:{rows:[],sync:{configured:false,label:'Private - Prospect',running:false}},calls:[],writes:[],failed:false,conflict:false};
   const profileApi = {failed:false,saves:[],signatures:[],data:{contact:{name:'Example Package Holder',email:'holder@example.test',phone:'+85255550001'},profile:{profile_version:1},waiver_document:{version:'2026-09-16',title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}},waiver_signatures:[]}};
   const onboardingApi = { profile:{status:'ready'}, saves:[], failed:false };
   const googleApi = { enabled:false, authorize:[], exchanges:[], error:false };
@@ -46,6 +47,19 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if(path.endsWith('/admin_prospect_directory'))return respond(prospectApi.data);
+    if(path.endsWith('/sleekflow-prospect-sync')) {
+      const input=route.request().postDataJSON();prospectApi.calls.push(input);
+      if(prospectApi.failed)return respond({error:'invalid_key'},503);
+      Object.assign(prospectApi.data.sync,{configured:true,last_ok_at:now});
+      return respond({status:'synced',count:prospectApi.data.rows.length});
+    }
+    if(path.endsWith('/save_studio_prospect')) {
+      const input=route.request().postDataJSON();prospectApi.writes.push(input);
+      if(prospectApi.conflict)return respond({code:'40001',message:'prospect_changed'},409);
+      const row=prospectApi.data.rows.find(r=>r.id===input.p_id);
+      Object.assign(row,{remarks:input.p_remarks,status:input.p_status,next_action_date:input.p_next_action_date,version:row.version+1});return respond(null);
+    }
     if (path.endsWith('/settings')) return respond({external:{google:googleApi.enabled,email:true}});
     if (path.endsWith('/authorize')) {
       const url=new URL(route.request().url());googleApi.authorize.push(Object.fromEntries(url.searchParams));
@@ -157,7 +171,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, activityApi, authApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, activityApi, authApi, prospectApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -401,7 +415,8 @@ test('admin keeps the original workspace and all eight sections without mock man
   await page.screenshot({ path: `test-results/admin-dashboard-${testInfo.project.name}.png`, fullPage: true });
   for (const section of ['Teachers', 'Approvals', 'Prospects', 'Payouts', 'Refunds']) {
     await nav.getByRole('button', { name: section, exact: true }).click();
-    await expect(page.getByText('Not connected yet', { exact: true })).toBeVisible();
+    if(section==='Prospects') await expect(page.getByRole('button',{name:'Connect SleekFlow',exact:true})).toBeVisible();
+    else await expect(page.getByText('Not connected yet', { exact: true })).toBeVisible();
     expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
     await expect(page.getByText(/Mara Whitfield|Hailey Saw|Yuki Mori|Grace Lau|768,000|49,400/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Approve|Send reminder|Confirm refund/ })).toHaveCount(0);
@@ -971,4 +986,40 @@ test('returning to a browser tab preserves admin page, filters, selected client 
   // Preserving the mounted workspace must not bypass a revoked role or sign-out.
   api.authApi.role='client';await recheckSession(page);await expect(page.getByRole('heading',{name:'Access unavailable'})).toBeVisible();await expect(page.getByLabel('Client name',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('heading',{name:'Admin sign-in'})).toBeVisible();
+});
+
+
+test('admin prospects connect securely and preserve editable follow-up through background refresh',async({page},testInfo)=>{
+  const {prospectApi}=await setup(page,{role:'admin'});
+  await page.goto('/#admin');
+  await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Prospects',exact:true}).click();
+  await page.getByRole('button',{name:'Connect SleekFlow',exact:true}).click();
+  const keyInput=page.getByLabel('Platform API key',{exact:true});await expect(keyInput).toHaveAttribute('type','password');
+  await keyInput.fill('synthetic-api-key-only');prospectApi.failed=true;
+  await page.getByRole('button',{name:'Connect and sync',exact:true}).click();
+  await expect(page.getByText('The API key was not accepted.',{exact:false})).toBeVisible();await expect(keyInput).toHaveValue('');
+  prospectApi.failed=false;
+  prospectApi.data.rows=[{id:'synthetic-prospect',client_name:'Synthetic Prospect',mobile:'+85255550001',last_message:'Interested in a private class',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending us',source_present:true,version:1}];
+  await keyInput.fill('synthetic-api-key-only');await page.getByRole('button',{name:'Connect and sync',exact:true}).click();
+  await expect(page.getByText('Synthetic Prospect',{exact:true})).toBeVisible();await expect(page.getByText('1 prospects synced.',{exact:true})).toBeVisible();
+  await expect(keyInput).toHaveCount(0);
+  expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toContain('synthetic-api-key-only');
+  await page.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.getByLabel('Remarks',{exact:true}).fill('Please check Tuesday with the teacher');
+  await page.getByLabel('Next action date',{exact:true}).fill('2026-10-02');await page.getByLabel('Status',{exact:true}).selectOption('pending teacher');
+  prospectApi.data.rows[0].last_message='New message while editing';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(page.getByLabel('Remarks',{exact:true})).toHaveValue('Please check Tuesday with the teacher');
+  prospectApi.conflict=true;await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await expect(page.getByText('Another admin updated this prospect.',{exact:false})).toBeVisible();await expect(page.getByLabel('Remarks',{exact:true})).toHaveValue('Please check Tuesday with the teacher');
+  prospectApi.conflict=false;await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await expect(page.getByText('Follow-up saved.',{exact:true})).toBeVisible();await expect(page.getByText('New message while editing',{exact:true})).toBeVisible();
+  expect(prospectApi.writes.at(-1)).toMatchObject({p_remarks:'Please check Tuesday with the teacher',p_next_action_date:'2026-10-02',p_status:'pending teacher'});
+  await page.getByLabel('Search prospects').fill('55550001');await expect(page.getByText('Synthetic Prospect',{exact:true})).toBeVisible();
+  await page.getByLabel('Filter prospect status').selectOption('pending payment');await expect(page.getByText('No prospects match these filters.',{exact:true})).toBeVisible();
+  await page.getByLabel('Filter prospect status').selectOption('all');
+  await page.locator('.prospects-table').scrollIntoViewIfNeeded();
+  await page.screenshot({path:`test-results/prospects-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByText('Synthetic Prospect',{exact:true})).toHaveCount(0);
 });
