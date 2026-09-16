@@ -47,7 +47,7 @@
 .admin-client-search input { width:100%; min-width:0; border:0; background:transparent; font:300 13px var(--font-sans); color:var(--espresso); }
 .admin-client-tools select { border:1px solid var(--border); background:var(--ivory); border-radius:999px; padding:10px 15px; font:400 12px var(--font-sans); color:var(--taupe); max-width:100%; }
 .admin-client-caption { text-align:left; font:300 12px/1.6 var(--font-sans); color:var(--fg3); padding:14px 18px; }
-.admin-clients-table { min-width:850px; }
+.admin-clients-table { min-width:1100px; }
 .admin-clients-table td { vertical-align:middle; }
 .admin-client-name { display:inline-flex; align-items:center; gap:8px; background:none; border:0; padding:4px 0; cursor:pointer; font:500 13.5px var(--font-sans); color:var(--espresso); text-align:left; }
 .admin-client-name:hover { color:var(--accent); }
@@ -92,3 +92,9 @@ form .admin-editor-actions { margin-top: 24px; }
 .admin-client-sort-heading { display:inline-flex; align-items:center; gap:7px; padding:6px 0; border:0; background:none; color:inherit; font:inherit; letter-spacing:inherit; text-transform:inherit; white-space:nowrap; cursor:pointer; }
 .admin-client-sort-heading:hover, .admin-clients-table th[aria-sort] { color:var(--espresso); }
 .admin-client-sort-heading:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:3px; }
+
+.admin-client-package-names { min-width:220px; max-width:300px; overflow-wrap:anywhere; }
+.admin-client-package-names > span { display:block; line-height:1.6; }
+.admin-client-package-names > span + span { margin-top:8px; }
+
+.admin-clients-table td:first-child { min-width:180px; }
