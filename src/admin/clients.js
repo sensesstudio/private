@@ -1,15 +1,14 @@
-// CSV balances are a dated, read-only source. Never use these totals to book
-// sessions or mutate the app's credit ledger.
-export function groupClients(rows) {
-  const clients = new Map();
+// Studio records are separate from online booking credits and payments.
+export function groupClients(rows, records = []) {
+  const clients = new Map(records.map(r => [r.id, { id: r.id, record: r, packages: [] }]));
   for (const row of rows) {
     if (!clients.has(row.client_id)) clients.set(row.client_id, { id: row.client_id, packages: [] });
     clients.get(row.client_id).packages.push(row);
   }
   return [...clients.values()].map(client => {
     const values = field => [...new Set(client.packages.map(p => p[field]).filter(v => v !== '' && v != null))];
-    return { ...client, name: values('client_name').join(' / '), phone: values('phone').join(' / '), email: values('email').join(' / '),
-      visits: values('visits_since_jun').join(' / ') || '—',
+    return { ...client, version: client.record?.version, name: client.record?.client_name ?? values('client_name').join(' / '), phone: client.record?.phone ?? values('phone').join(' / '), email: client.record?.email ?? values('email').join(' / '),
+      visits: client.record ? String(client.record.visits_since_jun ?? '—') : values('visits_since_jun').join(' / ') || '—',
       credits: client.packages.reduce((n, p) => n + p.credits_left, 0),
       totalCredits: client.packages.reduce((n, p) => n + p.total_credits, 0),
       duplicates: client.packages.filter(p => p.duplicate_of_row != null).length,

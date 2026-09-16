@@ -75,3 +75,14 @@
   .admin-card-head, .admin-room-row { padding-left:16px; padding-right:16px; }
   .admin-page .room-schedule-embedded { padding:18px 14px; }
 }
+
+.admin-editor-title { font-family: var(--font-serif); font-size: 28px; font-weight: 400; margin: 0 0 20px; }
+.admin-editor-fields { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.admin-editor-fields label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.admin-editor-fields input { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font: inherit; color: var(--ink); background: var(--cream); }
+.admin-editor-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+form .admin-editor-actions { margin-top: 24px; }
+.admin-editor-actions > button { padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--sand); color: var(--ink); font: inherit; cursor: pointer; }
+.admin-editor-actions > .admin-editor-save { background: var(--accent); color: white; }
+.admin-editor-actions > button:disabled { opacity: .55; cursor: default; }
+@media(max-width: 600px) { .admin-editor-fields { grid-template-columns: 1fr; } }

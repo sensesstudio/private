@@ -23,7 +23,7 @@ function makeSnapshot() {
 }
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
   const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
-  const clientDirectory = clientDirectoryFixture(); const clientReads = [];
+  const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
   const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
@@ -49,6 +49,22 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.endsWith('/packages')) return paymentApi.failed ? respond({message:'unavailable'},503) : respond(pricingPackages);
     if (path.endsWith('/package_checkout_orders')) return respond(paymentApi.purchases);
     if (path.endsWith('/signup')) { paymentApi.signups.push(route.request().postDataJSON()); return respond({id:clientId,email:'buyer@example.test',identities:[]}); }
+    if (path.endsWith('/save_studio_client')) {
+      const input=route.request().postDataJSON(); clientWrites.push(input);
+      clientDirectory.clients ??= [];
+      const id=input.p_id || 'manual:synthetic-new-client';
+      clientDirectory.clients=clientDirectory.clients.filter(c=>c.id!==id);
+      clientDirectory.clients.push({id,...input.p_details,version:(input.p_version || 0)+1});
+      return respond(id);
+    }
+    if (path.endsWith('/save_studio_client_package')) {
+      const input=route.request().postDataJSON(); clientWrites.push(input);
+      const c=clientDirectory.clients.find(c=>c.id===input.p_client_id);
+      const id=input.p_id || 'synthetic-new-package';
+      clientDirectory.rows=clientDirectory.rows.filter(p=>p.id!==id);
+      clientDirectory.rows.push({id,client_id:c.id,client_name:c.client_name,phone:c.phone,email:c.email,visits_since_jun:c.visits_since_jun,...input.p_details,version:(input.p_version || 0)+1});
+      return respond(id);
+    }
     if (path.endsWith('/admin_client_directory')) {
       clientReads.push(path);
       if (role !== 'admin') return respond({ message: 'admin_access_required' }, 403);
@@ -79,7 +95,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientDirectory, clientReads, paymentApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -165,7 +181,7 @@ test('admin clients show complete CSV packages, search, pagination and private f
   for (const value of ['1000000000000000000001', '00123456789', 'holder@example.test', 'HK$9,000', 'HK$3,600', '1 Sept 2026', '10 Oct 2026']) {
     await expect(page.getByText(value, { exact: true }).first()).toBeVisible();
   }
-  await expect(page.getByText('CSV row 4 · Possible duplicate of row 2', { exact: true })).toBeVisible();
+  await expect(page.getByText('CSV row 4 · Possible duplicate of row 2 in source CSV', { exact: true })).toBeVisible();
   await expect(page.locator('.admin-client-packages h3')).toHaveCount(3);
   await page.screenshot({ path: `test-results/admin-client-details-${testInfo.project.name}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Back to clients', exact: true }).click();
@@ -208,7 +224,7 @@ test('admin client import empty and incomplete responses never appear as complet
   await expect(page.getByRole('alert')).toContainText('Client records could not be loaded.');
   api.clientDirectory.import = null; api.clientDirectory.rows = [];
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(page.getByText('No client CSV has been imported yet.', { exact: true })).toBeVisible();
+  await expect(page.getByText('No clients yet. Select Add client to get started.', { exact: true })).toBeVisible();
 });
 
 for (const mode of ['failed', 'stale', 'empty']) test(`${mode} backend has no demo or selectable availability`, async ({ page }) => {
@@ -463,4 +479,54 @@ test('unavailable pricing has no fake packs or enabled payment and signup reques
   await expect(page.getByText('Check your email to confirm your account, then return here to sign in.',{exact:true})).toBeVisible();
   expect(api.paymentApi.signups[0].data).toEqual({full_name:'Synthetic Buyer'});
   expect(api.paymentApi.checkouts).toEqual([]);
+});
+
+
+test('admin adds and edits clients and packages; Mindbody balances refresh without a click',async({page},testInfo)=>{
+ const api=await setup(page,{role:'admin'});
+ await page.goto('/#admin');
+ await page.getByLabel('Email',{exact:true}).fill('admin@example.test');
+ await page.getByLabel('Password',{exact:true}).fill('test-password-only');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();
+ await page.getByRole('button',{name:'Add client',exact:true}).click();
+ await page.getByLabel('Client name',{exact:true}).fill('Synthetic New Client');
+ await page.getByLabel('Phone',{exact:true}).fill('001234000');
+ await page.getByLabel('Email',{exact:true}).fill('new@example.test');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Synthetic New Client',exact:true})).toBeVisible();
+ await expect(page.getByText('0 package records',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Edit client',exact:true}).click();
+ await page.getByLabel('Client name',{exact:true}).fill('Synthetic Edited Client');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Synthetic Edited Client',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Add package',exact:true}).click();
+ await page.getByLabel('Package name',{exact:true}).fill('Synthetic manual pack');
+ await page.getByLabel('Total credits',{exact:true}).fill('5');
+ await page.getByLabel('Credits left',{exact:true}).fill('6');
+ await page.getByLabel('Purchase amount (HK$)',{exact:true}).fill('500');
+ await page.getByLabel('Remaining value (HK$)',{exact:true}).fill('300');
+ await page.getByLabel('Purchase date',{exact:true}).fill('2026-09-01');
+ await page.getByLabel('Expiry date',{exact:true}).fill('2026-12-01');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Credits left cannot exceed total credits.');
+ await page.getByLabel('Credits left',{exact:true}).fill('3');
+ await page.screenshot({path:`test-results/admin-package-editor-${testInfo.project.name}.png`,fullPage:true});
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Synthetic manual pack',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Edit package',exact:true}).click();
+ await page.getByLabel('Credits left',{exact:true}).fill('2');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await expect(page.getByText('Changes saved.',{exact:true})).toBeVisible();
+ expect(api.clientWrites.at(-1).p_details.credits_left).toBe(2);
+ expect(api.clientWrites.at(-1).p_client_id).toBe('manual:synthetic-new-client');
+ await page.getByRole('button',{name:'Back to clients',exact:true}).click();
+ const before=api.clientReads.length;
+ api.clientDirectory.sync={last_ok_at:now,failed:false,matched:1,pending:3};
+ api.clientDirectory.rows[0].credits_left=1;
+ await page.clock.install({time:new Date(now)});
+ await page.clock.fastForward(60001);
+ await expect.poll(()=>api.clientReads.length).toBeGreaterThan(before);
+ await expect(page.getByText('This page updates automatically.',{exact:false})).toBeVisible();
+ await expect(page.locator('.admin-clients-table tbody tr').filter({hasText:'Example Package Holder'})).toContainText('8 / 25');
 });
