@@ -27,3 +27,7 @@ verify_jwt = false
 # Handler validates Auth tokens, roles and explicit CRM ownership.
 [functions.client-accounts]
 verify_jwt = false
+
+# Validates either the scheduled sync key or a current admin session.
+[functions.sleekflow-prospect-sync]
+verify_jwt = false

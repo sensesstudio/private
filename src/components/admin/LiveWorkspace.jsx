@@ -9,6 +9,7 @@ import { LOCATIONS, locName } from '../../data.js';
 import { useAdminRoomDetails } from '../../availability/adminRoomDetails.js';
 import { RoomBookingDetails } from '../live/RoomBookingDetails.jsx';
 import { AdminClients } from './Clients.jsx';
+import { AdminProspects } from './Prospects.jsx';
 import './admin.css';
 
 // Use the original Admin workspace and design components. Live panels only
@@ -66,7 +67,6 @@ function Dashboard({ go }) {
 const UNCONNECTED = {
   Teachers: { eyebrow: 'Studio team', title: 'Teachers', description: 'Instructor management is not connected yet.', columns: ['Instructor', 'Focus', 'Studio', 'Rate', 'Rating', 'Sessions', 'Status'] },
   Approvals: { eyebrow: 'Onboarding', title: 'Teacher approvals', description: 'Instructor applications and approvals are not connected yet.', icon: 'user-check' },
-  Prospects: { eyebrow: 'Conversion', title: 'Prospects', description: 'Prospect tracking and reminders are not connected yet.', icon: 'user-search', stats: [['user-search', 'Open prospects'], ['shopping-cart', 'Abandoned checkouts'], ['trending-up', 'Prospect → client']] },
   Payouts: { eyebrow: 'Studio finance', title: 'Payouts', description: 'Payout reporting is not connected yet.', columns: ['Payout', 'Period', 'Gross', 'Fees', 'Refunds', 'Net', 'Status'], stats: [['banknote', 'Total paid out'], ['clock', 'In transit'], ['wallet', 'Next payout']] },
   Refunds: { eyebrow: 'Client care', title: 'Refunds', description: 'Refund requests and processing are not connected yet.', icon: 'rotate-ccw' },
 };
@@ -91,7 +91,7 @@ export function LiveAdminWorkspace({ account, session }) {
   const badge = <div className="admin-account"><div className="admin-account-identity"><span className="admin-account-mark">S</span><div className="hide-mobile"><strong>{account.full_name || 'Studio Ops'}</strong><span>Studio Ops</span></div></div>
     <Button variant="ghost" size="sm" onClick={session.logout}>Sign out</Button>
   </div>;
-  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Clients' ? <AdminClients /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
+  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Clients' ? <AdminClients /> : tab === 'Prospects' ? <AdminProspects /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
   return <Workspace title="Admin" nav={ADMIN_NAV} tab={tab} setTab={setTab} headRight={badge}>
     {session.error && <p className="admin-panel-note" role="alert">{session.error}</p>}
     <div key={tab}>{content}</div>
