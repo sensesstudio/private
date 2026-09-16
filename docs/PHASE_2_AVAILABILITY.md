@@ -162,3 +162,38 @@ Browser binaries are installed with `npx playwright install chromium`. An
 existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` in constrained development environments.
 The automated workflow uses no production secrets and performs no deployment.
+
+## Admin client details (16 September 2026)
+
+Dashboard room rows, the day grid and List now load client names and booking
+status through `admin-room-details`. The endpoint verifies the access token
+against Supabase Auth and the protected `profiles.role = admin` before any
+Mindbody query. It only resolves references already present in the selected
+Hong Kong day's synced rooms within the existing 14-day window. Appointment
+clients and non-cancelled class visits are resolved to display names; empty
+class rosters are distinct from missing names or an unavailable roster.
+Changed room/time, cancelled and waitlisted source records cannot label an old
+busy interval as a current booking. Failed reads remove displayed names.
+
+Private responses use no-store; names stay in component memory, are cleared on
+sign-out/unmount, and are never added to public snapshots, database tables,
+browser storage, logs or deployment smoke output. Room occupancy continues to
+use the existing five-minute sync; private details refresh separately while
+Admin is open. The existing design and English interface copy are retained.
+Deploy the new edge function and signup-role migration through the existing
+main-branch workflow; no manual Supabase deployment is needed. Tests cover verified-role
+access, private field minimization, date/source matching, class roster states,
+and desktop/mobile names, refresh failure and sign-out.
+
+The deployment also fixes the existing Auth signup trigger, which previously
+trusted user-supplied role metadata. New signups always receive the client role;
+existing staff roles are unchanged and staff provisioning remains trusted-only.
+A database test verifies forged admin/teacher metadata cannot elevate access.
+
+Security advisor review found pre-existing issues outside this feature: the
+credit_balances definer view, mutable search paths in book_with_credit and
+enforce_max_photos, public _migrations RLS, pg_net placement and leaked-password
+protection. These are not claims that a full backend security audit has passed.
+Public snapshot and role-check RPC grants are intentional; the signup trigger's
+public execute grant is removed by this migration. Relevant advisor reference:
+https://supabase.com/docs/guides/database/database-linter
