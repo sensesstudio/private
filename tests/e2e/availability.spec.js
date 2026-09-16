@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clientDirectoryFixture } from '../fixtures/client-import.js';
 
 const now = '2026-09-30T02:00:00Z';
 const teacherId = '11111111-1111-4111-8111-111111111111';
@@ -20,7 +21,8 @@ function makeSnapshot() {
   };
 }
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
-  const data = makeSnapshot(); let fail = failed, detailsFail = false; const detailReads = []; const writes = [], websockets = [];
+  const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
+  const clientDirectory = clientDirectoryFixture(); const clientReads = [];
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
   await page.clock.setFixedTime(new Date(now));
@@ -35,6 +37,11 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/admin_client_directory')) {
+      clientReads.push(path);
+      if (role !== 'admin') return respond({ message: 'admin_access_required' }, 403);
+      return clientsFail ? respond({ message: 'unavailable' }, 503) : respond(clientDirectory);
+    }
     if (path.endsWith('/admin-room-details')) {
       const { day } = route.request().postDataJSON(); detailReads.push(day);
       if (role !== 'admin') return respond({ error: 'admin_access_required' }, 403);
@@ -60,7 +67,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientDirectory, clientReads, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -119,6 +126,77 @@ test('client credentials do not grant teacher or admin access', async ({ page })
   await page.getByRole('button', { name: 'Admin', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Access unavailable' })).toBeVisible();
   expect(api.writes).toEqual([]);
+  expect(api.clientReads).toEqual([]);
+});
+
+test('admin clients show complete CSV packages, search, pagination and private failure states', async ({ page }, testInfo) => {
+  const api = await setup(page, { role: 'admin' });
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/#admin');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password-only');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Clients', exact: true }).click();
+  await expect(page.getByText('2 clients · 4 package records', { exact: true })).toBeVisible();
+  await expect(page.locator('.admin-clients-table tbody tr')).toHaveCount(2);
+  await expect(page.locator('.admin-clients-table tbody tr').first()).toContainText('11 / 25');
+  await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(3)).toHaveText('7');
+  await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(3)).toHaveText('—');
+  await expect(page.getByText('1 possible duplicate row is included in totals.', { exact: false })).toBeVisible();
+  await page.screenshot({ path: `test-results/admin-clients-${testInfo.project.name}.png`, fullPage: true });
+  for (const q of ['holder@example.test', '00123456789', '1000000000000000000001', 'Example Private 5']) {
+    await page.getByLabel('Search clients', { exact: true }).fill(q);
+    await expect(page.locator('.admin-clients-table tbody tr')).toHaveCount(1);
+  }
+  await page.getByRole('button', { name: 'Example Package Holder', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Example Package Holder', exact: true })).toBeVisible();
+  for (const value of ['1000000000000000000001', '00123456789', 'holder@example.test', 'HK$9,000', 'HK$3,600', '1 Sept 2026', '10 Oct 2026']) {
+    await expect(page.getByText(value, { exact: true }).first()).toBeVisible();
+  }
+  await expect(page.getByText('CSV row 4 · Possible duplicate of row 2', { exact: true })).toBeVisible();
+  await expect(page.locator('.admin-client-packages h3')).toHaveCount(3);
+  await page.screenshot({ path: `test-results/admin-client-details-${testInfo.project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Back to clients', exact: true }).click();
+  await page.getByLabel('Search clients', { exact: true }).fill('nothing-matches');
+  await expect(page.getByText('No clients match your search.', { exact: true })).toBeVisible();
+  await page.getByLabel('Search clients', { exact: true }).fill('');
+  await page.getByLabel('Filter clients', { exact: true }).selectOption('duplicates');
+  await expect(page.locator('.admin-clients-table tbody tr')).toHaveCount(1);
+  await page.getByLabel('Filter clients', { exact: true }).selectOption('all');
+  for (let i = 0; i < 25; i++) api.clientDirectory.rows.push({ ...api.clientDirectory.rows[0], source_row: 6 + i, client_id: `synthetic-extra-${i}`, client_name: `Pagination Example ${String(i).padStart(2, '0')}` });
+  api.clientDirectory.import.row_count = api.clientDirectory.rows.length;
+  await page.getByRole('button', { name: 'Refresh clients', exact: true }).click();
+  await expect(page.getByText('1–25 of 27 clients', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByText('26–27 of 27 clients', { exact: true })).toBeVisible();
+  await expect(page.locator('.admin-clients-table tbody tr')).toHaveCount(2);
+  api.setClientsFailure(true);
+  await page.getByRole('button', { name: 'Refresh clients', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Client records could not be loaded.');
+  await expect(page.getByText('holder@example.test', { exact: true })).toHaveCount(0);
+  api.setClientsFailure(false);
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page.getByText('27 clients · 29 package records', { exact: true })).toBeVisible();
+  const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
+  expect(storage).not.toMatch(/holder@example.test|Example Package Holder|00123456789/);
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Admin sign-in', exact: true })).toBeVisible();
+  await expect(page.locator('.admin-clients-table')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('admin client import empty and incomplete responses never appear as complete data', async ({ page }) => {
+  const api = await setup(page, { role: 'admin' });
+  api.clientDirectory.import.row_count = 10;
+  await page.goto('/#admin');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('test-password-only');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Clients', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Client records could not be loaded.');
+  api.clientDirectory.import = null; api.clientDirectory.rows = [];
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page.getByText('No client CSV has been imported yet.', { exact: true })).toBeVisible();
 });
 
 for (const mode of ['failed', 'stale', 'empty']) test(`${mode} backend has no demo or selectable availability`, async ({ page }) => {
@@ -223,7 +301,7 @@ test('admin keeps the original workspace and all eight sections without mock man
   await expect(page.getByRole('heading', { name: 'By studio', exact: true })).toBeVisible();
   if (testInfo.project.name === 'desktop') await expect(page.locator('aside')).toHaveCSS('width', '248px');
   await page.screenshot({ path: `test-results/admin-dashboard-${testInfo.project.name}.png`, fullPage: true });
-  for (const section of ['Clients', 'Teachers', 'Approvals', 'Prospects', 'Payouts', 'Refunds']) {
+  for (const section of ['Teachers', 'Approvals', 'Prospects', 'Payouts', 'Refunds']) {
     await nav.getByRole('button', { name: section, exact: true }).click();
     await expect(page.getByText('Not connected yet', { exact: true })).toBeVisible();
     expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
