@@ -17,7 +17,7 @@ export function ClientEditor({ kind, client, record, onCancel, onSaved }) {
     ['package_name','Package name','text',300], ['total_credits','Total credits','number'], ['credits_left','Credits left','number'],
     ['purchase_amount_hkd','Purchase amount (HK$)','number'], ['remaining_value_hkd','Remaining value (HK$)','number'],
     ['purchase_date','Purchase date','date'], ['expiry_date','Expiry date','date'],
-  ] : [['client_name','Client name','text',200],['phone','Phone','tel',80],['email','Email','email',320],['visits_since_jun','Visits since Jun','number']];
+  ] : [['client_name','Client name','text',200],['phone','Phone','tel',80],['email','Email','email',320]];
   async function submit(event) {
     event.preventDefault();
     if (submitting.current) return;
@@ -26,6 +26,8 @@ export function ClientEditor({ kind, client, record, onCancel, onSaved }) {
     submitting.current = true; setSaving(true); setError('');
     try {
       const details = { ...values };
+      // Preserve the historical count without displaying an editable June field.
+      if (!isPackage) details.visits_since_jun = values.visits_since_jun === '' ? null : Number(values.visits_since_jun);
       fields.forEach(([key,,type]) => { if (type === 'number') details[key] = values[key] === '' ? null : Number(values[key]); });
       const args = { p_id: record?.id ?? null, p_version: record?.version ?? null, p_details: details };
       if (isPackage) args.p_client_id = client.id;

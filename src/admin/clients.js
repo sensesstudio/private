@@ -9,6 +9,8 @@ export function groupClients(rows, records = []) {
     const values = field => [...new Set(client.packages.map(p => p[field]).filter(v => v !== '' && v != null))];
     return { ...client, version: client.record?.version, name: client.record?.client_name ?? values('client_name').join(' / '), phone: client.record?.phone ?? values('phone').join(' / '), email: client.record?.email ?? values('email').join(' / '),
       visits: client.record ? String(client.record.visits_since_jun ?? '—') : values('visits_since_jun').join(' / ') || '—',
+      lastVisit: client.record ? client.record.last_visit_date ?? null : values('last_visit_date').sort().at(-1) || null,
+      neverAttended: client.record ? client.record.never_attended === true : client.packages.length > 0 && client.packages.every(p => p.never_attended === true),
       credits: client.packages.reduce((n, p) => n + p.credits_left, 0),
       totalCredits: client.packages.reduce((n, p) => n + p.total_credits, 0),
       duplicates: client.packages.filter(p => p.duplicate_of_row != null).length,
@@ -45,14 +47,14 @@ export function sortClients(clients, key, direction, asOf) {
     if (key === 'credits') return client.credits;
     if (key === 'packages') return client.packages.length;
     if (key === 'package_names') return client.packages.map(p => p.package_name).sort(collator.compare).join('\n') || null;
-    if (key === 'visits') return /^\d+$/.test(String(client.visits)) ? Number(client.visits) : null;
+    if (key === 'last_visit') return client.lastVisit;
     if (key === 'expiry') return client.nextExpiry;
     if (key === 'status') return packageStatus(client.packages, asOf);
     return client.name;
   };
   return [...clients].sort((a, b) => {
     const left = value(a), right = value(b);
-    // Missing dates or visit counts stay last in either direction.
+    // Missing dates stay last in either direction.
     if (left == null && right != null) return 1;
     if (left != null && right == null) return -1;
     const comparison = left == null ? 0 : typeof left === 'number' ? left - right : collator.compare(left, right);
