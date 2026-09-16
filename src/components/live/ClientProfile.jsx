@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Avatar, Button, Card, Icon, Segmented } from '../shared/index.jsx';
-import { LOCATIONS, TEACHERS, GOALS, INJURIES, SCHEDULES, LEVELS } from '../../data.js';
+import { TEACHERS, GOALS } from '../../data.js';
 import { useLiveAvailability } from '../../availability/live.js';
 import { TERMS_SECTIONS } from '../../terms.js';
-import { WAIVER_SECTIONS } from '../../waiver.js';
+import { ClientIntakeForm, ClientPreferencesForm, ClientFavouritesForm, ClientWaiverForm, DocumentSections, ProfileRecordGate, useClientProfile } from './ClientProfileForms.jsx';
 import { hkDateKey } from '../../availability/time.js';
 import './profile.css';
 
@@ -51,22 +51,11 @@ function NextVisit({data}) {
 function Visits({data}) {
   return <div className="client-account-visits"><Card pad={20}><h3>Last visit</h3><p>{data.last_visit?.never_attended ? 'Never attended' : recordDate(data.last_visit?.date)}</p><RecordSource asOf={data.last_visit?.as_of}/></Card><NextVisit data={data}/></div>;
 }
-function DocumentSections({sections}) { return sections.map((s,i)=><section className="profile-document" key={i}>{s.h && <h3>{s.h}</h3>}{s.paras?.map((p,j)=><p key={j}>{p}</p>)}{!!s.bullets?.length && <ul>{s.bullets.map((p,j)=><li key={j}>{p}</li>)}</ul>}{s.after && <p>{s.after}</p>}</section>); }
 export function StudioLocations() {
   const state=useLiveAvailability();
   // Only render locations confirmed by the live reference snapshot.
   const studios=state.snapshot?.studios || [];
   return <><p>Find your Senses studio in Hong Kong.</p><div className="profile-stack">{studios.map(l=><Card key={l.id} pad={22}><div className="profile-next"><span className="profile-icon"><Icon n="map-pin"/></span><div><h2>{l.name}</h2>{l.note && <p>{l.note}</p>}</div></div><p>{l.address || 'Address not recorded'}</p>{l.address && <a className="profile-text-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Senses Studio '+l.name+' '+l.address)}`} target="_blank" rel="noopener noreferrer">View map <Icon n="arrow-up-right" size={14}/></a>}</Card>)}</div>{!studios.length && <EmptyPanel icon="map-pin" title={state.loading ? 'Loading studios…' : 'Studio locations unavailable'} action={contact}>Please contact the studio for directions.</EmptyPanel>}</>;
-}
-function AboutMe({data,email}) {
-  return <div className="profile-stack"><Card pad={22}><h2>Your details</h2><dl><div><dt>Name</dt><dd>{data.name}</dd></div><div><dt>Login email</dt><dd>{email}</dd></div></dl><p className="profile-source">Contact the studio to update your details.</p>{contact}</Card>
-    <p className="profile-source">Your intake form is not connected yet. The sections below are not saved answers; please share your details with the studio.</p>
-    {[['What brings you to the mat?',GOALS.map(g=>g.label)],['A little about you',['Under 25','25–34','35–44','45–54','55+']],['Where are you in your practice?',LEVELS.map(l=>l.label)],['Preferred teaching language',['English','Cantonese','Mandarin','No preference']],['Anything we should hold gently?',INJURIES],['When do you like to move?',SCHEDULES.map(s=>s.label)],['Which studios suit your life?',LOCATIONS.map(l=>l.name)]].map(([title,options])=><Card key={title} pad={22}><h2>{title}</h2><div className="profile-option-grid">{options.map(label=><button type="button" disabled key={label}><span className="profile-option-circle"/>{label}</button>)}</div></Card>)}
-    <Card><h2>What should your instructor know?</h2><textarea disabled aria-label="Instructor notes" className="profile-input-frame" placeholder="Your goals, preferences and anything else you would like to share"/></Card>
-    <Card><h2>A quick health declaration</h2>{['Are you pregnant?','Any recent surgery?','Has a doctor cleared you to exercise?'].map(label=><div className="profile-setting" key={label}><span>{label}</span><div className="profile-option-grid"><button type="button" disabled>Yes</button><button type="button" disabled>No</button></div></div>)}</Card></div>;
-}
-function Preferences({email}) {
-  return <div className="profile-stack"><Card pad={22}><h2>Contact details</h2><dl><div><dt>Login email</dt><dd>{email}</dd></div></dl>{contact}</Card><Card pad={0}><div className="profile-list-title">Notifications</div>{[['Booking reminders','Confirmations and a reminder before a session'],['Class availability alerts','Updates when instructors open new sessions'],['Promotions & news','Studio news and offers']].map(([title,sub])=><div className="profile-setting" key={title}><div><strong>{title}</strong><p>{sub}</p></div><span className="profile-unavailable">Not connected</span></div>)}</Card><p className="profile-source">Notification preferences are not available yet. No subscriptions have been enabled.</p></div>;
 }
 function Bookings({data,onBrowse}) {
   const [tab,setTab]=useState('Upcoming');
@@ -88,23 +77,25 @@ export function ClientHomeFrame({data,onNavigate,onOpen}) {
 const MENU=[['shield-check','Liability waiver','waiver'],['user-round','About me','about'],['calendar-check','Bookings','bookings'],['heart','Favourite teachers','favourites'],['clipboard-list','Progress log','progress'],['credit-card','Payment & packages','packages'],['map-pin','Studios & locations','locations'],['settings','Preferences','preferences'],['file-text','Terms & Conditions','terms']];
 export function LiveClientProfile({data,email,onLogout,onNavigate,mode='profile',onOpen}) {
   const [page,setPage]=useState(null);
+  const record=useClientProfile();
+  data={...data,name:record.data?.contact?.name || data.name};
   const pack=data.packages?.find(p=>p.remaining>0 && p.current!==false && !p.needs_review && (!p.expires_on || p.expires_on>=hkDateKey(new Date()))) || data.packages?.[0];
   if(mode==='home') return <ClientHomeFrame data={data} onNavigate={onNavigate} onOpen={onOpen}/>;
   if(page) return <div className="prototype-subpage"><button className="profile-back" onClick={()=>setPage(null)}><Icon n="arrow-left" size={18}/>Profile</button><h1>{MENU.find(m=>m[2]===page)?.[1]}</h1>
     {page==='progress' && <ProgressLog data={data}/>}
     {page==='packages' && <><h2>My packages</h2><div className="client-account-packages">{data.packages?.map(p=><PackageCard key={p.id} pack={p} detail/>)}</div>{!data.packages?.length && <EmptyPanel icon="tag" title="No packages recorded"/>}<Button variant="accent" full onClick={()=>onNavigate('pricing')} style={{marginTop:18}}>View available packages</Button><h2>Payment method</h2><Card><p>Saved payment methods are not connected yet.</p></Card><h2>Payment history</h2><EmptyPanel icon="receipt" title="Receipts are not connected yet">Contact the studio for payment records.</EmptyPanel></>}
     {page==='bookings' && <Bookings data={data} onBrowse={()=>onNavigate('browse')}/>}
-    {page==='about' && <AboutMe data={data} email={email}/>}
-    {page==='preferences' && <Preferences email={email}/>}
-    {page==='favourites' && <EmptyPanel icon="heart" title="Your favourite teachers" action={<Button variant="soft" onClick={()=>onNavigate('browse')}>Browse instructors</Button>}>Saved favourites are not connected yet.</EmptyPanel>}
+    {page==='about' && <ProfileRecordGate record={record}>{record.data && <ClientIntakeForm record={record}/>}</ProfileRecordGate>}
+    {page==='preferences' && <ProfileRecordGate record={record}>{record.data && <ClientPreferencesForm record={record}/>}</ProfileRecordGate>}
+    {page==='favourites' && <ProfileRecordGate record={record}>{record.data && <ClientFavouritesForm record={record}/>}</ProfileRecordGate>}
     {page==='locations' && <StudioLocations/>}
     {page==='terms' && <DocumentSections sections={TERMS_SECTIONS}/>}
-    {page==='waiver' && <><Card><p>Online signing and your waiver status are not connected yet. Contact the studio to complete or check your waiver.</p>{contact}</Card><DocumentSections sections={WAIVER_SECTIONS}/></>}
+    {page==='waiver' && <ProfileRecordGate record={record}>{record.data && <ClientWaiverForm record={record}/>}</ProfileRecordGate>}
   </div>;
   return <div className="prototype-profile"><div className="profile-identity"><Avatar t={{initials:initials(data.name),ph:'almond'}} size={66}/><div><h1>{data.name}</h1><p>{data.private_lifetime?.sessions!=null ? `${data.private_lifetime.sessions} private sessions attended` : 'Your personal practice'}</p></div></div>
     <ProgressCard data={data} openLog={()=>setPage('progress')}/>
     {pack ? <PackageCard pack={pack}/> : <Card><h2>Your packages</h2><p>No packages recorded yet.</p><Button variant="soft" onClick={()=>onNavigate('pricing')}>Explore packages</Button></Card>}
-    <NextVisit data={data}/><div><div className="profile-label">Your focus</div><p className="profile-source">Your personal goals are not connected yet.</p></div>
-    <div className="profile-menu">{MENU.map(([icon,label,key])=><button key={key} onClick={()=>setPage(key)}><Icon n={icon} size={19}/><span>{label}</span><Icon n="chevron-right" size={17}/></button>)}<button onClick={onLogout}><Icon n="log-out" size={19}/><span>Sign out</span><Icon n="chevron-right" size={17}/></button></div>
+    <NextVisit data={data}/><div><div className="profile-label">Your focus</div><p className="profile-source">{record.data?.profile?.goals?.length ? record.data.profile.goals.map(id=>GOALS.find(g=>g.id===id)?.label || id).join(' · ') : 'Add your goals in About me.'}</p></div>
+    <div className="profile-menu">{MENU.map(([icon,label,key])=><button key={key} onClick={()=>setPage(key)}><Icon n={icon} size={19}/><span>{label}</span>{key==='waiver' && <small className="profile-unavailable">{record.loading ? 'Loading…' : record.error ? 'Unavailable' : record.data?.waiver_signatures?.some(s=>s.version===record.data?.waiver_document?.version) ? 'Signed' : 'Not signed'}</small>}<Icon n="chevron-right" size={17}/></button>)}<button onClick={onLogout}><Icon n="log-out" size={19}/><span>Sign out</span><Icon n="chevron-right" size={17}/></button></div>
   </div>;
 }

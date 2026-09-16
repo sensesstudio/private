@@ -42,7 +42,7 @@ export function GoogleSignIn({ destination = 'account', disabled = false }) {
       </svg>
       {busy ? 'Connecting to Google…' : 'Continue with Google'}
     </button>
-    <p className="google-sign-in-help">{availability === 'disabled' ? 'Google sign-in is coming soon. Please use email for now.' : availability === 'error' ? 'Google sign-in is temporarily unavailable. Please use email or reload the page.' : 'Use the same email you have registered with the studio.'}</p>
+    <p className="google-sign-in-help">{availability === 'disabled' ? 'Google sign-in is coming soon. Please use email for now.' : availability === 'error' ? 'Google sign-in is temporarily unavailable. Please use email or reload the page.' : 'New here? Google creates your account. Existing clients, use your studio email.'}</p>
     {error && <p role="alert">{error}</p>}
     <div className="google-sign-in-divider"><span>or use email</span></div>
   </div>;

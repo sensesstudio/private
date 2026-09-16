@@ -39,6 +39,10 @@ export function filterClients(clients, query, filter, asOf) {
     const matches = !term || [c.id, c.name, c.phone, c.email, ...c.packages.map(p => p.package_name)]
       .some(v => v.toLocaleLowerCase().includes(term));
     if (!matches) return false;
+    if (filter === 'intake_pending') return !c.record?.portal_profile?.intake_completed_at;
+    if (filter === 'waiver_pending') return !c.record?.waiver_signatures?.length;
+    if (filter === 'google') return c.record?.signup_source === 'google';
+    if (filter === 'incomplete') return c.record?.signup_source === 'google' && !c.record.profile_completed_at;
     if (filter === 'duplicates') return c.duplicates > 0;
     if (filter === 'expiring') return c.packages.some(p => p.credits_left > 0 && p.expiry_date >= asOf && p.days_to_expiry <= 30);
     return true;
@@ -48,6 +52,8 @@ export function filterClients(clients, query, filter, asOf) {
 export function sortClients(clients, key, direction, asOf) {
   const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
   const value = client => {
+    if (key === 'intake') return client.record?.portal_profile?.intake_completed_at ? 1 : 0;
+    if (key === 'waiver') return client.record?.waiver_signatures?.length ? 1 : 0;
     if (key === 'credits') return client.credits;
     if (key === 'packages') return client.packages.length;
     if (key === 'package_names') return client.packages.map(p => p.package_name).sort(collator.compare).join('\n') || null;

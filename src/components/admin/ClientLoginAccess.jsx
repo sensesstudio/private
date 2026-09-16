@@ -37,7 +37,7 @@ export function ClientLoginAccess({ client }) {
   return <Card pad={22}>
     <h2 className="admin-card-title">Client login</h2>
     {loading ? <p role="status">Checking login…</p> : <>
-      {link ? <><p>Login email: <strong>{link.login_email}</strong></p><p>{link.password_changed_at ? 'Active · Password set by client' : 'Created · Waiting for password change'}</p>
+      {link ? <><p>Login email: <strong>{link.login_email}</strong></p><p>{client.record?.signup_source === 'google' ? 'Active · Google sign-in enabled' : link.password_changed_at ? 'Active · Password set by client' : 'Created · Waiting for password change'}</p>
         {!resetOpen && <Button size="sm" variant="soft" onClick={()=>{setResetOpen(true);setConfirmed(false);setCredentials(null);setNotice('');}}>Reset password</Button>}
       </> : <p>Use the client email to sign in and view their own packages and visits.</p>}
       {!link && !client.email && <p>Add an email using Edit client before creating a login.</p>}
