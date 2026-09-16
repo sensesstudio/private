@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Avatar, Button, PhoneFrame, Sheet, SpecChips } from '../shared/index.jsx';
+import { Avatar, Button, Card, Icon, PhoneFrame, Sheet, SpecChips } from '../shared/index.jsx';
 import { ClientBrowse } from '../client/Browse.jsx';
 import { ChatAssistant } from '../client/ChatAssistant.jsx';
 import { LOCATIONS, teacherById, locName } from '../../data.js';
@@ -14,6 +14,8 @@ import './live.css';
 import { LiveAdminWorkspace } from '../admin/LiveWorkspace.jsx';
 import { ClientPricing } from './Pricing.jsx';
 import { ClientAccount } from './ClientAccount.jsx';
+import { EmptyPanel, StudioLocations } from './ClientProfile.jsx';
+import { LiveTeacherWorkspace } from './TeacherWorkspace.jsx';
 
 function AvailabilityStatus() {
   const { loading, error, snapshot } = useLiveAvailability();
@@ -47,13 +49,16 @@ function Instructor({ id, onBack, onPick }) {
   const t = teacherById(id);
   const days = daysForTeacher(id);
   const [selected, select] = useState(0);
+  const [reviews,setReviews] = useState(false);
   if (!t) return <section className="live-section"><p>Instructor unavailable.</p><Button onClick={onBack}>Back</Button></section>;
+  if (reviews) return <section className="live-section"><Button variant="soft" onClick={()=>setReviews(false)}>Back to instructor</Button><h1>Reviews · {t.name}</h1><EmptyPanel icon="message-circle" title="Client reflections">Instructor reviews are not connected yet.</EmptyPanel></section>;
   return <section className="live-section">
     <Button variant="ghost" onClick={onBack}>Back</Button>
     <div className="live-person"><Avatar t={t} size={64} /><div><h1>{t.name}</h1><p>{t.headline}</p></div></div>
     <p>{t.locIds.map(locName).join(' · ')}</p>
     <SpecChips items={t.specs} accent />
-    <p>{t.langs.join(' · ')}</p><p>{t.certs.join(' · ')}</p>
+    <div className="teacher-layout" style={{margin:'20px 0'}}><Card><h2>About your instructor</h2><p>{t.headline || 'No headline published.'}</p>{t.style && <p>{t.style}</p>}{t.exp!=null && <p>{t.exp} years of experience</p>}<h3>Teaching languages</h3><p>{t.langs.join(' · ') || 'Not recorded'}</p></Card><Card><h2>Certifications</h2>{t.certs.length ? t.certs.map(c=><p key={c}><Icon n="check-circle-2" size={14}/> {c}</p>) : <p>Not recorded</p>}<Button variant="soft" size="sm" onClick={()=>setReviews(true)}>Client reviews</Button></Card></div>
+    <h2>Availability</h2>
     <AvailabilityStatus />
     <div className="live-dates">{days.map((d, i) => <button key={d.iso} aria-pressed={i === selected} onClick={() => select(i)}>{hkLabel(d.date)}</button>)}</div>
     <div className="live-slot-list">{days[selected].slots.map(s => <button key={s.id} disabled={s.status !== 'open'} onClick={() => onPick(s)}>
@@ -65,18 +70,16 @@ function Instructor({ id, onBack, onPick }) {
 
 export function LiveClientPortal() {
   useLiveAvailability();
-  const [tab, setTab] = useState(() => { const q = new URLSearchParams(window.location.search); return q.has('account') ? 'account' : q.has('checkout') || q.has('pricing') ? 'pricing' : 'browse'; });
+  const [tab, setTab] = useState(() => { const q = new URLSearchParams(window.location.search); return q.has('account') ? 'account' : q.has('checkout') || q.has('pricing') ? 'pricing' : q.has('book') ? 'browse' : 'home'; });
   const [instructor, setInstructor] = useState(null);
   const [slotId, setSlotId] = useState(null);
   const pick = s => { if (slotById(s.id)?.status === 'open') setSlotId(s.id); };
-  return <PhoneFrame showWhatsApp={tab !== 'ask' || !!instructor} navBar={<nav className="live-nav" aria-label="Client navigation">
-    <button aria-pressed={tab === 'browse'} onClick={() => { setTab('browse'); setInstructor(null); }}>Browse</button>
-    <button aria-pressed={tab === 'ask'} onClick={() => { setTab('ask'); setInstructor(null); }}>Match for me</button>
-    <button aria-pressed={tab === 'pricing'} onClick={() => { setTab('pricing'); setInstructor(null); }}>Pricing</button>
-    <button aria-pressed={tab === 'account'} onClick={() => { setTab('account'); setInstructor(null); }}>My account</button>
+  const navigate = target => {setTab(target);setInstructor(null);};
+  return <PhoneFrame showWhatsApp={tab !== 'ask' || !!instructor} navBar={<nav className="live-nav prototype-nav" aria-label="Client navigation">
+    {[['home','home','Home'],['browse','calendar-plus','Book'],['ask','sparkles','Match for me'],['pricing','tag','Pricing'],['account','user','Profile']].map(([key,icon,label])=><button key={key} aria-pressed={tab===key} onClick={()=>navigate(key)}><Icon n={icon} size={21}/><span>{label}</span></button>)}
   </nav>} overlay={slotId && <SessionPreview slotId={slotId} onClose={() => setSlotId(null)} />}>
-    {tab !== 'pricing' && tab !== 'account' && <AvailabilityStatus />}
-    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'account' ? <ClientAccount /> : tab === 'pricing' ? <ClientPricing onBrowse={() => setTab('browse')} /> : tab === 'ask' ?
+    {(tab==='browse' || tab==='ask') && <AvailabilityStatus />}
+    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab==='locations' ? <section className="live-section"><Button variant="soft" onClick={()=>navigate('home')}>Back to Home</Button><h1>Studios & locations</h1><StudioLocations/></section> : tab === 'account' || tab==='home' ? <ClientAccount key={tab} mode={tab==='home' ? 'home' : 'profile'} onNavigate={navigate} onOpen={setInstructor}/> : tab === 'pricing' ? <ClientPricing onBrowse={() => navigate('browse')} /> : tab === 'ask' ?
       <ChatAssistant onPickSlot={(teacher, day, time, id) => { const s = slotById(id); if (s) pick(s); }} /> :
       <ClientBrowse embedded onOpen={t => setInstructor(t.id)} onPickSlot={pick} />}
   </PhoneFrame>;
@@ -172,7 +175,7 @@ function TeacherAvailability({ account }) {
 }
 
 export function LiveTeacherPortal() {
-  return <div className="live-scroll"><StaffGate role="teacher">{account => <TeacherAvailability key={account.id} account={account} />}</StaffGate></div>;
+  return <div className="live-admin-root"><StaffGate role="teacher" workspace>{(account,session) => <LiveTeacherWorkspace key={account.id} account={account} session={session} availability={<TeacherAvailability account={account}/>} />}</StaffGate></div>;
 }
 export function LiveAdminPortal() {
   return <div className="live-admin-root"><StaffGate role="admin" workspace>{(account, session) =>

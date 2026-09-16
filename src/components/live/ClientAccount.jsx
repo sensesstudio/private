@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Card } from '../shared/index.jsx';
+import { Button } from '../shared/index.jsx';
 import { supabase } from '../../supabase/client.js';
 import { useAccount } from '../../supabase/useAccount.js';
 import { clientAccountAction } from '../../supabase/clientAccounts.js';
+import { LiveClientProfile, ClientHomeFrame } from './ClientProfile.jsx';
 import { inputStyle } from '../../styles.js';
-const date=value=>value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:'Asia/Hong_Kong'}).format(new Date(`${value}T00:00:00+08:00`)) : 'Not recorded';
-const instant=value=>new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value))+' HKT';
 
 function SetPassword({ onSaved }) {
   const [current,setCurrent]=useState(''), [password,setPassword]=useState(''), [confirm,setConfirm]=useState('');
@@ -31,7 +30,7 @@ function SetPassword({ onSaved }) {
   </div>;
 }
 
-function ClientRecords({ onPasswordSaved }) {
+function ClientRecords({ onPasswordSaved, onLogout, onNavigate, mode, email, onOpen }) {
   const [state,setState]=useState({loading:true,data:null,error:false});
   const pending=useRef(null);
   const refresh=useCallback(async (background=false)=>{
@@ -49,33 +48,16 @@ function ClientRecords({ onPasswordSaved }) {
     return ()=>{pending.current?.abort();clearInterval(timer);window.removeEventListener('focus',update);};
   },[refresh]);
   const data=state.data;
-  if (state.loading) return <p role="status">Loading your account…</p>;
-  if (state.error) return <div role="alert"><p>Your records could not be loaded.</p><Button onClick={()=>refresh()}>Retry</Button></div>;
-  if (data.status==='not_linked') return <p>Your login is not linked to a studio client record yet. Contact the studio to connect your packages and visits.</p>;
-  if (data.status==='sign_in_required') return <p>Your session is no longer current. Please sign out and sign in again with your latest password.</p>;
-  if (data.status==='password_required') return <SetPassword onSaved={onPasswordSaved} />;
-  return <>
-    <p className="client-account-welcome">Welcome, {data.name}.</p>
-    <h2>My visits</h2>
-    <div className="client-account-visits">
-      {data.private_lifetime && <Card pad={20}><h3>Private lifetime</h3><p>{data.private_lifetime.sessions} sessions attended</p><small>Records updated {date(data.private_lifetime.as_of)}</small></Card>}
-      <Card pad={20}><h3>Last visit</h3><p>{data.last_visit?.never_attended ? 'Never attended' : date(data.last_visit?.date)}</p>{data.last_visit?.as_of && <small>Records updated {date(data.last_visit.as_of)}</small>}</Card>
-      <Card pad={20}><h3>Next visit</h3><p>{data.next_visit?.at ? instant(data.next_visit.at) : data.next_visit?.no_booking ? 'No upcoming booking' : 'Not recorded'}</p>{data.next_visit?.at && data.next_visit.details && <p>{data.next_visit.details}</p>}{data.next_visit?.as_of && <small>Records updated {date(data.next_visit.as_of)}</small>}</Card>
-    </div>
-    <p className="client-account-note">Visit dates are from studio records. Contact the studio for booking changes. Full visit history is not available here yet.</p>
-    <h2>My packages</h2>
-    {!data.packages?.length && <p>No packages on your studio record yet.</p>}
-    <div className="client-account-packages">{data.packages?.map(pack=><Card pad={22} key={pack.id}>
-      <h3>{pack.name}</h3><p className="client-account-balance"><strong>{pack.remaining}</strong> / {pack.total} sessions remaining</p>
-      <dl><div><dt>Sessions used</dt><dd>{Math.max(0,pack.total-pack.remaining)}</dd></div><div><dt>Purchase date</dt><dd>{date(pack.purchased_on)}</dd></div><div><dt>Expiry date</dt><dd>{date(pack.expires_on)}</dd></div></dl>
-      {pack.needs_review && <p>Balance needs review. Please confirm with the studio.</p>}
-      {pack.current===false && <p>This package is not currently usable in Mindbody.</p>}
-      <p className="client-account-note">{pack.synced_at ? `Mindbody last updated ${instant(pack.synced_at)}.${pack.sync_status!=='synced' || Date.now()-new Date(pack.synced_at).getTime()>30*60000 ? ' Update delayed; showing last available values.' : ''}` : 'Studio record · Not yet linked to Mindbody.'}</p>
-    </Card>)}</div>
-  </>;
+  const signOut=<div className="client-account-session"><span>{email}</span><Button variant="ghost" onClick={onLogout}>Sign out</Button></div>;
+  if (state.loading) return <>{signOut}<p role="status">Loading your account…</p></>;
+  if (state.error) return <>{signOut}<div role="alert"><p>Your records could not be loaded.</p><Button onClick={()=>refresh()}>Retry</Button></div></>;
+  if (data.status==='not_linked') return <>{signOut}<p>Your login is not linked to a studio client record yet. Contact the studio to connect your packages and visits.</p></>;
+  if (data.status==='sign_in_required') return <>{signOut}<p>Your session is no longer current. Please sign out and sign in again with your latest password.</p></>;
+  if (data.status==='password_required') return <>{signOut}<SetPassword onSaved={onPasswordSaved} /></>;
+  return <LiveClientProfile data={data} email={email} onLogout={onLogout} onNavigate={onNavigate} mode={mode} onOpen={onOpen}/>;
 }
 
-export function ClientAccount() {
+export function ClientAccount({mode="profile",onNavigate,onOpen}) {
   const account=useAccount();
   const [email,setEmail]=useState(''), [password,setPassword]=useState(''), [busy,setBusy]=useState(false), [notice,setNotice]=useState('');
   async function login(e) {
@@ -90,8 +72,9 @@ export function ClientAccount() {
     if (error) { setNotice('Sign-out failed. Please retry.');return; }
     setPassword('');setNotice(message);
   }
-  return <section className="live-section client-account">
-    <h1>My account</h1>
+  if(mode==='home' && !account.loading && (!account.user || account.profile?.role!=='client')) return <section className="live-section prototype-client-section"><ClientHomeFrame onNavigate={onNavigate} onOpen={onOpen}/></section>;
+  return <section className="live-section client-account prototype-client-section">
+    {!account.user && <h1>My account</h1>}
     {account.loading ? <p role="status">Checking account…</p> : !account.user ? <div className="client-account-form">
       <p>Sign in with the email and password provided by the studio to view your packages and visits.</p>
       <form onSubmit={login}>
@@ -101,8 +84,8 @@ export function ClientAccount() {
       </form>
       <p>Need a login or forgot your password? <a href="https://wa.me/85298818081" target="_blank" rel="noopener noreferrer">Contact the studio</a>.</p>
     </div> : <>
-      <div className="client-account-session"><span>{account.user.email}</span><Button variant="ghost" onClick={()=>logout()}>Sign out</Button></div>
-      {account.profile?.role==='client' ? <ClientRecords key={account.user.id} onPasswordSaved={()=>logout('Password updated. Sign in with your new password.')} /> : <p>Please sign out and use a client account to view your packages and visits.</p>}
+      {account.profile?.role!=='client' && <Button variant="ghost" onClick={()=>logout()}>Sign out</Button>}
+      {account.profile?.role==='client' ? <ClientRecords key={account.user.id} onPasswordSaved={()=>logout('Password updated. Sign in with your new password.')} onLogout={()=>logout()} email={account.user.email} onNavigate={onNavigate} mode={mode} onOpen={onOpen} /> : <p>Please sign out and use a client account to view your packages and visits.</p>}
     </>}
     {(notice || account.error) && <p role="status">{notice || account.error}</p>}
   </section>;
