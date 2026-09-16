@@ -1,4 +1,6 @@
 :root {
+  /* Shared light beige for notices, badges and controls in every portal. */
+  --sand: #faf7f3;
   --accent: #c79b8e;
   --accent-tint: rgba(199,155,142,0.15);
   --chrome-h: 54px;
