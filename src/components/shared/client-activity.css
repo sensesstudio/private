@@ -1,0 +1,16 @@
+.client-activity { margin-block:24px; scroll-margin-top:80px; }
+.client-activity-list { display:grid; gap:14px; }
+.client-activity h2 { font-family:var(--font-serif); font-size:23px; font-weight:500; margin-bottom:14px; }
+.client-activity h3 { margin:0; font:500 19px var(--font-serif); color:var(--espresso); }
+.client-activity-head { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; }
+.client-activity-head span,.client-activity-meta { color:var(--taupe); font-size:12px; line-height:1.6; }
+.client-activity-note { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; }
+.client-activity-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; }
+.client-activity-fields dt { color:var(--taupe); font-size:12px; margin-bottom:5px; }
+.client-activity-fields dd { margin:0; overflow-wrap:anywhere; }
+.client-activity-pages { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:16px; }
+.client-progress-photos { display:flex; flex-wrap:wrap; gap:12px; }
+.client-progress-photo { max-width:100%; }
+.client-progress-photo img { max-width:100%; width:240px; max-height:320px; object-fit:contain; border-radius:14px; }
+.admin-client-section-nav { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0; }
+.admin-client-section { scroll-margin-top:80px; }

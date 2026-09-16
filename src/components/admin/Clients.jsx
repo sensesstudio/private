@@ -1,3 +1,4 @@
+import { ClientActivity } from '../shared/ClientActivity.jsx';
 import { ClientSubmittedDetails } from './ClientSubmittedDetails.jsx';
 import { ClientEditor } from './ClientEditor.jsx';
 import { ClientLoginAccess } from './ClientLoginAccess.jsx';
@@ -54,6 +55,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
     <Button variant="ghost" size="sm" icon="arrow-left" onClick={onBack}>Back to clients</Button>
     <div className="admin-client-detail-head"><PageHead eyebrow="Client details" title={client.name} sub={`${client.packages.length} package records`} right={<Button size="sm" variant="soft" onClick={() => onEdit('client', client)}>Edit client</Button>} /></div>
     <SyncStatus sync={sync} />
+    <nav className="admin-client-section-nav" aria-label="Client record sections">{[['about','About me'],['waiver','Liability waiver'],['progress','Progress log'],['packages','Payment & packages'],['preferences','Preferences']].map(([id,label])=><Button key={id} size="sm" variant="soft" onClick={()=>document.getElementById(`client-${id}`)?.scrollIntoView({block:'start',behavior:'smooth'})}>{label}</Button>)}</nav>
     <Card pad={22}>
       <dl className="admin-client-fields">
         <Field label="Client ID">{client.id}</Field><Field label="Phone">{client.phone}</Field><Field label="Email">{client.email}</Field>
@@ -66,7 +68,9 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
       </dl>
     </Card>
     <ClientSubmittedDetails client={client}/>
+    <section id="client-progress" className="admin-client-section"><h2 className="admin-card-title">Progress log</h2><ClientActivity key={`progress:${client.id}`} kind="progress" clientId={client.id}/></section>
     <div className="admin-client-login"><ClientLoginAccess key={client.id} client={client} /></div>
+    <section id="client-packages" className="admin-client-section"><h2 className="admin-card-title">Payment &amp; packages</h2><p className="admin-muted">Studio packages from Mindbody and imported records</p>
     <div className="admin-client-package-head admin-client-packages-title"><h2 className="admin-card-title">Packages</h2><Button size="sm" onClick={() => onEdit('package', null)}>Add package</Button></div>
     {client.duplicates > 0 && <p className="admin-client-notice">Possible duplicate rows are preserved and included in totals. Check the source before using these balances.</p>}
     <div className="admin-client-packages">{client.packages.map(p => <Card key={p.id || p.source_row} pad={22}>
@@ -80,6 +84,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Days to expiry">{p.days_to_expiry}</Field>
       </dl>
     </Card>)}</div>
+    <ClientActivity key={`packages:${client.id}`} kind="packages" clientId={client.id}/><ClientActivity key={`payments:${client.id}`} kind="payments" clientId={client.id}/></section>
     <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last and next visit dates are from the latest client CSV. Studio records include admin updates and client submissions. These balances are separate from online booking credits.</p>
   </>;
 }
