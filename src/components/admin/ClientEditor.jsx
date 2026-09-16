@@ -26,6 +26,8 @@ export function ClientEditor({ kind, client, record, onCancel, onSaved }) {
     submitting.current = true; setSaving(true); setError('');
     try {
       const details = { ...values };
+      // Preserve the historical count without displaying an editable June field.
+      if (!isPackage) details.visits_since_jun = values.visits_since_jun === '' ? null : Number(values.visits_since_jun);
       fields.forEach(([key,,type]) => { if (type === 'number') details[key] = values[key] === '' ? null : Number(values[key]); });
       const args = { p_id: record?.id ?? null, p_version: record?.version ?? null, p_details: details };
       if (isPackage) args.p_client_id = client.id;
