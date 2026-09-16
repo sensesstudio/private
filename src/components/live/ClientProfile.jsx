@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ClientActivity } from '../shared/ClientActivity.jsx';
 import { Avatar, Button, Card, Icon, Segmented } from '../shared/index.jsx';
 import { TEACHERS, GOALS } from '../../data.js';
 import { useLiveAvailability } from '../../availability/live.js';
@@ -26,7 +27,7 @@ export function ProgressCard({data,openLog,logLabel='Open progress log'}) {
     <h2>{known ? <>You’re <em>{next-count} sessions</em> from your <em>{next}-session milestone</em>.</> : 'Your progress starts with your first recorded session.'}</h2>
     {known && <><div className="profile-meter-label"><span>Towards {next} sessions</span><span>{count%10} / 10</span></div><progress max={10} value={count%10} aria-label={`Progress towards ${next} sessions`} /><p className="profile-source">{count} private sessions attended · Records updated {recordDate(data.private_lifetime.as_of)}</p></>}
     <button className="profile-expand" aria-expanded={expanded} onClick={()=>setExpanded(v=>!v)}>{expanded ? 'Hide details' : 'See full progress'}<Icon n={expanded ? 'chevron-up' : 'chevron-down'} size={14}/></button>
-    {expanded && <div className="profile-progress-details"><p>{known ? `${count} sessions recorded so far. Your next milestone is ${next} sessions.` : 'Your cumulative attendance has not been recorded yet.'}</p><p>Instructor notes and posture records are not connected yet.</p><button className="profile-expand" onClick={openLog}>{logLabel} <Icon n="arrow-right" size={14}/></button></div>}
+    {expanded && <div className="profile-progress-details"><p>{known ? `${count} sessions recorded so far. Your next milestone is ${next} sessions.` : 'Your cumulative attendance has not been recorded yet.'}</p><p>Open your progress log to see recorded instructor notes and session photos.</p><button className="profile-expand" onClick={openLog}>{logLabel} <Icon n="arrow-right" size={14}/></button></div>}
   </section>;
 }
 export function PackageCard({pack,detail=false}) {
@@ -62,7 +63,7 @@ function Bookings({data,onBrowse}) {
   return <><Segmented options={['Upcoming','Past']} value={tab} onChange={setTab}/><div className="profile-stack" style={{marginTop:18}}>{tab==='Upcoming' ? <NextVisit data={data}/> : <><Card><h3>Last visit</h3><p>{data.last_visit?.never_attended ? 'Never attended' : recordDate(data.last_visit?.date)}</p><RecordSource asOf={data.last_visit?.as_of}/></Card><EmptyPanel icon="calendar" title="Full visit history is not connected yet">Your last recorded visit is shown above.</EmptyPanel></>}<p className="profile-source">Visit dates are from studio records. For booking changes or current confirmation, contact the studio.</p>{contact}<Button variant="accent" onClick={onBrowse}>Find my instructor</Button></div></>;
 }
 function ProgressLog({data}) {
-  return <><Card><div className="profile-label">Private lifetime</div><p className="profile-total">{data.private_lifetime?.sessions ?? '—'} <span>sessions attended</span></p><RecordSource asOf={data.private_lifetime?.as_of}/></Card><div className="profile-timeline"><EmptyPanel icon="clipboard-list" title="Your session story">Instructor session notes, focus areas and posture records will appear here once connected.</EmptyPanel></div><h2>My visits</h2><Visits data={data}/></>;
+  return <><Card><div className="profile-label">Private lifetime</div><p className="profile-total">{data.private_lifetime?.sessions ?? '—'} <span>sessions attended</span></p><RecordSource asOf={data.private_lifetime?.as_of}/></Card><ClientActivity kind="progress"/><h2>My visits</h2><Visits data={data}/></>;
 }
 export function ClientHomeFrame({data,onNavigate,onOpen}) {
   const {loading,error}=useLiveAvailability();
@@ -83,7 +84,7 @@ export function LiveClientProfile({data,email,onLogout,onNavigate,mode='profile'
   if(mode==='home') return <ClientHomeFrame data={data} onNavigate={onNavigate} onOpen={onOpen}/>;
   if(page) return <div className="prototype-subpage"><button className="profile-back" onClick={()=>setPage(null)}><Icon n="arrow-left" size={18}/>Profile</button><h1>{MENU.find(m=>m[2]===page)?.[1]}</h1>
     {page==='progress' && <ProgressLog data={data}/>}
-    {page==='packages' && <><h2>My packages</h2><div className="client-account-packages">{data.packages?.map(p=><PackageCard key={p.id} pack={p} detail/>)}</div>{!data.packages?.length && <EmptyPanel icon="tag" title="No packages recorded"/>}<Button variant="accent" full onClick={()=>onNavigate('pricing')} style={{marginTop:18}}>View available packages</Button><h2>Payment method</h2><Card><p>Saved payment methods are not connected yet.</p></Card><h2>Payment history</h2><EmptyPanel icon="receipt" title="Receipts are not connected yet">Contact the studio for payment records.</EmptyPanel></>}
+    {page==='packages' && <><h2>My packages</h2><div className="client-account-packages">{data.packages?.map(p=><PackageCard key={p.id} pack={p} detail/>)}</div>{!data.packages?.length && <EmptyPanel icon="tag" title="No packages recorded"/>}<Button variant="accent" full onClick={()=>onNavigate('pricing')} style={{marginTop:18}}>View available packages</Button><ClientActivity kind="packages"/><ClientActivity kind="payments"/></>}
     {page==='bookings' && <Bookings data={data} onBrowse={()=>onNavigate('browse')}/>}
     {page==='about' && <ProfileRecordGate record={record}>{record.data && <ClientIntakeForm record={record}/>}</ProfileRecordGate>}
     {page==='preferences' && <ProfileRecordGate record={record}>{record.data && <ClientPreferencesForm record={record}/>}</ProfileRecordGate>}

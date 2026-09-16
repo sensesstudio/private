@@ -27,6 +27,8 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
   const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
   const accountApi = { link:null, needsPassword:true, calls:[] };
+  const activityApi={failed:false,reads:[],progress:[],payments:[],packages:[]};
+  const authApi={role,failed:false,delay:0,reads:0};
   const profileApi = {failed:false,saves:[],signatures:[],data:{contact:{name:'Example Package Holder',email:'holder@example.test',phone:'+85255550001'},profile:{profile_version:1},waiver_document:{version:'2026-09-16',title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}},waiver_signatures:[]}};
   const onboardingApi = { profile:{status:'ready'}, saves:[], failed:false };
   const googleApi = { enabled:false, authorize:[], exchanges:[], error:false };
@@ -51,6 +53,16 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
       if (googleApi.error) callback.hash='error=access_denied&error_description=Private-provider-error';
       else callback.searchParams.set('code','synthetic-oauth-code');
       return route.fulfill({status:302,headers:{location:callback.href},body:''});
+    }
+    if(path.endsWith('/my_client_activity') || path.endsWith('/admin_client_activity')) {
+      const input=route.request().postDataJSON();activityApi.reads.push(input);
+      if(activityApi.failed)return respond({message:'unavailable'},503);
+      const items=activityApi[input.p_kind] || [];
+      return respond({linked:true,items:items.slice(input.p_offset,input.p_offset+input.p_limit),total:items.length,as_of:now});
+    }
+    if(path.startsWith('/storage/v1/object/sign/session-photos/')) {
+      if(route.request().method()==='POST')return respond({signedURL:'/object/sign/session-photos/synthetic.jpg?token=test-only'});
+      return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64')});
     }
     if(path.endsWith('/my_client_profile')) return respond(profileApi.data);
     if(path.endsWith('/save_my_client_profile')) {
@@ -140,12 +152,12 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
       const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: userId, role: 'authenticated', exp: 9999999999 })}.test-signature`;
       return respond({ access_token: token, refresh_token: 'test-refresh', token_type: 'bearer', expires_in: 3600, user: { id: userId, aud: 'authenticated', role: 'authenticated', email: 'test@example.test', app_metadata: {}, user_metadata: {} } });
     }
-    if (path.endsWith('/profiles')) return respond({ id: userId, full_name: role === 'teacher' ? 'Test Instructor' : 'Test Client', role });
+    if (path.endsWith('/profiles')) {authApi.reads++;if(authApi.delay)await new Promise(resolve=>setTimeout(resolve,authApi.delay));return authApi.failed ? respond({message:'unavailable'},503) : respond({ id: userId, full_name: role === 'teacher' ? 'Test Instructor' : 'Test Client', role:authApi.role });}
     if (path.endsWith('/logout')) return route.fulfill({ status: 204 });
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, activityApi, authApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -898,4 +910,65 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   await admin.getByText('View signed document · 2026-09-16',{exact:true}).click();
   await expect(admin.getByRole('heading',{name:'Assumption of Risk'})).toBeVisible();
   await context.close();
+});
+
+
+async function recheckSession(page,event='SIGNED_IN') {
+  await page.evaluate(async event=>{
+    const {supabase}=await import('/src/supabase/client.js');
+    const {data}=await supabase.auth.getSession();
+    // The SDK emits these events when a tab refocuses or a token refreshes.
+    await supabase.auth._notifyAllSubscribers(event,data.session);
+    window.dispatchEvent(new Event('focus'));
+  },event);
+}
+
+test('client progress and payment histories match Admin Clients and update without refresh',async({page,browser},testInfo)=>{
+  const api=await setup(page,{role:'client'});api.accountApi.needsPassword=false;
+  api.activityApi.progress=Array.from({length:23},(_,i)=>({id:`note-${i}`,focus:`Session focus ${i}`,note:`Saved progress ${i}`,teacher_name:'Test Instructor',created_at:now,session_at:now,studio_name:'Central',photos:i===0?[{id:'photo-1',storage_path:`${clientId}/note-0/posture.jpg`}]:[]}));
+  api.activityApi.payments=[{id:'synthetic-payment-1',package_name:'Online private pack',amount_hkd:4750,method:'stripe',status:'paid',created_at:now,format:'1:1'}];
+  api.activityApi.packages=[{id:'synthetic-order-1',package_name:'Online private pack',price_hkd:4750,credits:5,validity_months:3,payment_status:'paid',paid_at:now,format:'1:1'}];
+  await page.goto('/?account=1');
+  await page.getByLabel('Email',{exact:true}).fill('holder@example.test');await page.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('button',{name:'Progress log',exact:true}).click();
+  await expect(page.getByText('Saved progress 0',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'View photo 1',exact:true}).click();await expect(page.getByAltText('Session progress photo 1')).toBeVisible();
+  await page.getByRole('navigation',{name:'Your session story pages'}).getByRole('button',{name:'Next',exact:true}).click();
+  await expect(page.getByText('Saved progress 20',{exact:true})).toBeVisible();expect(api.activityApi.reads.at(-1).p_offset).toBe(20);
+  api.authApi.delay=150;await recheckSession(page,'TOKEN_REFRESHED');
+  await expect(page.getByRole('heading',{name:'Progress log',exact:true})).toBeVisible();await expect(page.getByText('Saved progress 20',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.getByRole('button',{name:'Payment & packages',exact:true}).click();
+  const history=page.getByRole('region',{name:'Payment history'});await expect(history.getByText('HK$4,750',{exact:true})).toBeVisible();
+  await expect(page.getByText('4/ 10 sessions remaining',{exact:false})).toBeVisible();
+  api.activityApi.payments[0].status='refunded';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(history.getByText('Refunded',{exact:true})).toBeVisible();
+  const context=await browser.newContext({viewport:testInfo.project.use.viewport,isMobile:testInfo.project.use.isMobile,hasTouch:testInfo.project.use.hasTouch});
+  const admin=await context.newPage();const adminApi=await setup(admin,{role:'admin'});Object.assign(adminApi.activityApi,structuredClone(api.activityApi),{reads:[]});
+  await admin.goto('/#admin');await admin.getByLabel('Email',{exact:true}).fill('admin@example.test');await admin.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');await admin.getByRole('button',{name:'Sign in',exact:true}).click();
+  await admin.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();await admin.getByRole('button',{name:'Example Package Holder',exact:true}).click();
+  await admin.getByRole('navigation',{name:'Client record sections'}).getByRole('button',{name:'Progress log',exact:true}).click();await expect(admin.getByText('Saved progress 0',{exact:true})).toBeVisible();
+  await expect(admin.getByText('Saved progress 0',{exact:true})).toBeInViewport();
+  await admin.screenshot({path:`test-results/admin-client-progress-${testInfo.project.name}.png`,fullPage:false});
+  await admin.getByRole('navigation',{name:'Client record sections'}).getByRole('button',{name:'Payment & packages',exact:true}).click();
+  await expect(admin.getByRole('region',{name:'Payment history'}).getByText('Refunded',{exact:true})).toBeVisible();
+  expect(adminApi.activityApi.reads.every(r=>r.p_client_id==='1000000000000000000001')).toBeTruthy();
+  adminApi.activityApi.failed=true;await admin.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(admin.getByText('Saved progress 0',{exact:true})).toHaveCount(0);await expect(admin.getByRole('button',{name:'Retry records'})).toHaveCount(3);
+  adminApi.activityApi.failed=false;await admin.getByRole('button',{name:'Retry records'}).first().click();await expect(admin.getByText('Saved progress 0',{exact:true})).toBeVisible();
+  expect(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await context.close();
+});
+
+test('returning to a browser tab preserves admin page, filters, selected client and unsaved edits',async({page})=>{
+  const api=await setup(page,{role:'admin'});
+  await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  const nav=page.getByRole('navigation',{name:'Admin navigation'});
+  await nav.getByRole('button',{name:'Clients',exact:true}).click();await page.getByLabel('Search clients').fill('holder');await page.getByLabel('Sort clients',{exact:true}).selectOption('name:desc');
+  api.authApi.delay=150;let reads=api.authApi.reads;await recheckSession(page);
+  await expect.poll(()=>api.authApi.reads).toBeGreaterThan(reads);await expect(nav.getByRole('button',{name:'Clients',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.getByLabel('Search clients')).toHaveValue('holder');await expect(page.getByLabel('Sort clients',{exact:true})).toHaveValue('name:desc');
+  await page.getByRole('button',{name:'Example Package Holder',exact:true}).click();await recheckSession(page,'TOKEN_REFRESHED');
+  await expect(page.getByRole('heading',{name:'Example Package Holder',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Edit client',exact:true}).click();await page.getByLabel('Client name',{exact:true}).fill('Unsaved client name');
+  reads=api.authApi.reads;await recheckSession(page);await expect.poll(()=>api.authApi.reads).toBeGreaterThan(reads);await expect(page.getByLabel('Client name',{exact:true})).toHaveValue('Unsaved client name');
+  // Preserving the mounted workspace must not bypass a revoked role or sign-out.
+  api.authApi.role='client';await recheckSession(page);await expect(page.getByRole('heading',{name:'Access unavailable'})).toBeVisible();await expect(page.getByLabel('Client name',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('heading',{name:'Admin sign-in'})).toBeVisible();
 });

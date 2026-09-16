@@ -9,7 +9,14 @@ export function useAccount() {
     async function accept(session) {
       const mine = ++request;
       if (!session?.user) { if (active) setState({ loading: false, user: null, profile: null, error: null }); return; }
-      setState({ loading: true, user: session.user, profile: null, error: null });
+      // Supabase re-emits SIGNED_IN when a browser tab regains focus. Keep the
+      // same user's verified workspace mounted while rechecking their role, so
+      // its current page, selected client, filters and unsaved form survive.
+      // A different identity, sign-out, failed check or revoked role still
+      // clears access through the normal gate below.
+      setState(previous => previous.user?.id === session.user.id && previous.profile && !previous.error
+        ? { ...previous, user: session.user }
+        : { loading: true, user: session.user, profile: null, error: null });
       try {
         const { data, error } = await supabase.from('profiles').select('id, role, full_name').eq('id', session.user.id).single();
         if (error) throw error;
