@@ -50,7 +50,7 @@
 .admin-client-caption { text-align:left; font:300 12px/1.6 var(--font-sans); color:var(--fg3); padding:14px 18px; }
 .admin-clients-page { max-width:none; padding-left:32px; padding-right:32px; }
 .admin-clients-table { min-width:960px; table-layout:fixed; }
-.admin-clients-table th, .admin-clients-table td { padding-left:12px; padding-right:12px; overflow-wrap:anywhere; }
+.admin-clients-table th, .admin-clients-table td { padding-left:8px; padding-right:8px; overflow-wrap:anywhere; }
 .admin-clients-table .admin-client-sort-heading { white-space:normal; text-align:left; overflow-wrap:normal; gap:5px; }
 .admin-clients-table .admin-client-sort-heading > span { flex-shrink:0; }
 .admin-clients-table .admin-client-status > span { white-space:normal !important; line-height:1.5 !important; max-width:100%; box-sizing:border-box; }

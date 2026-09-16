@@ -11,6 +11,9 @@ export function groupClients(rows, records = []) {
       visits: client.record ? String(client.record.visits_since_jun ?? '—') : values('visits_since_jun').join(' / ') || '—',
       lastVisit: client.record ? client.record.last_visit_date ?? null : values('last_visit_date').sort().at(-1) || null,
       neverAttended: client.record ? client.record.never_attended === true : client.packages.length > 0 && client.packages.every(p => p.never_attended === true),
+      nextVisit: client.record ? client.record.next_visit_at ?? null : values('next_visit_at').sort()[0] || null,
+      nextVisitDetails: client.record ? client.record.next_visit_details ?? null : values('next_visit_details').join(' / ') || null,
+      noUpcomingBooking: client.record ? client.record.no_upcoming_booking === true : client.packages.length > 0 && client.packages.every(p => p.no_upcoming_booking === true),
       credits: client.packages.reduce((n, p) => n + p.credits_left, 0),
       totalCredits: client.packages.reduce((n, p) => n + p.total_credits, 0),
       duplicates: client.packages.filter(p => p.duplicate_of_row != null).length,
@@ -48,6 +51,7 @@ export function sortClients(clients, key, direction, asOf) {
     if (key === 'packages') return client.packages.length;
     if (key === 'package_names') return client.packages.map(p => p.package_name).sort(collator.compare).join('\n') || null;
     if (key === 'last_visit') return client.lastVisit;
+    if (key === 'next_visit') return client.nextVisit ? new Date(client.nextVisit).getTime() : null;
     if (key === 'expiry') return client.nextExpiry;
     if (key === 'status') return packageStatus(client.packages, asOf);
     return client.name;
