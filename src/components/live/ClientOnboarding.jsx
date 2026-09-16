@@ -43,9 +43,12 @@ export function ClientOnboarding({ children }) {
     const result = await supabase.auth.signOut();
     if (result.error) setError('Could not sign out. Please retry.');
   }
-  if (account.loading || (userId && check?.userId !== userId)) return <section className="live-section" role="status">Preparing your account…</section>;
-  if (!userId || ['ready','not_applicable'].includes(check?.status)) return children;
-  return <section className="live-section live-login">
+  const checking = account.loading || (userId && check?.userId !== userId);
+  const allowed = !userId || ['ready','not_applicable'].includes(check?.status);
+  // Preserve the selected pack and sign-in form during Auth's loading events.
+  // A confirmed onboarding requirement unmounts records until creation finishes.
+  return <><div hidden={checking || !allowed} style={{display: !checking && allowed ? 'contents' : 'none'}}>{checking || allowed ? children : null}</div>
+    {checking ? <section className="live-section" role="status">Preparing your account…</section> : !allowed && <section className="live-section live-login">
     {check.status === 'onboarding_required' ? <>
       <h1>Welcome to Senses</h1><p>Complete your profile so the studio can contact you about your sessions.</p>
       <form onSubmit={save}>
@@ -61,5 +64,5 @@ export function ClientOnboarding({ children }) {
     </> : <><h1>Finish setting up your account</h1><p>We could not load your profile. Please retry.</p><Button onClick={() => setRetry(r => r + 1)}>Retry</Button></>}
     {error && <p role="alert">{error}</p>}
     <Button variant="ghost" disabled={busy} onClick={signOut}>Sign out</Button>
-  </section>;
+  </section>}</>;
 }
