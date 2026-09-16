@@ -7,13 +7,13 @@ import { filterClients, groupClients, packageStatus, sortClients } from '../../a
 
 const PAGE_SIZE = 25;
 const SORT_COLUMNS = [
-  { key: 'name', label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
-  { key: 'credits', label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
-  { key: 'packages', label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
-  { key: 'package_names', label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
-  { key: 'last_visit', label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
-  { key: 'expiry', label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
-  { key: 'status', label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
+  { key: 'name', width: 18, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
+  { key: 'credits', width: 10, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
+  { key: 'packages', width: 10, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
+  { key: 'package_names', width: 22, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
+  { key: 'last_visit', width: 12, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
+  { key: 'expiry', width: 12, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
+  { key: 'status', width: 16, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
 ];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
@@ -91,7 +91,7 @@ export function AdminClients() {
     setEditor(null); setSelectedId(id); setNotice('Changes saved.'); await refresh();
   }} />;
   if (selected) return <div className="admin-page">{notice && <p role="status">{notice}</p>}<ClientDetails client={selected} batch={batch} asOf={asOf} sync={data?.sync} onBack={() => { setSelectedId(null); setNotice(''); }} onEdit={(kind, record) => { setNotice(''); setEditor({ kind, record, client: selected }); }} /></div>;
-  return <div className="admin-page">
+  return <div className="admin-page admin-clients-page">
     <PageHead eyebrow="Studio community" title="Clients" sub={loading ? 'Loading client records…' : data ? `${clients.length} clients · ${data.rows.length} package records` : 'Client records'}
       right={<div className="admin-editor-actions"><Button size="sm" disabled={loading || error} onClick={() => setEditor({ kind: 'client', record: null })}>Add client</Button><Button variant="soft" size="sm" icon="refresh-cw" disabled={loading} onClick={() => { setSelectedId(null); refresh(); }}>Refresh clients</Button></div>} />
     {data && <>
@@ -114,6 +114,7 @@ export function AdminClients() {
       {loading ? <div className="admin-empty-panel" role="status">Loading client records…</div> : error ? <div className="admin-empty-panel" role="alert"><p>Client records could not be loaded. Please try again.</p><Button variant="soft" size="sm" onClick={refresh}>Retry</Button></div> : !clients.length ? <div className="admin-empty-panel"><Icon n="database" size={30} color="var(--accent)" /><p>No clients yet. Select Add client to get started.</p></div> : <>
         <div className="admin-table-scroll"><table className="admin-table admin-clients-table">
           <caption className="admin-client-caption">Package status as of {date(asOf)}. Select a name to see all package details.</caption>
+          <colgroup>{SORT_COLUMNS.map(column => <col key={column.key} style={{ width: `${column.width}%` }} />)}</colgroup>
           <thead><tr>{SORT_COLUMNS.map(column => <th key={column.key} scope="col" aria-sort={sortKey === column.key ? sortDirection === 'asc' ? 'ascending' : 'descending' : undefined}>
             <button className="admin-client-sort-heading" type="button" aria-label={`Sort by ${column.label}`} onClick={() => changeSort(`${column.key}:${sortKey === column.key && sortDirection === 'asc' ? 'desc' : 'asc'}`)}>
               {column.label}<span aria-hidden="true">{sortKey === column.key ? sortDirection === 'asc' ? '↑' : '↓' : '↕'}</span>
