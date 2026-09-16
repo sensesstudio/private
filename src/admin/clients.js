@@ -11,6 +11,7 @@ export function groupClients(rows, records = []) {
       visits: client.record ? String(client.record.visits_since_jun ?? '—') : values('visits_since_jun').join(' / ') || '—',
       lastVisit: client.record ? client.record.last_visit_date ?? null : values('last_visit_date').sort().at(-1) || null,
       neverAttended: client.record ? client.record.never_attended === true : client.packages.length > 0 && client.packages.every(p => p.never_attended === true),
+      privateLifetime: client.record ? client.record.private_sessions_lifetime ?? null : values('private_sessions_lifetime')[0] ?? null,
       nextVisit: client.record ? client.record.next_visit_at ?? null : values('next_visit_at').sort()[0] || null,
       nextVisitDetails: client.record ? client.record.next_visit_details ?? null : values('next_visit_details').join(' / ') || null,
       noUpcomingBooking: client.record ? client.record.no_upcoming_booking === true : client.packages.length > 0 && client.packages.every(p => p.no_upcoming_booking === true),
@@ -52,6 +53,7 @@ export function sortClients(clients, key, direction, asOf) {
     if (key === 'package_names') return client.packages.map(p => p.package_name).sort(collator.compare).join('\n') || null;
     if (key === 'last_visit') return client.lastVisit;
     if (key === 'next_visit') return client.nextVisit ? new Date(client.nextVisit).getTime() : null;
+    if (key === 'private_lifetime') return client.privateLifetime;
     if (key === 'expiry') return client.nextExpiry;
     if (key === 'status') return packageStatus(client.packages, asOf);
     return client.name;

@@ -1,4 +1,17 @@
 .live-scroll { height:100%; overflow:auto; background:var(--cream); }
+.client-account { max-width:1000px; }
+.client-account-session { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13px; overflow-wrap:anywhere; }
+.client-account-form { max-width:480px; }
+.client-account-form form, .client-account-form label { display:flex; flex-direction:column; gap:10px; }
+.client-account-form form { gap:18px; margin:24px 0; }
+.client-account-visits { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:16px; }
+.client-account-packages { display:grid; gap:16px; }
+.client-account small, .client-account-note { color:var(--taupe); font-size:12px !important; }
+.client-account-balance strong { font:32px var(--font-serif); }
+.client-account dl { display:flex; gap:20px 36px; flex-wrap:wrap; font-size:13px; }
+.client-account dt { color:var(--taupe); margin-bottom:8px; }
+.client-account dd { margin:0; }
+@media (max-width:600px) { .live-nav { gap:6px; padding-inline:8px; } .live-nav button { padding-inline:10px; font-size:12px; } }
 .live-section { max-width:1000px; margin:0 auto; padding:24px 22px 84px; color:var(--espresso); font-family:var(--font-sans); }
 .live-section h1, .live-section h2, .live-section h3 { font-family:var(--font-serif); font-weight:500; margin:12px 0; }
 .live-section h1 { font-size:30px; }
@@ -59,3 +72,7 @@
 .room-empty { padding:24px 0; }
 .room-explanation { color:var(--taupe); }
 @media (max-width:600px) { .live-section { padding:20px 16px 90px; } .live-section h1 { font-size:25px; } .live-status { padding:10px 16px; } }
+@media (max-width:600px) {
+  .live-nav[aria-label="Client navigation"] { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding-inline:8px; }
+  .live-nav[aria-label="Client navigation"] button { min-width:0; padding:8px 4px; font-size:12px; }
+}

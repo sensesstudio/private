@@ -23,3 +23,7 @@ verify_jwt = false
 # Server-only cron authenticates with x-sync-key.
 [functions.mindbody-client-sync]
 verify_jwt = false
+
+# Handler validates Auth tokens, roles and explicit CRM ownership.
+[functions.client-accounts]
+verify_jwt = false

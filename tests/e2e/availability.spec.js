@@ -25,6 +25,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
   const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
+  const accountApi = { link:null, needsPassword:true, calls:[] };
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
   await page.clock.setFixedTime(new Date(now));
@@ -39,6 +40,17 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/studio_client_accounts')) return respond(accountApi.link);
+    if (path.endsWith('/client-accounts')) {
+      const input=route.request().postDataJSON();accountApi.calls.push(input);
+      if (input.action==='create') { accountApi.link={login_email:'holder@example.test',password_changed_at:null};return respond({email:'holder@example.test',temporary_password:'SyntheticMapleTea4826'}); }
+      accountApi.needsPassword=false;return respond({ok:true});
+    }
+    if (path.endsWith('/my_client_account')) return respond(accountApi.needsPassword ? {status:'password_required'} : {
+      status:'active',name:'Example Package Holder',last_visit:{date:'2026-09-24',as_of:'2026-09-30'},
+      next_visit:{at:'2026-10-02T02:30:00Z',details:'Central Synthetic session',as_of:'2026-09-30'},
+      packages:[{id:'synthetic-own-pack',name:'Example Private 10',remaining:4,total:10,purchased_on:'2026-09-01',expires_on:'2026-10-10',sync_status:'synced',synced_at:now}],
+    });
     if (path.endsWith('/create-checkout')) {
       const input=route.request().postDataJSON();
       if(input.action==='availability') return respond({available:paymentApi.available,livemode:true});
@@ -95,7 +107,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -167,11 +179,14 @@ test('admin clients show complete CSV packages, search, pagination and private f
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Clients', exact: true }).click();
   await expect(page.getByText('2 clients · 4 package records', { exact: true })).toBeVisible();
   await expect(page.locator('.admin-clients-table tbody tr')).toHaveCount(2);
+  await expect(page.getByLabel('Sort clients',{exact:true})).toHaveValue('next_visit:asc');
   await expect(page.locator('.admin-clients-table tbody tr').first()).toContainText('11 / 25');
   await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(4)).toHaveText('24 Sept 2026');
   await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(4)).toHaveText('Never attended');
   await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(5)).toHaveText('2 Oct 202610:30 HKT');
   await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(5)).toHaveText('No upcoming booking');
+  await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(6)).toHaveText('14sessions attended');
+  await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(6)).toHaveText('0sessions attended');
   await expect(page.getByText('1 possible duplicate row is included in totals.', { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/admin-clients-${testInfo.project.name}.png`, fullPage: true });
   for (const q of ['holder@example.test', '00123456789', '1000000000000000000001', 'Example Private 5']) {
@@ -531,4 +546,55 @@ test('admin adds and edits clients and packages; Mindbody balances refresh witho
  await expect.poll(()=>api.clientReads.length).toBeGreaterThan(before);
  await expect(page.getByText('This page updates automatically.',{exact:false})).toBeVisible();
  await expect(page.locator('.admin-clients-table tbody tr').filter({hasText:'Example Package Holder'})).toContainText('8 / 25');
+});
+
+test('admin assigns a client login once and keeps temporary credentials out of storage',async({page})=>{
+  const api=await setup(page,{role:'admin'});
+  await page.goto('/#admin');
+  await page.getByLabel('Email',{exact:true}).fill('admin@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();
+  await page.getByRole('button',{name:'Example Package Holder',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Create login',exact:true})).toBeDisabled();
+  await page.getByRole('checkbox',{name:/I have verified/}).check();
+  await page.getByRole('button',{name:'Create login',exact:true}).click();
+  await expect(page.getByText('SyntheticMapleTea4826',{exact:true})).toBeVisible();
+  expect(api.accountApi.calls).toEqual([{action:'create',clientId:'1000000000000000000001',email:'holder@example.test',confirmedEmail:true}]);
+  expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toMatch(/SyntheticMapleTea4826|holder@example.test/);
+  await page.getByRole('button',{name:'Back to clients',exact:true}).click();
+  await page.getByRole('button',{name:'Example Package Holder',exact:true}).click();
+  await expect(page.getByText('Created · Waiting for first password change',{exact:true})).toBeVisible();
+  await expect(page.getByText('SyntheticMapleTea4826',{exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Create login',exact:true})).toHaveCount(0);
+});
+
+test('client changes temporary password before seeing own packages and visit dates',async({page},testInfo)=>{
+  const api=await setup(page,{role:'client'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/?account=1#client');
+  await page.getByLabel('Email',{exact:true}).fill('holder@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('SyntheticMapleTea4826');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Choose your own password',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'My packages',exact:true})).toHaveCount(0);
+  await page.getByLabel('Current password',{exact:true}).fill('SyntheticMapleTea4826');
+  await page.getByLabel('New password',{exact:true}).fill('ChosenPassword1234');
+  await page.getByLabel('Confirm new password',{exact:true}).fill('ChosenPassword4321');
+  await page.getByRole('button',{name:'Set password',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('do not match');expect(api.accountApi.calls).toHaveLength(0);
+  await page.getByLabel('Confirm new password',{exact:true}).fill('ChosenPassword1234');
+  await page.getByRole('button',{name:'Set password',exact:true}).click();
+  await expect(page.getByText('Password updated. Sign in with your new password.',{exact:true})).toBeVisible();
+  await page.getByLabel('Password',{exact:true}).fill('ChosenPassword1234');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'My packages',exact:true})).toBeVisible();
+  await expect(page.locator('.client-account-packages')).toContainText('4 / 10 sessions remaining');
+  await expect(page.locator('.client-account-visits')).toContainText('24 Sept 2026');
+  await expect(page.locator('.client-account-visits')).toContainText('2 Oct 2026, 10:30 HKT');
+  await expect(page.locator('.client-account-packages')).toContainText('10 Oct 2026');
+  expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toMatch(/ChosenPassword1234|SyntheticMapleTea4826|Example Private 10/);
+  expect(api.clientReads).toHaveLength(0);
+  await page.screenshot({path:`test-results/client-account-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+  await expect(page.getByText('Example Private 10',{exact:true})).toHaveCount(0);expect(errors).toEqual([]);
 });

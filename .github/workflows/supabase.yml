@@ -66,7 +66,7 @@ jobs:
       - name: Deploy edge functions
         run: |
           set -euo pipefail
-          for fn in mindbody-health mindbody-discover mindbody-sync mindbody-client-sync admin-room-details create-checkout stripe-webhook; do
+          for fn in mindbody-health mindbody-discover mindbody-sync mindbody-client-sync admin-room-details create-checkout stripe-webhook client-accounts; do
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --no-verify-jwt --use-api
           done
 

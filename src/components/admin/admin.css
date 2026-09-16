@@ -49,7 +49,7 @@
 .admin-client-tools select { border:1px solid var(--border); background:var(--ivory); border-radius:999px; padding:10px 15px; font:400 12px var(--font-sans); color:var(--taupe); max-width:100%; }
 .admin-client-caption { text-align:left; font:300 12px/1.6 var(--font-sans); color:var(--fg3); padding:14px 18px; }
 .admin-clients-page { max-width:none; padding-left:32px; padding-right:32px; }
-.admin-clients-table { min-width:960px; table-layout:fixed; }
+.admin-clients-table { min-width:1040px; table-layout:fixed; }
 .admin-clients-table th, .admin-clients-table td { padding-left:8px; padding-right:8px; overflow-wrap:anywhere; }
 .admin-clients-table .admin-client-sort-heading { white-space:normal; text-align:left; overflow-wrap:normal; gap:5px; }
 .admin-clients-table .admin-client-sort-heading > span { flex-shrink:0; }
@@ -104,3 +104,8 @@ form .admin-editor-actions { margin-top: 24px; }
 .admin-client-package-names { overflow-wrap:anywhere; }
 .admin-client-package-names > span { display:block; line-height:1.6; }
 .admin-client-package-names > span + span { margin-top:8px; }
+.admin-client-login { margin-top:20px; }
+.admin-login-confirm { display:flex; align-items:flex-start; gap:10px; font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.admin-login-confirm input { margin-top:5px; accent-color:var(--accent); }
+.admin-login-credentials { padding:16px 20px; margin-top:16px; background:var(--sand); border-radius:14px; overflow-wrap:anywhere; }
+.admin-login-credentials code { font-size:18px; user-select:all; }
