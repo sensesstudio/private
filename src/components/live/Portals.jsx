@@ -13,6 +13,7 @@ import { inputStyle } from '../../styles.js';
 import './live.css';
 import { LiveAdminWorkspace } from '../admin/LiveWorkspace.jsx';
 import { ClientPricing } from './Pricing.jsx';
+import { ClientAccount } from './ClientAccount.jsx';
 
 function AvailabilityStatus() {
   const { loading, error, snapshot } = useLiveAvailability();
@@ -64,7 +65,7 @@ function Instructor({ id, onBack, onPick }) {
 
 export function LiveClientPortal() {
   useLiveAvailability();
-  const [tab, setTab] = useState(() => { const q = new URLSearchParams(window.location.search); return q.has('checkout') || q.has('pricing') ? 'pricing' : 'browse'; });
+  const [tab, setTab] = useState(() => { const q = new URLSearchParams(window.location.search); return q.has('account') ? 'account' : q.has('checkout') || q.has('pricing') ? 'pricing' : 'browse'; });
   const [instructor, setInstructor] = useState(null);
   const [slotId, setSlotId] = useState(null);
   const pick = s => { if (slotById(s.id)?.status === 'open') setSlotId(s.id); };
@@ -72,9 +73,10 @@ export function LiveClientPortal() {
     <button aria-pressed={tab === 'browse'} onClick={() => { setTab('browse'); setInstructor(null); }}>Browse</button>
     <button aria-pressed={tab === 'ask'} onClick={() => { setTab('ask'); setInstructor(null); }}>Match for me</button>
     <button aria-pressed={tab === 'pricing'} onClick={() => { setTab('pricing'); setInstructor(null); }}>Pricing</button>
+    <button aria-pressed={tab === 'account'} onClick={() => { setTab('account'); setInstructor(null); }}>My account</button>
   </nav>} overlay={slotId && <SessionPreview slotId={slotId} onClose={() => setSlotId(null)} />}>
-    {tab !== 'pricing' && <AvailabilityStatus />}
-    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'pricing' ? <ClientPricing onBrowse={() => setTab('browse')} /> : tab === 'ask' ?
+    {tab !== 'pricing' && tab !== 'account' && <AvailabilityStatus />}
+    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'account' ? <ClientAccount /> : tab === 'pricing' ? <ClientPricing onBrowse={() => setTab('browse')} /> : tab === 'ask' ?
       <ChatAssistant onPickSlot={(teacher, day, time, id) => { const s = slotById(id); if (s) pick(s); }} /> :
       <ClientBrowse embedded onOpen={t => setInstructor(t.id)} onPickSlot={pick} />}
   </PhoneFrame>;

@@ -1,4 +1,5 @@
 import { ClientEditor } from './ClientEditor.jsx';
+import { ClientLoginAccess } from './ClientLoginAccess.jsx';
 import { useMemo, useState } from 'react';
 import { Button, Card, Icon, Pill } from '../shared/index.jsx';
 import { PageHead } from './Portal.jsx';
@@ -7,13 +8,14 @@ import { filterClients, groupClients, packageStatus, sortClients } from '../../a
 
 const PAGE_SIZE = 25;
 const SORT_COLUMNS = [
-  { key: 'name', width: 16, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
-  { key: 'credits', width: 9, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
+  { key: 'name', width: 14, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
+  { key: 'credits', width: 8, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
   { key: 'packages', width: 9, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
-  { key: 'package_names', width: 18, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
-  { key: 'last_visit', width: 11, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
-  { key: 'next_visit', width: 14, label: 'Next visit date', asc: 'Next visit: earliest first', desc: 'Next visit: latest first' },
-  { key: 'expiry', width: 11, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
+  { key: 'package_names', width: 15, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
+  { key: 'last_visit', width: 10, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
+  { key: 'next_visit', width: 13, label: 'Next visit date', asc: 'Next visit: earliest first', desc: 'Next visit: latest first' },
+  { key: 'private_lifetime', width: 9, label: 'Private lifetime', asc: 'Private lifetime: fewest first', desc: 'Private lifetime: most first' },
+  { key: 'expiry', width: 10, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
   { key: 'status', width: 12, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
 ];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
@@ -55,9 +57,11 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Credits left / total">{client.credits} / {client.totalCredits}</Field>
         <Field label="Last visit date">{lastVisit(client)}</Field>
         <Field label="Next visit date"><NextVisit client={client} details /></Field>
+        <Field label="Private lifetime">{client.privateLifetime == null ? '—' : `${client.privateLifetime} sessions attended`}</Field>
         <Field label="Package status"><Status packages={client.packages} asOf={asOf} /></Field>
       </dl>
     </Card>
+    <div className="admin-client-login"><ClientLoginAccess key={client.id} client={client} /></div>
     <div className="admin-client-package-head admin-client-packages-title"><h2 className="admin-card-title">Packages</h2><Button size="sm" onClick={() => onEdit('package', null)}>Add package</Button></div>
     {client.duplicates > 0 && <p className="admin-client-notice">Possible duplicate rows are preserved and included in totals. Check the source before using these balances.</p>}
     <div className="admin-client-packages">{client.packages.map(p => <Card key={p.id || p.source_row} pad={22}>
@@ -79,13 +83,13 @@ export function AdminClients() {
   const { data, loading, error, refresh } = useClients();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [sort, setSort] = useState('name:asc');
+  const [sort, setSort] = useState('next_visit:asc');
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [editor, setEditor] = useState(null);
   const [notice, setNotice] = useState('');
   const clients = useMemo(() => groupClients(data?.rows || [], data?.clients || []), [data]);
-  const batch = data?.next_visit_import || data?.last_visit_import || data?.import;
+  const batch = data?.lifetime_import || data?.next_visit_import || data?.last_visit_import || data?.import;
   const asOf = data?.as_of || batch?.as_of;
   const filtered = useMemo(() => filterClients(clients, query, filter, asOf), [clients, query, filter, asOf]);
   const [sortKey, sortDirection] = sort.split(':');
@@ -137,7 +141,7 @@ export function AdminClients() {
             <td>{client.credits} <span className="admin-client-secondary">/ {client.totalCredits}</span></td>
             <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td>
             <td className="admin-client-package-names">{client.packages.length ? client.packages.map((pack, index) => <span key={pack.id || pack.source_row || index}>{pack.package_name}</span>) : '—'}</td>
-            <td>{lastVisit(client)}</td><td><NextVisit client={client} /></td><td>{date(client.nextExpiry)}</td>
+            <td>{lastVisit(client)}</td><td><NextVisit client={client} /></td><td>{client.privateLifetime ?? '—'}<span className="admin-client-contact">sessions attended</span></td><td>{date(client.nextExpiry)}</td>
             <td><Status packages={client.packages} asOf={asOf} /></td>
           </tr>)}</tbody>
         </table></div>
