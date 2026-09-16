@@ -47,8 +47,8 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
       if (input.action==='reset-password') { accountApi.needsPassword=true;return respond({email:'holder@example.test',temporary_password:input.temporaryPassword || 'SyntheticResetTea4826'}); }
       accountApi.needsPassword=false;return respond({ok:true});
     }
-    if (path.endsWith('/my_client_account')) return respond(accountApi.needsPassword ? {status:'password_required'} : {
-      status:'active',name:'Example Package Holder',last_visit:{date:'2026-09-24',as_of:'2026-09-30'},
+    if (path.endsWith('/my_client_account')) return respond(accountApi.needsPassword ? {status:'password_required'} : accountApi.records || {
+      status:'active',name:'Example Package Holder',private_lifetime:{sessions:28,as_of:'2026-09-30'},last_visit:{date:'2026-09-24',as_of:'2026-09-30'},
       next_visit:{at:'2026-10-02T02:30:00Z',details:'Central Synthetic session',as_of:'2026-09-30'},
       packages:[{id:'synthetic-own-pack',name:'Example Private 10',remaining:4,total:10,purchased_on:'2026-09-01',expires_on:'2026-10-10',sync_status:'synced',synced_at:now}],
     });
@@ -113,7 +113,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
   await setup(page); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/');
+  await page.goto('/?book=1');
   await expect(page.getByText('Test Instructor', { exact: true })).toBeVisible();
   await expect(page.getByText('Hailey Saw', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Quarry Bay', { exact: true })).toHaveCount(0);
@@ -139,6 +139,7 @@ test('teacher signs in, edits only assigned studios, and updates client availabi
   await page.getByLabel('Email', { exact: true }).fill('test@example.test');
   await page.getByLabel('Password', { exact: true }).fill('test-password-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('navigation',{name:'Teacher navigation'}).getByRole('button',{name:'Availability',exact:true}).click();
   await expect(page.getByRole('heading', { name: 'Availability' })).toBeVisible();
   await expect(page.getByLabel('Studio', { exact: true }).locator('option')).toHaveCount(2);
   const opened = page.getByRole('button', { name: '2026-09-30 11:00 Central Open', exact: true });
@@ -148,9 +149,11 @@ test('teacher signs in, edits only assigned studios, and updates client availabi
   await page.getByRole('button', { name: '2026-09-30 11:00 Central Closed', exact: true }).click();
   await expect(opened).toBeVisible();
   await page.getByRole('button', { name: 'Client', exact: true }).click();
+  await page.getByRole('button', { name: 'Book', exact: true }).click();
   await page.getByRole('button', { name: 'By date', exact: true }).click();
   await expect(page.getByText('11:00', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Teacher', exact: true }).click();
+  await page.getByRole('navigation',{name:'Teacher navigation'}).getByRole('button',{name:'Availability',exact:true}).click();
   await expect(opened).toBeVisible();
   await page.screenshot({ path: `test-results/teacher-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
@@ -247,7 +250,7 @@ test('admin client import empty and incomplete responses never appear as complet
 
 for (const mode of ['failed', 'stale', 'empty']) test(`${mode} backend has no demo or selectable availability`, async ({ page }) => {
   const api = await setup(page, { [mode]: true });
-  await page.goto('/');
+  await page.goto('/?book=1');
   await expect(page.getByText('Hailey Saw', { exact: true })).toHaveCount(0);
   if (mode !== 'empty') await expect(page.getByText('Availability is temporarily unavailable.', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: 'By date', exact: true }).click();
@@ -596,14 +599,92 @@ test('client changes temporary password before seeing own packages and visit dat
   await expect(page.getByText('Password updated. Sign in with your new password.',{exact:true})).toBeVisible();
   await page.getByLabel('Password',{exact:true}).fill('ChosenPassword1234');
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Example Package Holder',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Your progress')).toContainText('2 sessions');
+  await expect(page.getByLabel('Your progress')).toContainText('30-session milestone');
+  await page.screenshot({path:`test-results/client-profile-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Payment & packages',exact:true}).click();
   await expect(page.getByRole('heading',{name:'My packages',exact:true})).toBeVisible();
-  await expect(page.locator('.client-account-packages')).toContainText('4 / 10 sessions remaining');
+  await expect(page.locator('.client-account-packages')).toContainText('4/ 10 sessions remaining');
+  await expect(page.locator('.client-account-packages')).toContainText('10 Oct 2026');
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();
+  await page.getByRole('button',{name:'Progress log',exact:true}).click();
   await expect(page.locator('.client-account-visits')).toContainText('24 Sept 2026');
   await expect(page.locator('.client-account-visits')).toContainText('2 Oct 2026, 10:30 HKT');
-  await expect(page.locator('.client-account-packages')).toContainText('10 Oct 2026');
   expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toMatch(/ChosenPassword1234|SyntheticMapleTea4826|Example Private 10/);
   expect(api.clientReads).toHaveLength(0);
   await page.screenshot({path:`test-results/client-account-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Profile',exact:true}).first().click();
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByText('Example Private 10',{exact:true})).toHaveCount(0);expect(errors).toEqual([]);
+});
+
+
+test('prototype pages retain navigation and never display sample client records',async({page},testInfo)=>{
+  const api=await setup(page,{role:'client'});api.accountApi.needsPassword=false;
+  await page.goto('/');
+  await expect(page.getByRole('heading',{name:'Senses Studio',exact:true})).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'Client navigation'}).getByRole('button')).toHaveCount(5);
+  await page.getByRole('button',{name:'Profile',exact:true}).click();
+  await page.getByLabel('Email',{exact:true}).fill('holder@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('button',{name:'See full progress',exact:true}).click();
+  await expect(page.getByText('28 sessions recorded so far. Your next milestone is 30 sessions.',{exact:true})).toBeVisible();
+  for(const [label,text] of [['About me','Your details'],['Bookings','Upcoming'],['Favourite teachers','Saved favourites are not connected yet.'],['Progress log','Your session story'],['Payment & packages','Payment history'],['Studios & locations','Central'],['Preferences','Booking reminders'],['Terms & Conditions','Re-scheduling'],['Liability waiver','Online signing and your waiver status are not connected yet.']]) {
+    await page.getByRole('button',{name:label,exact:true}).click();
+    await expect(page.getByText(text,{exact:false}).first()).toBeVisible();
+    await page.getByRole('button',{name:'Profile',exact:true}).first().click();
+  }
+  await page.getByRole('button',{name:'Home',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Example Package Holder',exact:true})).toBeVisible();
+  await expect(page.getByText(/Mara Whitfield|Hailey Saw|Visa ···· 8842/)).toHaveCount(0);
+  expect(api.clientReads).toHaveLength(0);
+  await page.screenshot({path:`test-results/client-home-${testInfo.project.name}.png`,fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+
+test('teacher prototype workspace has empty session and finance frames with a real profile',async({page},testInfo)=>{
+  await setup(page);
+  await page.goto('/#teacher');
+  await page.getByLabel('Email',{exact:true}).fill('test@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('test-password-only');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  const nav=page.getByRole('navigation',{name:'Teacher navigation'});
+  await expect(nav.getByRole('button')).toHaveCount(5);
+  await nav.getByRole('button',{name:'Sessions',exact:true}).click();
+  await expect(page.getByText('Upcoming sessions are not connected yet',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Past',exact:true}).click();
+  await expect(page.getByText('Past sessions are not connected yet',{exact:true})).toBeVisible();
+  await nav.getByRole('button',{name:'Earnings',exact:true}).click();
+  await expect(page.getByText('Payout records are not connected yet.',{exact:true})).toBeVisible();
+  await nav.getByRole('button',{name:'Profile',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Your profile',exact:true})).toBeVisible();
+  await expect(page.getByText(/Hailey Saw|Mara Whitfield|HK\$520/)).toHaveCount(0);
+  await page.screenshot({path:`test-results/teacher-profile-${testInfo.project.name}.png`,fullPage:true});
+});
+
+
+test('progress distinguishes zero attendance, a new milestone and unknown records; reset removes private cards',async({page})=>{
+  const api=await setup(page,{role:'client'});api.accountApi.needsPassword=false;
+  api.accountApi.records={status:'active',name:'Synthetic Empty Client',private_lifetime:{sessions:0,as_of:'2026-09-30'},packages:[]};
+  await page.goto('/?account=1#client');
+  await page.getByLabel('Email',{exact:true}).fill('holder@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByLabel('Your progress')).toContainText('10-session milestone');
+  await expect(page.getByRole('progressbar')).toHaveAttribute('value','0');
+  api.accountApi.records.private_lifetime.sessions=10;
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(page.getByLabel('Your progress')).toContainText('20-session milestone');
+  await expect(page.getByRole('progressbar')).toHaveAttribute('value','0');
+  api.accountApi.records.private_lifetime=null;
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
+  await expect(page.getByText('No packages recorded yet.',{exact:true})).toBeVisible();
+  api.accountApi.records={status:'sign_in_required'};
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(page.getByText('Your session is no longer current.',{exact:false})).toBeVisible();
+  await expect(page.getByLabel('Your progress')).toHaveCount(0);
+  await expect(page.getByText('Synthetic Empty Client',{exact:true})).toHaveCount(0);
 });
