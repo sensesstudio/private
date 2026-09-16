@@ -1,8 +1,8 @@
 # Client access and attendance (2026-09-16)
 
 Admin → Clients → select a client → Client login → verify email → Create login.
-The server creates a Supabase Auth client with a unique three-word/four-digit
-password, binds its UUID to exactly one studio client ID, and returns the
+The server creates a Supabase Auth client with an admin-supplied or generated
+temporary password, binds its UUID to exactly one studio client ID, and returns the
 credentials once. The admin hands them directly to the verified client. No
 invitation is sent, no CSV/mobile-based passwords are used, and existing Auth
 accounts are never overwritten or automatically linked by matching email.
@@ -16,11 +16,10 @@ mapping, not by a client-supplied ID or user metadata. The underlying CRM tables
 retain admin-only RLS. New endpoints send Cache-Control: no-store; private
 records and temporary credentials are never written to browser storage.
 
-This first release supports new login assignment only. Existing-email
-collisions, account relinking and forgotten-password recovery need studio
-support; no bulk account creation, password reset, or notification occurs on
-deployment. A lost one-time credential response also needs support. Editing a
-CRM contact email does not change an existing Auth login email.
+Existing-email collisions and account relinking need studio support. Admins can
+reset a lost password from the client record. Account creation never runs on
+page load or deployment. Editing a CRM contact email does not change an existing
+Auth login email.
 
 Client packages use the same last available Mindbody values as Admin Clients
 (with source/update notices), and remain separate from online checkout credits.
@@ -38,3 +37,22 @@ Validation: database ownership/RLS tests; server authentication, duplicate and
 rollback tests; desktop/mobile account provisioning, first-password change,
 private record rendering and sign-out tests. Fixtures are synthetic. Live
 customer account creation is performed by an admin, not by the test suite.
+
+
+## Admin password reset
+
+Admin → Clients → client details → Client login includes Reset password.
+The admin must confirm the login email and reset. An optional temporary password
+can be supplied; otherwise a unique password is generated. Only a hash is stored
+by Auth. Credentials are shown once and are never persisted in browser storage.
+Existing accounts are never overwritten by Create login.
+
+Resets and first password changes take a service-only five-minute operation lease,
+with an audit trail. The account snapshot checks the actual Auth session against
+an access cutoff, so old sessions cannot read CRM data after reset or change.
+Clients must choose their own password before viewing packages and visits, then
+sign in again. No invitation or reset email is sent by this feature.
+
+A one-time operator can provision verified existing clients through the same
+admin-only create endpoint, skipping missing/shared emails and existing mappings.
+Never put the chosen password, client exports or API credentials into source.
