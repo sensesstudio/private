@@ -8,6 +8,33 @@ import { filterClients, groupClients, packageStatus } from '../../admin/clients.
 const PAGE_SIZE = 25;
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
+
+// Sortable columns. `get` returns the value to compare; `type` picks the comparator.
+const STATUS_ORDER = ['Expires today', 'Expires within 30 days', 'In date', 'No credits', 'Expired'];
+const COLUMNS = [
+  { key: 'name', label: 'Client', type: 'text', get: c => c.name },
+  { key: 'credits', label: 'Credits left', type: 'num', get: c => c.credits },
+  { key: 'packages', label: 'Packages', type: 'num', get: c => c.packages.length },
+  { key: 'visits', label: 'Recorded visits since Jun', type: 'num', get: c => c.visits },
+  { key: 'expiry', label: 'Earliest expiry', type: 'date', get: c => c.nextExpiry },
+  { key: 'status', label: 'Package status', type: 'num', get: (c, asOf) => STATUS_ORDER.indexOf(packageStatus(c.packages, asOf)) },
+];
+function sortClients(rows, sort, asOf) {
+  const col = COLUMNS.find(c => c.key === sort.key);
+  if (!col) return rows;
+  const out = [...rows];
+  out.sort((a, b) => {
+    let av = col.get(a, asOf), bv = col.get(b, asOf);
+    if (col.type === 'date') { // missing expiry always sinks to the bottom, either direction
+      if (!av && !bv) return a.name.localeCompare(b.name);
+      if (!av) return 1;
+      if (!bv) return -1;
+    }
+    let d = col.type === 'text' ? String(av).localeCompare(String(bv)) : av === bv ? 0 : av < bv ? -1 : 1;
+    return (d || a.name.localeCompare(b.name)) * sort.dir;
+  });
+  return out;
+}
 function SyncStatus({ sync }) {
   if (!sync?.last_ok_at) return <p className="admin-client-notice">Mindbody auto-sync: {sync?.failed ? 'temporarily unavailable' : 'awaiting first update'}. Imported balances may be out of date.</p>;
   const stale = sync.failed || Date.now() - new Date(sync.last_ok_at).getTime() > 30 * 60000;
@@ -64,13 +91,16 @@ export function AdminClients() {
   const [selectedId, setSelectedId] = useState(null);
   const [editor, setEditor] = useState(null);
   const [notice, setNotice] = useState('');
+  const [sort, setSort] = useState({ key: null, dir: 1 });
   const clients = useMemo(() => groupClients(data?.rows || [], data?.clients || []), [data]);
   const batch = data?.import;
   const asOf = data?.as_of || batch?.as_of;
   const filtered = useMemo(() => filterClients(clients, query, filter, asOf), [clients, query, filter, asOf]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => sortClients(filtered, sort, asOf), [filtered, sort, asOf]);
+  const toggleSort = key => { setSort(s => ({ key, dir: s.key === key ? -s.dir : 1 })); setPage(0); };
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
-  const visible = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const visible = sorted.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const selected = clients.find(c => c.id === selectedId);
   const duplicates = clients.reduce((n, c) => n + c.duplicates, 0);
   if (editor) return <ClientEditor key={`${editor.kind}:${editor.record?.id || 'new'}`} {...editor} onCancel={() => setEditor(null)} onSaved={async id => {
@@ -95,7 +125,14 @@ export function AdminClients() {
       {loading ? <div className="admin-empty-panel" role="status">Loading client records…</div> : error ? <div className="admin-empty-panel" role="alert"><p>Client records could not be loaded. Please try again.</p><Button variant="soft" size="sm" onClick={refresh}>Retry</Button></div> : !clients.length ? <div className="admin-empty-panel"><Icon n="database" size={30} color="var(--accent)" /><p>No clients yet. Select Add client to get started.</p></div> : <>
         <div className="admin-table-scroll"><table className="admin-table admin-clients-table">
           <caption className="admin-client-caption">Package status as of {date(asOf)}. Select a name to see all package details.</caption>
-          <thead><tr>{['Client', 'Credits left', 'Packages', 'Recorded visits since Jun', 'Earliest expiry', 'Package status'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <thead><tr>{COLUMNS.map(col => {
+            const active = sort.key === col.key;
+            return <th key={col.key} aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+              <button type="button" className={`admin-th-sort${active ? ' is-active' : ''}`} onClick={() => toggleSort(col.key)}>
+                {col.label}<span className="admin-sort-caret" aria-hidden="true">{active ? (sort.dir === 1 ? '▲' : '▼') : '↕'}</span>
+              </button>
+            </th>;
+          })}</tr></thead>
           <tbody>{visible.map(client => <tr key={client.id}>
             <td><button className="admin-client-name" onClick={() => setSelectedId(client.id)}>{client.name}<Icon n="chevron-right" size={14} /></button>
               <span className="admin-client-contact">{client.email || client.phone || 'No contact details'}</span>
@@ -107,7 +144,7 @@ export function AdminClients() {
           </tr>)}</tbody>
         </table></div>
         {!visible.length && <p className="admin-empty-panel">No clients match your search.</p>}
-        <div className="admin-client-pagination"><span role="status">{filtered.length ? `${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, filtered.length)} of ${filtered.length} clients` : '0 clients'}</span>
+        <div className="admin-client-pagination"><span role="status">{sorted.length ? `${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, sorted.length)} of ${sorted.length} clients` : '0 clients'}</span>
           <div><Button variant="ghost" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</Button><Button variant="ghost" size="sm" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Next</Button></div>
         </div>
       </>}
