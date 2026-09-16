@@ -135,10 +135,10 @@ for (const mode of ['failed', 'stale', 'empty']) test(`${mode} backend has no de
   }
 });
 
-test('Ask matches the actual studio and disables an earlier suggestion when the room becomes busy', async ({ page }) => {
+test('Match for me matches the actual studio and disables an earlier suggestion when the room becomes busy', async ({ page }) => {
   const api = await setup(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await page.getByRole('button', { name: 'Match for me', exact: true }).click();
   await page.getByPlaceholder('Ask about availability…').fill('Cantonese Reformer tomorrow in Causeway Bay');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   const card = page.getByRole('button').filter({ hasText: 'Test Instructor · Reformer · Causeway Bay' });

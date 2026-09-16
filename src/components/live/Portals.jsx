@@ -68,7 +68,7 @@ export function LiveClientPortal() {
   const pick = s => { if (slotById(s.id)?.status === 'open') setSlotId(s.id); };
   return <PhoneFrame showWhatsApp={tab !== 'ask' || !!instructor} navBar={<nav className="live-nav" aria-label="Client navigation">
     <button aria-pressed={tab === 'browse'} onClick={() => { setTab('browse'); setInstructor(null); }}>Browse</button>
-    <button aria-pressed={tab === 'ask'} onClick={() => { setTab('ask'); setInstructor(null); }}>Ask</button>
+    <button aria-pressed={tab === 'ask'} onClick={() => { setTab('ask'); setInstructor(null); }}>Match for me</button>
   </nav>} overlay={slotId && <SessionPreview slotId={slotId} onClose={() => setSlotId(null)} />}>
     <AvailabilityStatus />
     {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'ask' ?
