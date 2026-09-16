@@ -12,3 +12,10 @@ verify_jwt = false
 # Handler validates the access token with Auth and the protected admin role.
 [functions.admin-room-details]
 verify_jwt = false
+
+# Checkout validates caller tokens with Auth. Webhook verifies Stripe signatures.
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false

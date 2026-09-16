@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { clientDirectoryFixture } from '../fixtures/client-import.js';
+import { pricingPackages } from '../fixtures/pricing.js';
 
 const now = '2026-09-30T02:00:00Z';
 const teacherId = '11111111-1111-4111-8111-111111111111';
@@ -23,6 +24,7 @@ function makeSnapshot() {
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
   const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
   const clientDirectory = clientDirectoryFixture(); const clientReads = [];
+  const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
   if (stale) data.sync.last_ok_at = '2026-09-30T01:00:00Z';
   if (empty) { data.slots = []; data.teachers = []; }
   await page.clock.setFixedTime(new Date(now));
@@ -37,6 +39,16 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/create-checkout')) {
+      const input=route.request().postDataJSON();
+      if(input.action==='availability') return respond({available:paymentApi.available,livemode:true});
+      if(input.action==='status') return respond({status:paymentApi.status,credits:5,package_name:'5-class pack',format:'1:1'});
+      paymentApi.checkouts.push(input);
+      return respond({url:'https://checkout.stripe.com/c/pay/cs_live_synthetic'});
+    }
+    if (path.endsWith('/packages')) return paymentApi.failed ? respond({message:'unavailable'},503) : respond(pricingPackages);
+    if (path.endsWith('/package_checkout_orders')) return respond(paymentApi.purchases);
+    if (path.endsWith('/signup')) { paymentApi.signups.push(route.request().postDataJSON()); return respond({id:clientId,email:'buyer@example.test',identities:[]}); }
     if (path.endsWith('/admin_client_directory')) {
       clientReads.push(path);
       if (role !== 'admin') return respond({ message: 'admin_access_required' }, 403);
@@ -67,7 +79,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientDirectory, clientReads, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientDirectory, clientReads, paymentApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -384,4 +396,71 @@ test('admin client names appear on dashboard, grid and list, and disappear after
   await expect(page.getByRole('heading', { name: 'Admin sign-in' })).toBeVisible();
   await expect(page.getByText('Fixture Client', { exact: true })).toHaveCount(0);
   expect(api.writes).toHaveLength(0);
+});
+
+test('client pricing preserves the design, shows database packs and signs in before Stripe checkout', async ({ page }, testInfo) => {
+  const api=await setup(page,{role:'client'}); const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('https://checkout.stripe.com/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Stripe checkout fixture</h1>'}));
+  await page.goto('/#client');
+  await page.getByRole('navigation',{name:'Client navigation'}).getByRole('button',{name:'Pricing',exact:true}).click();
+  await expect(page.locator('.pricing-pack')).toHaveCount(4);
+  await expect(page.locator('.pricing-price strong')).toHaveText(['HK$900','HK$1,200','HK$4,750','HK$9,000']);
+  await expect(page.getByText('Valid for 3 months from first visit',{exact:true})).toBeVisible();
+  expect(await page.locator('.client-pricing').innerText()).not.toMatch(/[\u3400-\u9fff]/);
+  await page.screenshot({path:`test-results/client-pricing-${testInfo.project.name}.png`,fullPage:true});
+  await page.getByRole('button',{name:'Semi-private · 1:2',exact:true}).click();
+  await expect(page.locator('.pricing-price strong')).toHaveText(['HK$1,200','HK$1,600','HK$6,500','HK$12,000']);
+  await expect(page.getByText('Prices are the total for two people sharing the session.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Buy · HK$6,500',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Client sign-in',exact:true})).toBeVisible();
+  expect(api.paymentApi.checkouts).toEqual([]);
+  await page.getByLabel('Email',{exact:true}).fill('buyer@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+  await page.locator('.pricing-auth').getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Client sign-in',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Buy · HK$6,500',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Stripe checkout fixture',exact:true})).toBeVisible();
+  expect(api.paymentApi.checkouts).toEqual([{packageId:'p12-5',origin:'http://127.0.0.1:4173'}]);
+  expect(errors).toEqual([]);
+});
+
+test('checkout return waits for verified payment and shows only own purchases', async ({ page }) => {
+  const api=await setup(page,{role:'client'});
+  await page.goto('/?checkout=success&session_id=cs_live_synthetic#client');
+  await expect(page.getByText('Sign in with the account used at checkout to confirm your purchase.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByLabel('Email',{exact:true}).fill('buyer@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+  await page.locator('.pricing-auth').getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByText('Checking your payment.',{exact:false})).toBeVisible();
+  await expect(page.getByText('No purchases on this app yet.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Payment confirmed.',{exact:false})).toHaveCount(0);
+  api.paymentApi.status='paid';api.paymentApi.purchases=[{id:'synthetic-order',package_name:'5-class pack',format:'1:1',credits:5,price_hkd:4750,validity_months:3,paid_at:now}];
+  await page.getByRole('button',{name:'Check payment status',exact:true}).click();
+  await expect(page.getByText('Payment confirmed. 5 sessions added for 5-class pack (1:1).',{exact:true})).toBeVisible();
+  await expect(page.locator('.pricing-purchases article')).toHaveCount(1);
+  await expect(page.locator('.pricing-purchases article')).toContainText('5 sessions purchased · HK$4,750');
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+  await expect(page.locator('.pricing-purchases')).toHaveCount(0);
+  await expect(page.getByText('Payment confirmed.',{exact:false})).toHaveCount(0);
+});
+
+test('unavailable pricing has no fake packs or enabled payment and signup requests only a client profile', async ({ page }) => {
+  const api=await setup(page,{role:'client'});api.paymentApi.failed=true;
+  await page.goto('/?pricing=1#client');
+  await expect(page.getByText('Packages could not be loaded.',{exact:false})).toBeVisible({timeout:15000});
+  await expect(page.locator('.pricing-pack')).toHaveCount(0);
+  api.paymentApi.failed=false;api.paymentApi.available=false;
+  await page.getByRole('button',{name:'Retry pricing',exact:true}).click();
+  await expect(page.locator('.pricing-pack')).toHaveCount(4);
+  await expect(page.getByRole('button',{name:'Buy · HK$900',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('button',{name:'New here? Create account',exact:true}).click();
+  await page.getByLabel('Full name',{exact:true}).fill('Synthetic Buyer');
+  await page.getByLabel('Email',{exact:true}).fill('buyer@example.test');
+  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+  await page.getByRole('button',{name:'Create account',exact:true}).click();
+  await expect(page.getByText('Check your email to confirm your account, then return here to sign in.',{exact:true})).toBeVisible();
+  expect(api.paymentApi.signups[0].data).toEqual({full_name:'Synthetic Buyer'});
+  expect(api.paymentApi.checkouts).toEqual([]);
 });

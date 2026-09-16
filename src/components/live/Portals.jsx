@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Avatar, Button, PhoneFrame, Sheet, SpecChips } from '../shared/index.jsx';
 import { ClientBrowse } from '../client/Browse.jsx';
 import { ChatAssistant } from '../client/ChatAssistant.jsx';
@@ -8,9 +8,11 @@ import { useLiveAvailability, liveStore, setTeacherAvailability } from '../../av
 import { availabilityDays, hkLabel, hkDateKey, hkTime, HOUR_MS } from '../../availability/time.js';
 import { syncCovers } from '../../availability/model.js';
 import { supabase } from '../../supabase/client.js';
+import { useAccount } from '../../supabase/useAccount.js';
 import { inputStyle } from '../../styles.js';
 import './live.css';
 import { LiveAdminWorkspace } from '../admin/LiveWorkspace.jsx';
+import { ClientPricing } from './Pricing.jsx';
 
 function AvailabilityStatus() {
   const { loading, error, snapshot } = useLiveAvailability();
@@ -62,48 +64,20 @@ function Instructor({ id, onBack, onPick }) {
 
 export function LiveClientPortal() {
   useLiveAvailability();
-  const [tab, setTab] = useState('browse');
+  const [tab, setTab] = useState(() => { const q = new URLSearchParams(window.location.search); return q.has('checkout') || q.has('pricing') ? 'pricing' : 'browse'; });
   const [instructor, setInstructor] = useState(null);
   const [slotId, setSlotId] = useState(null);
   const pick = s => { if (slotById(s.id)?.status === 'open') setSlotId(s.id); };
   return <PhoneFrame showWhatsApp={tab !== 'ask' || !!instructor} navBar={<nav className="live-nav" aria-label="Client navigation">
     <button aria-pressed={tab === 'browse'} onClick={() => { setTab('browse'); setInstructor(null); }}>Browse</button>
     <button aria-pressed={tab === 'ask'} onClick={() => { setTab('ask'); setInstructor(null); }}>Match for me</button>
+    <button aria-pressed={tab === 'pricing'} onClick={() => { setTab('pricing'); setInstructor(null); }}>Pricing</button>
   </nav>} overlay={slotId && <SessionPreview slotId={slotId} onClose={() => setSlotId(null)} />}>
-    <AvailabilityStatus />
-    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'ask' ?
+    {tab !== 'pricing' && <AvailabilityStatus />}
+    {instructor ? <Instructor id={instructor} onBack={() => setInstructor(null)} onPick={pick} /> : tab === 'pricing' ? <ClientPricing onBrowse={() => setTab('browse')} /> : tab === 'ask' ?
       <ChatAssistant onPickSlot={(teacher, day, time, id) => { const s = slotById(id); if (s) pick(s); }} /> :
       <ClientBrowse embedded onOpen={t => setInstructor(t.id)} onPickSlot={pick} />}
   </PhoneFrame>;
-}
-
-// Session restoration and role checks always use Supabase. No demo sign-in path.
-function useAccount() {
-  const [state, setState] = useState({ loading: true, user: null, profile: null, error: null });
-  useEffect(() => {
-    let active = true, request = 0;
-    async function accept(session) {
-      const mine = ++request;
-      if (!session?.user) { if (active) setState({ loading: false, user: null, profile: null, error: null }); return; }
-      setState({ loading: true, user: session.user, profile: null, error: null });
-      try {
-        const { data, error } = await supabase.from('profiles').select('id, role, full_name').eq('id', session.user.id).single();
-        if (error) throw error;
-        if (active && mine === request) setState({ loading: false, user: session.user, profile: data, error: null });
-      } catch {
-        if (active && mine === request) setState({ loading: false, user: session.user, profile: null, error: 'Could not verify account access.' });
-      }
-    }
-    if (!supabase) { setState({ loading: false, user: null, profile: null, error: 'Sign-in is unavailable.' }); return; }
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!active) return;
-      if (error) setState({ loading: false, user: null, profile: null, error: 'Please sign in again.' });
-      else if (!request) void accept(data.session);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => { queueMicrotask(() => { if (active) void accept(session); }); });
-    return () => { active = false; request++; data.subscription.unsubscribe(); };
-  }, []);
-  return state;
 }
 
 function StaffGate({ role, children, workspace = false }) {
