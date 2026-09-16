@@ -72,6 +72,7 @@ test('CSV import preserves all source fields, duplicates and identifiers; only a
   await db.exec(await migration('20260916081040_admin_client_editing.sql'));
   await db.exec(await migration('20260916081703_mindbody_client_packages.sql'));
   await db.exec(await migration('20260916091926_admin_client_last_visit.sql'));
+  await db.exec(await migration('20260916094547_admin_client_next_visit.sql'));
   const saveClient = (id, version, name = 'Synthetic Added Client') => db.query('select save_studio_client($1,$2,$3) as id', [id,version,JSON.stringify({client_name:name,phone:'001234000',email:'new@example.test',visits_since_jun:0})]);
   const pack = { package_name:'Synthetic manual pack', credits_left:3,total_credits:5,purchase_amount_hkd:500,remaining_value_hkd:300,purchase_date:'2026-09-01',expiry_date:'2026-12-01' };
   const savePack = (id,version,client,details=pack) => db.query('select save_studio_client_package($1,$2,$3,$4) as id',[id,version,client,JSON.stringify(details)]);
@@ -130,12 +131,22 @@ test('CSV import preserves all source fields, duplicates and identifiers; only a
   await db.query(`update admin_client_packages set
     last_visit_date=case when source_row < 5 then date '2026-09-24' end,
     never_attended=source_row=5,
-    raw_data=raw_data || jsonb_build_object('Last_visit_date',case when source_row < 5 then '24/9/2026' else 'Never attended' end)
+    next_visit_at=case when source_row < 5 then timestamptz '2026-10-02 10:30+08' end,
+    next_visit_details=case when source_row < 5 then 'Central Synthetic private session' end,
+    no_upcoming_booking=source_row=5,
+    raw_data=raw_data || jsonb_build_object('Last_visit_date',case when source_row < 5 then '24/9/2026' else 'Never attended' end,
+      'Next_visit',case when source_row < 5 then '2026-10-02 10:30 Central Synthetic private session' else 'No upcoming booking' end)
     where import_id=$1`, [attendanceImport]);
   await as('authenticated',ids.admin);
   live=(await db.query('select admin_client_directory() as data')).rows[0].data;
   assert.equal(live.rows.length,5);
   assert.equal(live.last_visit_import.id,attendanceImport);
+  assert.equal(live.next_visit_import.id,attendanceImport);
+  assert.equal(new Date(live.clients.find(c=>c.id===stored[0].client_id).next_visit_at).toISOString(),'2026-10-02T02:30:00.000Z');
+  assert.equal(live.clients.find(c=>c.id===stored[0].client_id).next_visit_details,'Central Synthetic private session');
+  assert.equal(live.clients.find(c=>c.id===stored[3].client_id).no_upcoming_booking,true);
+  assert.equal(live.clients.find(c=>c.id===added).next_visit_at,null);
+  assert.equal(live.clients.find(c=>c.id===added).no_upcoming_booking,false);
   assert.equal(live.clients.find(c=>c.id===stored[0].client_id).last_visit_date,'2026-09-24');
   assert.equal(live.clients.find(c=>c.id===stored[3].client_id).never_attended,true);
   assert.equal(live.clients.find(c=>c.id===added).last_visit_date,null);
@@ -145,7 +156,7 @@ test('CSV import preserves all source fields, duplicates and identifiers; only a
   for (const role of ['client','teacher']) {
     await as('authenticated',ids[role]);
     await assert.rejects(db.query('select admin_client_directory()'),/admin_access_required/);
-    assert.deepEqual((await db.query('select last_visit_date from admin_client_packages')).rows,[]);
+    assert.deepEqual((await db.query('select last_visit_date,next_visit_at,next_visit_details from admin_client_packages')).rows,[]);
   }
 
 });
@@ -162,6 +173,12 @@ test('client summaries keep all packages, count visits once, preserve missing va
   assert.equal(clients[0].lastVisit, '2026-09-24');
   assert.equal(clients[1].lastVisit, null);
   assert.equal(clients[1].neverAttended, true);
+  assert.equal(clients[0].nextVisit, '2026-10-02T10:30:00+08:00');
+  assert.equal(clients[1].noUpcomingBooking, true);
+  const earlierNext = { ...clients[0], id: 'earlier-next', nextVisit: '2026-10-02T01:00:00Z' };
+  const byNext = [...clients, earlierNext];
+  assert.deepEqual(sortClients(byNext, 'next_visit', 'asc', batch.as_of).map(c=>c.id), [earlierNext.id,clients[0].id,clients[1].id]);
+  assert.deepEqual(sortClients(byNext, 'next_visit', 'desc', batch.as_of).map(c=>c.id), [clients[0].id,earlierNext.id,clients[1].id]);
   const newer = { ...clients[0], id: 'newer', lastVisit: '2026-10-01' };
   const byVisit = [...clients, newer];
   assert.deepEqual(sortClients(byVisit, 'last_visit', 'desc', batch.as_of).map(c=>c.id), [newer.id,clients[0].id,clients[1].id]);

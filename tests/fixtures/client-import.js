@@ -8,7 +8,7 @@ rawClientRows.push({ ...rawClientRows[0], ClientId: '1000000000000000000002', Na
 export function clientDirectoryFixture() {
   return {
     import: { id: 'aaaaaaaa-0000-4000-8000-000000000001', source_file: 'synthetic-clients.csv', as_of: '2026-09-30', imported_at: '2026-09-30T01:00:00Z', row_count: rawClientRows.length },
-    rows: rawClientRows.map((r, i) => ({ last_visit_date: i === 3 ? null : '2026-09-24', never_attended: i === 3, source_row: i + 2, client_id: r.ClientId, client_name: r.Name, phone: r.Phone, email: r.Email, package_name: r.Package,
+    rows: rawClientRows.map((r, i) => ({ next_visit_at: i === 3 ? null : '2026-10-02T10:30:00+08:00', next_visit_details: i === 3 ? null : 'Central Synthetic private session', no_upcoming_booking: i === 3, last_visit_date: i === 3 ? null : '2026-09-24', never_attended: i === 3, source_row: i + 2, client_id: r.ClientId, client_name: r.Name, phone: r.Phone, email: r.Email, package_name: r.Package,
       credits_left: +r.Credits_left, total_credits: +r.Total_credits, purchase_amount_hkd: +r['Purchase_amount_HK$'], remaining_value_hkd: +r['Remaining_value_HK$'],
       purchase_date: r.Purchase_date, expiry_date: r.Expiry_date, days_to_expiry: +r.Days_to_expiry, visits_since_jun: r.Visits_since_Jun === '' ? null : +r.Visits_since_Jun, duplicate_of_row: i === 2 ? 2 : null })),
   };

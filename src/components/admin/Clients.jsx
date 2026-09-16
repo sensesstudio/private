@@ -7,17 +7,25 @@ import { filterClients, groupClients, packageStatus, sortClients } from '../../a
 
 const PAGE_SIZE = 25;
 const SORT_COLUMNS = [
-  { key: 'name', width: 18, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
-  { key: 'credits', width: 10, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
-  { key: 'packages', width: 10, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
-  { key: 'package_names', width: 22, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
-  { key: 'last_visit', width: 12, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
-  { key: 'expiry', width: 12, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
-  { key: 'status', width: 16, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
+  { key: 'name', width: 16, label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
+  { key: 'credits', width: 9, label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
+  { key: 'packages', width: 9, label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
+  { key: 'package_names', width: 18, label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
+  { key: 'last_visit', width: 11, label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
+  { key: 'next_visit', width: 14, label: 'Next visit date', asc: 'Next visit: earliest first', desc: 'Next visit: latest first' },
+  { key: 'expiry', width: 11, label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
+  { key: 'status', width: 12, label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
 ];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
 const lastVisit = client => client.lastVisit ? date(client.lastVisit) : client.neverAttended ? 'Never attended' : '—';
+function NextVisit({ client, details = false }) {
+  if (!client.nextVisit) return client.noUpcomingBooking ? 'No upcoming booking' : '—';
+  const when = new Date(client.nextVisit);
+  return <><span>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'Asia/Hong_Kong' }).format(when)}</span>
+    <span className="admin-client-contact">{new Intl.DateTimeFormat('en-GB', { timeStyle: 'short', timeZone: 'Asia/Hong_Kong' }).format(when)} HKT</span>
+    {details && client.nextVisitDetails && <span className="admin-client-contact">{client.nextVisitDetails}</span>}</>;
+}
 function SyncStatus({ sync }) {
   if (!sync?.last_ok_at) return <p className="admin-client-notice">Mindbody auto-sync: {sync?.failed ? 'temporarily unavailable' : 'awaiting first update'}. Imported balances may be out of date.</p>;
   const stale = sync.failed || Date.now() - new Date(sync.last_ok_at).getTime() > 30 * 60000;
@@ -46,6 +54,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Client ID">{client.id}</Field><Field label="Phone">{client.phone}</Field><Field label="Email">{client.email}</Field>
         <Field label="Credits left / total">{client.credits} / {client.totalCredits}</Field>
         <Field label="Last visit date">{lastVisit(client)}</Field>
+        <Field label="Next visit date"><NextVisit client={client} details /></Field>
         <Field label="Package status"><Status packages={client.packages} asOf={asOf} /></Field>
       </dl>
     </Card>
@@ -62,7 +71,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Days to expiry">{p.days_to_expiry}</Field>
       </dl>
     </Card>)}</div>
-    <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last visit dates are from the latest client CSV. Studio records include admin updates. These balances are separate from online booking credits.</p>
+    <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last and next visit dates are from the latest client CSV. Studio records include admin updates. These balances are separate from online booking credits.</p>
   </>;
 }
 
@@ -76,7 +85,7 @@ export function AdminClients() {
   const [editor, setEditor] = useState(null);
   const [notice, setNotice] = useState('');
   const clients = useMemo(() => groupClients(data?.rows || [], data?.clients || []), [data]);
-  const batch = data?.last_visit_import || data?.import;
+  const batch = data?.next_visit_import || data?.last_visit_import || data?.import;
   const asOf = data?.as_of || batch?.as_of;
   const filtered = useMemo(() => filterClients(clients, query, filter, asOf), [clients, query, filter, asOf]);
   const [sortKey, sortDirection] = sort.split(':');
@@ -96,7 +105,7 @@ export function AdminClients() {
       right={<div className="admin-editor-actions"><Button size="sm" disabled={loading || error} onClick={() => setEditor({ kind: 'client', record: null })}>Add client</Button><Button variant="soft" size="sm" icon="refresh-cw" disabled={loading} onClick={() => { setSelectedId(null); refresh(); }}>Refresh clients</Button></div>} />
     {data && <>
       <SyncStatus sync={data.sync} />
-      <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last visit dates are from the client CSV. Studio records include admin updates. Package status as of {date(asOf)}.</p>
+      <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last and next visit dates are from the client CSV. Studio records include admin updates. Package status as of {date(asOf)}.</p>
       {duplicates > 0 && <p className="admin-client-notice">{duplicates} possible duplicate {duplicates === 1 ? 'row is' : 'rows are'} included in totals. Open a client to review their packages.</p>}
       <div className="admin-client-tools">
         <label className="admin-client-search"><Icon n="search" size={17} /><input aria-label="Search clients" placeholder="Search name, phone, email, ID or package…" value={query} onChange={e => { setQuery(e.target.value); setPage(0); }} /></label>
@@ -128,7 +137,7 @@ export function AdminClients() {
             <td>{client.credits} <span className="admin-client-secondary">/ {client.totalCredits}</span></td>
             <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td>
             <td className="admin-client-package-names">{client.packages.length ? client.packages.map((pack, index) => <span key={pack.id || pack.source_row || index}>{pack.package_name}</span>) : '—'}</td>
-            <td>{lastVisit(client)}</td><td>{date(client.nextExpiry)}</td>
+            <td>{lastVisit(client)}</td><td><NextVisit client={client} /></td><td>{date(client.nextExpiry)}</td>
             <td><Status packages={client.packages} asOf={asOf} /></td>
           </tr>)}</tbody>
         </table></div>

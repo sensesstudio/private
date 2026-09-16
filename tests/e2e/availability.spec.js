@@ -170,6 +170,8 @@ test('admin clients show complete CSV packages, search, pagination and private f
   await expect(page.locator('.admin-clients-table tbody tr').first()).toContainText('11 / 25');
   await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(4)).toHaveText('24 Sept 2026');
   await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(4)).toHaveText('Never attended');
+  await expect(page.locator('.admin-clients-table tbody tr').first().locator('td').nth(5)).toHaveText('2 Oct 202610:30 HKT');
+  await expect(page.locator('.admin-clients-table tbody tr').last().locator('td').nth(5)).toHaveText('No upcoming booking');
   await expect(page.getByText('1 possible duplicate row is included in totals.', { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/admin-clients-${testInfo.project.name}.png`, fullPage: true });
   for (const q of ['holder@example.test', '00123456789', '1000000000000000000001', 'Example Private 5']) {
