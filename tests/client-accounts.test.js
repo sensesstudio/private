@@ -9,8 +9,8 @@ import { temporaryPassword, validNewPassword } from '../supabase/functions/clien
 test('client account ownership is explicit; password gate, role checks and raw CRM isolation hold in SQL',async t=>{
   const db=new PGlite();t.after(()=>db.close());
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
-    create schema auth;create table auth.users(id uuid primary key);create table auth.sessions(id uuid primary key,user_id uuid,created_at timestamptz default clock_timestamp(),not_after timestamptz);
-    create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('session_id',current_setting('request.jwt.claim.session_id',true)) $$;
+    create schema auth;create table auth.users(id uuid primary key);create table auth.identities(user_id uuid,provider text,identity_data jsonb);create table auth.sessions(id uuid primary key,user_id uuid,created_at timestamptz default clock_timestamp(),not_after timestamptz);
+    create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('session_id',current_setting('request.jwt.claim.session_id',true),'amr',coalesce(nullif(current_setting('request.jwt.claim.amr',true),'')::jsonb,'[]'::jsonb)) $$;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema public,auth to anon,authenticated,service_role;`);
   const migration=async name=>(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8')).replace(/create extension if not exists (pgcrypto|pg_cron|pg_net);/g,'');
@@ -29,7 +29,7 @@ test('client account ownership is explicit; password gate, role checks and raw C
   await as('service_role');
   await db.query('select import_admin_client_packages($1,$2,$3,$4)', ['synthetic.csv','c'.repeat(64),'2026-09-30',JSON.stringify(rawClientRows)]);
   await db.exec('reset role');
-  for (const name of ['20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql']) await db.exec(await migration(name));
+  for (const name of ['20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql']) await db.exec(await migration(name));
   const first=rawClientRows[0].ClientId,second=rawClientRows[3].ClientId;
   await db.query("update admin_client_packages set private_sessions_lifetime=case when client_id=$1 then 14 else 0 end, raw_data=raw_data || jsonb_build_object('Private_sessions_lifetime',case when client_id=$1 then '14' else '0' end)",[first]);
   await as('authenticated',ids.admin);
@@ -60,6 +60,35 @@ test('client account ownership is explicit; password gate, role checks and raw C
   assert.deepEqual((await db.query('select * from studio_client_accounts')).rows,[]);
   await assert.rejects(db.query('update studio_client_accounts set password_changed_at=now()'),/permission denied/);
   await assert.rejects(db.query("update profiles set role='admin' where id=auth.uid()"),/permission denied/);
+  // OAuth is session-specific: unverified/mismatched identities, missing AMR,
+  // password sessions and Google identities owned by another user stay gated.
+  await db.exec('reset role');
+  await db.query('insert into auth.identities values($1,$2,$3)',[ids.two,'google',JSON.stringify({email:'holder@example.test',email_verified:true})]);
+  const amr=async method=>db.query("select set_config('request.jwt.claim.amr',$1,false)",[JSON.stringify([{method}])]);
+  await as('authenticated',ids.one);await amr('oauth');
+  assert.equal((await snapshot()).status,'password_required');
+  await db.exec('reset role');
+  await db.query('insert into auth.identities values($1,$2,$3)',[ids.one,'google',JSON.stringify({email:'holder@example.test',email_verified:false})]);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'password_required');
+  await db.exec('reset role');
+  await db.query("update auth.identities set identity_data=$1 where user_id=$2",[JSON.stringify({email:'wrong@example.test',email_verified:true}),ids.one]);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'password_required');
+  await db.exec('reset role');
+  await db.query("update auth.identities set identity_data=$1 where user_id=$2",[JSON.stringify({email:'holder@example.test',email_verified:true}),ids.one]);
+  await as('authenticated',ids.one);
+  assert.equal((await snapshot()).status,'active');
+  assert.equal((await snapshot()).name,'Example Package Holder');
+  await amr('password');assert.equal((await snapshot()).status,'password_required');
+  await as('service_role');
+  assert.equal((await db.query('select password_changed_at from studio_client_accounts where user_id=$1',[ids.one])).rows[0].password_changed_at,null);
+  await db.query('update studio_client_accounts set password_operation_id=$1 where user_id=$1',[ids.one]);
+  await as('authenticated',ids.one);await amr('oauth');assert.equal((await snapshot()).status,'password_required');
+  await as('service_role');await db.exec('update studio_client_accounts set password_operation_id=null');
+  await db.exec('reset role');
+  await db.query("update auth.sessions set not_after=now()-interval '1 minute' where id=$1",[ids.one]);
+  await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
+  await db.exec('reset role');await db.query('update auth.sessions set not_after=null where id=$1',[ids.one]);
+  await amr('password');
   await as('service_role');await db.exec('update studio_client_accounts set password_changed_at=now()');
   await as('authenticated',ids.one);
   const own=await snapshot();assert.equal(own.status,'active');assert.equal(own.packages.length,3);assert.equal(own.name,'Example Package Holder');
@@ -81,6 +110,7 @@ test('client account ownership is explicit; password gate, role checks and raw C
   await assert.rejects(finish(ids.two),/password_operation_changed/);
   await finish(op);
   await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
+  await amr('oauth');assert.equal((await snapshot()).status,'sign_in_required');await amr('password');
   await as('service_role');const change=(await begin(false,ids.one)).rows[0].op;await finish(change,true,ids.one);
   await as('authenticated',ids.one);assert.equal((await snapshot()).status,'sign_in_required');
   await db.exec('reset role');await db.query('update auth.sessions set created_at=clock_timestamp() where id=$1',[ids.one]);

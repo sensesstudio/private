@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './client.js';
+import { supabase, clientAuthReady } from './client.js';
 
 // Session restoration and role checks always use Supabase. No demo sign-in path.
 export function useAccount() {
@@ -19,13 +19,16 @@ export function useAccount() {
       }
     }
     if (!supabase) { setState({ loading: false, user: null, profile: null, error: 'Sign-in is unavailable.' }); return; }
-    supabase.auth.getSession().then(({ data, error }) => {
+    let subscription;
+    clientAuthReady.then(async () => {
+      if (!active) return;
+      subscription = supabase.auth.onAuthStateChange((_event, session) => { queueMicrotask(() => { if (active) void accept(session); }); }).data.subscription;
+      const { data, error } = await supabase.auth.getSession();
       if (!active) return;
       if (error) setState({ loading: false, user: null, profile: null, error: 'Please sign in again.' });
       else if (!request) void accept(data.session);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => { queueMicrotask(() => { if (active) void accept(session); }); });
-    return () => { active = false; request++; data.subscription.unsubscribe(); };
+    return () => { active = false; request++; subscription?.unsubscribe(); };
   }, []);
   return state;
 }

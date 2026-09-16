@@ -5,6 +5,7 @@ import { useAccount } from '../../supabase/useAccount.js';
 import { startCheckout } from '../../supabase/checkout.js';
 import { inputStyle } from '../../styles.js';
 import './pricing.css';
+import { GoogleSignIn } from './GoogleSignIn.jsx';
 
 const hkd = value => `HK$${Number(value).toLocaleString('en-HK')}`;
 function ClientSignIn({ onClose }) {
@@ -27,6 +28,7 @@ function ClientSignIn({ onClose }) {
   return <Sheet open onClose={onClose}><section className="live-section pricing-auth">
     <h2>{signup ? 'Create a client account' : 'Client sign-in'}</h2>
     <p>Sign in to keep your package purchases together.</p>
+    <GoogleSignIn destination="pricing" disabled={busy} />
     <form onSubmit={submit}>
       {signup && <label>Full name<input aria-label="Full name" autoComplete="name" required value={name} onChange={e => setName(e.target.value)} style={inputStyle} /></label>}
       <label>Email<input aria-label="Email" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} /></label>

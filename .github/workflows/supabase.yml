@@ -59,6 +59,9 @@ jobs:
             fi
           done
 
+      - name: Configure client OAuth return URLs
+        run: python3 supabase/configure-client-oauth.py
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
