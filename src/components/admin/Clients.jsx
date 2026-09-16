@@ -11,12 +11,13 @@ const SORT_COLUMNS = [
   { key: 'credits', label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
   { key: 'packages', label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
   { key: 'package_names', label: 'Package names', asc: 'Package names: A–Z', desc: 'Package names: Z–A' },
-  { key: 'visits', label: 'Recorded visits since Jun', asc: 'Visits: fewest first', desc: 'Visits: most first' },
+  { key: 'last_visit', label: 'Last visit date', asc: 'Last visit: oldest first', desc: 'Last visit: newest first' },
   { key: 'expiry', label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
   { key: 'status', label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
 ];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
+const lastVisit = client => client.lastVisit ? date(client.lastVisit) : client.neverAttended ? 'Never attended' : '—';
 function SyncStatus({ sync }) {
   if (!sync?.last_ok_at) return <p className="admin-client-notice">Mindbody auto-sync: {sync?.failed ? 'temporarily unavailable' : 'awaiting first update'}. Imported balances may be out of date.</p>;
   const stale = sync.failed || Date.now() - new Date(sync.last_ok_at).getTime() > 30 * 60000;
@@ -44,7 +45,7 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
       <dl className="admin-client-fields">
         <Field label="Client ID">{client.id}</Field><Field label="Phone">{client.phone}</Field><Field label="Email">{client.email}</Field>
         <Field label="Credits left / total">{client.credits} / {client.totalCredits}</Field>
-        <Field label="Recorded visits since Jun">{client.visits}</Field>
+        <Field label="Last visit date">{lastVisit(client)}</Field>
         <Field label="Package status"><Status packages={client.packages} asOf={asOf} /></Field>
       </dl>
     </Card>
@@ -58,10 +59,10 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
         <Field label="Credits left">{p.credits_left}</Field><Field label="Total credits">{p.total_credits}</Field>
         <Field label="Recorded purchase amount">{money(p.purchase_amount_hkd)}</Field><Field label="Recorded remaining value">{money(p.remaining_value_hkd)}</Field>
         <Field label="Purchase date">{date(p.purchase_date)}</Field><Field label="Expiry date">{date(p.expiry_date)}</Field>
-        <Field label="Days to expiry">{p.days_to_expiry}</Field><Field label="Recorded visits since Jun">{p.visits_since_jun}</Field>
+        <Field label="Days to expiry">{p.days_to_expiry}</Field>
       </dl>
     </Card>)}</div>
-    <p className="admin-muted admin-client-source">{batch ? `Original source: ${batch.source_file}. ` : ''}Studio records include admin updates. Visits are a client total. These balances are separate from online booking credits.</p>
+    <p className="admin-muted admin-client-source">{batch ? `Source: ${batch.source_file}. ` : ''}Last visit dates are from the latest client CSV. Studio records include admin updates. These balances are separate from online booking credits.</p>
   </>;
 }
 
@@ -75,7 +76,7 @@ export function AdminClients() {
   const [editor, setEditor] = useState(null);
   const [notice, setNotice] = useState('');
   const clients = useMemo(() => groupClients(data?.rows || [], data?.clients || []), [data]);
-  const batch = data?.import;
+  const batch = data?.last_visit_import || data?.import;
   const asOf = data?.as_of || batch?.as_of;
   const filtered = useMemo(() => filterClients(clients, query, filter, asOf), [clients, query, filter, asOf]);
   const [sortKey, sortDirection] = sort.split(':');
@@ -95,7 +96,7 @@ export function AdminClients() {
       right={<div className="admin-editor-actions"><Button size="sm" disabled={loading || error} onClick={() => setEditor({ kind: 'client', record: null })}>Add client</Button><Button variant="soft" size="sm" icon="refresh-cw" disabled={loading} onClick={() => { setSelectedId(null); refresh(); }}>Refresh clients</Button></div>} />
     {data && <>
       <SyncStatus sync={data.sync} />
-      <p className="admin-client-source admin-muted">{batch ? `Originally imported ${date(batch.as_of)}. ` : ''}Studio records include admin updates. Package status as of {date(asOf)}.</p>
+      <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last visit dates are from the client CSV. Studio records include admin updates. Package status as of {date(asOf)}.</p>
       {duplicates > 0 && <p className="admin-client-notice">{duplicates} possible duplicate {duplicates === 1 ? 'row is' : 'rows are'} included in totals. Open a client to review their packages.</p>}
       <div className="admin-client-tools">
         <label className="admin-client-search"><Icon n="search" size={17} /><input aria-label="Search clients" placeholder="Search name, phone, email, ID or package…" value={query} onChange={e => { setQuery(e.target.value); setPage(0); }} /></label>
@@ -126,7 +127,7 @@ export function AdminClients() {
             <td>{client.credits} <span className="admin-client-secondary">/ {client.totalCredits}</span></td>
             <td>{client.packages.length}<span className="admin-client-contact">{client.packages.filter(p => p.mindbody?.status === 'synced').length} synced</span></td>
             <td className="admin-client-package-names">{client.packages.length ? client.packages.map((pack, index) => <span key={pack.id || pack.source_row || index}>{pack.package_name}</span>) : '—'}</td>
-            <td>{client.visits}</td><td>{date(client.nextExpiry)}</td>
+            <td>{lastVisit(client)}</td><td>{date(client.nextExpiry)}</td>
             <td><Status packages={client.packages} asOf={asOf} /></td>
           </tr>)}</tbody>
         </table></div>

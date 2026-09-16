@@ -17,7 +17,7 @@ export function ClientEditor({ kind, client, record, onCancel, onSaved }) {
     ['package_name','Package name','text',300], ['total_credits','Total credits','number'], ['credits_left','Credits left','number'],
     ['purchase_amount_hkd','Purchase amount (HK$)','number'], ['remaining_value_hkd','Remaining value (HK$)','number'],
     ['purchase_date','Purchase date','date'], ['expiry_date','Expiry date','date'],
-  ] : [['client_name','Client name','text',200],['phone','Phone','tel',80],['email','Email','email',320],['visits_since_jun','Visits since Jun','number']];
+  ] : [['client_name','Client name','text',200],['phone','Phone','tel',80],['email','Email','email',320]];
   async function submit(event) {
     event.preventDefault();
     if (submitting.current) return;
