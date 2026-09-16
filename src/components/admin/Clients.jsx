@@ -3,9 +3,17 @@ import { useMemo, useState } from 'react';
 import { Button, Card, Icon, Pill } from '../shared/index.jsx';
 import { PageHead } from './Portal.jsx';
 import { useClients } from '../../admin/useClients.js';
-import { filterClients, groupClients, packageStatus } from '../../admin/clients.js';
+import { filterClients, groupClients, packageStatus, sortClients } from '../../admin/clients.js';
 
 const PAGE_SIZE = 25;
+const SORT_COLUMNS = [
+  { key: 'name', label: 'Client', asc: 'Name: A–Z', desc: 'Name: Z–A' },
+  { key: 'credits', label: 'Credits left', asc: 'Credits: lowest first', desc: 'Credits: highest first' },
+  { key: 'packages', label: 'Packages', asc: 'Packages: fewest first', desc: 'Packages: most first' },
+  { key: 'visits', label: 'Recorded visits since Jun', asc: 'Visits: fewest first', desc: 'Visits: most first' },
+  { key: 'expiry', label: 'Earliest expiry', asc: 'Expiry: earliest first', desc: 'Expiry: latest first' },
+  { key: 'status', label: 'Package status', asc: 'Status: A–Z', desc: 'Status: Z–A' },
+];
 const date = value => value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const money = value => `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}`;
 function SyncStatus({ sync }) {
@@ -60,6 +68,7 @@ export function AdminClients() {
   const { data, loading, error, refresh } = useClients();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sort, setSort] = useState('name:asc');
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [editor, setEditor] = useState(null);
@@ -68,9 +77,12 @@ export function AdminClients() {
   const batch = data?.import;
   const asOf = data?.as_of || batch?.as_of;
   const filtered = useMemo(() => filterClients(clients, query, filter, asOf), [clients, query, filter, asOf]);
+  const [sortKey, sortDirection] = sort.split(':');
+  const sorted = useMemo(() => sortClients(filtered, sortKey, sortDirection, asOf), [filtered, sortKey, sortDirection, asOf]);
+  const changeSort = value => { setSort(value); setPage(0); };
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
-  const visible = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const visible = sorted.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const selected = clients.find(c => c.id === selectedId);
   const duplicates = clients.reduce((n, c) => n + c.duplicates, 0);
   if (editor) return <ClientEditor key={`${editor.kind}:${editor.record?.id || 'new'}`} {...editor} onCancel={() => setEditor(null)} onSaved={async id => {
@@ -89,13 +101,22 @@ export function AdminClients() {
         <select aria-label="Filter clients" value={filter} onChange={e => { setFilter(e.target.value); setPage(0); }}>
           <option value="all">All clients</option><option value="expiring">Expiring within 30 days</option><option value="duplicates">Possible duplicates</option>
         </select>
+        <label className="admin-client-sort-label">Sort
+          <select aria-label="Sort clients" value={sort} onChange={e => changeSort(e.target.value)}>
+            {SORT_COLUMNS.flatMap(column => ['asc', 'desc'].map(direction => <option key={`${column.key}:${direction}`} value={`${column.key}:${direction}`}>{column[direction]}</option>))}
+          </select>
+        </label>
       </div>
     </>}
     <Card pad={0}>
       {loading ? <div className="admin-empty-panel" role="status">Loading client records…</div> : error ? <div className="admin-empty-panel" role="alert"><p>Client records could not be loaded. Please try again.</p><Button variant="soft" size="sm" onClick={refresh}>Retry</Button></div> : !clients.length ? <div className="admin-empty-panel"><Icon n="database" size={30} color="var(--accent)" /><p>No clients yet. Select Add client to get started.</p></div> : <>
         <div className="admin-table-scroll"><table className="admin-table admin-clients-table">
           <caption className="admin-client-caption">Package status as of {date(asOf)}. Select a name to see all package details.</caption>
-          <thead><tr>{['Client', 'Credits left', 'Packages', 'Recorded visits since Jun', 'Earliest expiry', 'Package status'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <thead><tr>{SORT_COLUMNS.map(column => <th key={column.key} scope="col" aria-sort={sortKey === column.key ? sortDirection === 'asc' ? 'ascending' : 'descending' : undefined}>
+            <button className="admin-client-sort-heading" type="button" aria-label={`Sort by ${column.label}`} onClick={() => changeSort(`${column.key}:${sortKey === column.key && sortDirection === 'asc' ? 'desc' : 'asc'}`)}>
+              {column.label}<span aria-hidden="true">{sortKey === column.key ? sortDirection === 'asc' ? '↑' : '↓' : '↕'}</span>
+            </button>
+          </th>)}</tr></thead>
           <tbody>{visible.map(client => <tr key={client.id}>
             <td><button className="admin-client-name" onClick={() => setSelectedId(client.id)}>{client.name}<Icon n="chevron-right" size={14} /></button>
               <span className="admin-client-contact">{client.email || client.phone || 'No contact details'}</span>

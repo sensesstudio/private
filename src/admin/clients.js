@@ -38,3 +38,24 @@ export function filterClients(clients, query, filter, asOf) {
     return true;
   });
 }
+
+export function sortClients(clients, key, direction, asOf) {
+  const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+  const value = client => {
+    if (key === 'credits') return client.credits;
+    if (key === 'packages') return client.packages.length;
+    if (key === 'visits') return /^\d+$/.test(String(client.visits)) ? Number(client.visits) : null;
+    if (key === 'expiry') return client.nextExpiry;
+    if (key === 'status') return packageStatus(client.packages, asOf);
+    return client.name;
+  };
+  return [...clients].sort((a, b) => {
+    const left = value(a), right = value(b);
+    // Missing dates or visit counts stay last in either direction.
+    if (left == null && right != null) return 1;
+    if (left != null && right == null) return -1;
+    const comparison = left == null ? 0 : typeof left === 'number' ? left - right : collator.compare(left, right);
+    return comparison * (direction === 'desc' ? -1 : 1)
+      || collator.compare(a.name, b.name) || a.id.localeCompare(b.id);
+  });
+}

@@ -86,3 +86,9 @@ form .admin-editor-actions { margin-top: 24px; }
 .admin-editor-actions > .admin-editor-save { background: var(--accent); color: white; }
 .admin-editor-actions > button:disabled { opacity: .55; cursor: default; }
 @media(max-width: 600px) { .admin-editor-fields { grid-template-columns: 1fr; } }
+
+.admin-client-sort-label { display:flex; align-items:center; gap:8px; font:400 12px var(--font-sans); color:var(--taupe); max-width:100%; }
+.admin-client-sort-label select { min-width:0; flex:1; }
+.admin-client-sort-heading { display:inline-flex; align-items:center; gap:7px; padding:6px 0; border:0; background:none; color:inherit; font:inherit; letter-spacing:inherit; text-transform:inherit; white-space:nowrap; cursor:pointer; }
+.admin-client-sort-heading:hover, .admin-clients-table th[aria-sort] { color:var(--espresso); }
+.admin-client-sort-heading:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:3px; }
