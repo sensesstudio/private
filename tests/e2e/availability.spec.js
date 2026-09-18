@@ -415,7 +415,7 @@ test('admin keeps the original workspace and all nine sections without mock mana
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Admin navigation' });
-  await expect(nav.getByRole('button')).toHaveCount(8);
+  await expect(nav.getByRole('button')).toHaveCount(9);
   await expect(nav.getByRole('button', { name: 'Dashboard', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.admin-stats').first()).toContainText('Revenue · Not connected');
   await expect(page.getByRole('heading', { name: 'Revenue trend', exact: true })).toBeVisible();
