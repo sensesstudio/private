@@ -3,7 +3,7 @@ import { PageHead, Stat } from './Portal.jsx';
 import { Button, Card, Icon } from '../shared/index.jsx';
 import { supabase } from '../../supabase/client.js';
 import { useProspects } from '../../admin/useProspects.js';
-import { PROSPECT_STATUSES, statusLabel, visibleProspects, SYNC_ERRORS } from '../../admin/prospects.js';
+import { FOLLOWUP_BOARDS, PROSPECT_STATUSES, statusLabel, visibleProspects, SYNC_ERRORS } from '../../admin/prospects.js';
 import { hkDateKey } from '../../availability/time.js';
 import './prospects.css';
 const when = value => value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value)) + ' HKT' : '—';
@@ -13,21 +13,21 @@ function Conversation({row,full=false}) {
   return <div className="prospect-message"><p className={full?'':'prospect-message-preview'}>{row.last_message || 'No message available'}</p>
     <small>{row.message_at ? when(row.message_at) : ''}{row.channel ? ` · ${row.channel}` : ''}</small></div>;
 }
-function ProspectEditor({record,onCancel,onSaved}) {
+function ProspectEditor({record,config,onCancel,onSaved}) {
   const [remarks,setRemarks]=useState(record.remarks),[next,setNext]=useState(record.next_action_date||''),[status,setStatus]=useState(record.status);
   const [saving,setSaving]=useState(false),[error,setError]=useState('');const pending=useRef(false);
   async function submit(event) {
     event.preventDefault();if(pending.current)return;pending.current=true;setSaving(true);setError('');
     try {
-      const {error:failed}=await supabase.rpc('save_studio_prospect',{p_id:record.id,p_version:record.version,p_remarks:remarks,p_next_action_date:next||null,p_status:status});
+      const {error:failed}=await supabase.rpc(config.saveRpc,{p_id:record.id,p_version:record.version,p_remarks:remarks,p_next_action_date:next||null,p_status:status});
       if(failed)setError(failed.code==='40001'?'Another admin updated this prospect. Your draft is still here; copy it before closing and reopening the record.':'Could not save. Please check your connection and try again.');
       else await onSaved();
     } catch {setError('Could not save. Please try again.');}
     finally {pending.current=false;setSaving(false);}
   }
-  return <section aria-label="Edit prospect">
-    <PageHead eyebrow="Prospect follow-up" title={record.client_name} sub={record.mobile||'Mobile number unavailable'}/>
-    <Card pad={22}><dl className="admin-client-fields"><div><dt>Last contact date</dt><dd>{when(record.last_contact_at)}</dd></div><div><dt>SleekFlow label</dt><dd>{record.source_present?'Private - Prospect':'Label removed · Saved follow-up retained'}</dd></div></dl>
+  return <section aria-label={config.editorLabel}>
+    <PageHead eyebrow={config.eyebrow} title={record.client_name} sub={record.mobile||'Mobile number unavailable'}/>
+    <Card pad={22}><dl className="admin-client-fields"><div><dt>Last contact date</dt><dd>{when(record.last_contact_at)}</dd></div><div><dt>SleekFlow label</dt><dd>{record.source_present?config.label:'Label removed · Saved follow-up retained'}</dd></div></dl>
       <h2 className="admin-card-title prospect-conversation-title">Last SleekFlow conversation</h2><Conversation row={record} full/>
       <form onSubmit={submit}><fieldset disabled={saving} className="admin-editor-fields prospect-editor">
         <label className="prospect-remarks">Remarks<textarea aria-label="Remarks" rows={6} maxLength={10000} value={remarks} onChange={e=>setRemarks(e.target.value)}/></label>
@@ -39,8 +39,10 @@ function ProspectEditor({record,onCancel,onSaved}) {
     </Card>
   </section>;
 }
-export function AdminProspects() {
-  const {data,loading,error,refresh}=useProspects();
+export function AdminProspects({board='prospects'}) {
+  const config=FOLLOWUP_BOARDS[board];
+  const syncError=code=>code==='label_not_found'?`The label “${config.label}” was not found uniquely in SleekFlow. Check its name and try again.`:SYNC_ERRORS[code]||SYNC_ERRORS.sync_unavailable;
+  const {data,loading,error,refresh}=useProspects(config.directoryRpc);
   const [query,setQuery]=useState(''),[status,setStatus]=useState('all'),[scope,setScope]=useState('active'),[sort,setSort]=useState('next_action_date:asc'),[page,setPage]=useState(0);
   const [editor,setEditor]=useState(null),[connecting,setConnecting]=useState(false),[key,setKey]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
   const working=useRef(false);
@@ -48,11 +50,11 @@ export function AdminProspects() {
     event?.preventDefault();if(working.current)return;working.current=true;setBusy(true);setNotice('');
     const apiKey=key;setKey('');
     try {
-      const {data:result,error:failed}=await supabase.functions.invoke('sleekflow-prospect-sync',{body:connecting?{action:'connect',api_key:apiKey}:{action:'sync'}});
+      const {data:result,error:failed}=await supabase.functions.invoke('sleekflow-prospect-sync',{body:connecting?{action:'connect',board,api_key:apiKey}:{action:'sync',board}});
       let code=result?.error;
       if(failed?.context) {try {code=(await failed.context.json()).error;}catch {/* fixed message below */}}
-      if(failed||code)setNotice(SYNC_ERRORS[code]||SYNC_ERRORS.sync_unavailable);
-      else {setConnecting(false);setNotice(result.status==='synced'?`${result.count} prospects synced.`:result.status==='busy'?'A sync is running or was just requested. This page updates automatically.':'Connect SleekFlow to start syncing.');}
+      if(failed||code)setNotice(syncError(code));
+      else {setConnecting(false);setNotice(result.status==='synced'?`${result.count} ${config.noun} synced.`:result.status==='busy'?'A sync is running or was just requested. This page updates automatically.':'Connect SleekFlow to start syncing.');}
       await refresh({background:true});
     }catch{setNotice(SYNC_ERRORS.sync_unavailable);}
     finally{working.current=false;setBusy(false);}
@@ -64,26 +66,26 @@ export function AdminProspects() {
   const stale=syncInfo?.configured&&(!syncInfo.last_ok_at||syncInfo.error_code||Date.now()-new Date(syncInfo.last_ok_at).getTime()>35*60000);
   function change(set,value){set(value);setPage(0);}
   return <div className="admin-page admin-prospects-page">
-    {editor&&data&&!error ? <ProspectEditor record={editor} onCancel={()=>setEditor(null)} onSaved={async()=>{setEditor(null);setNotice('Follow-up saved.');await refresh({background:true});}}/> : <>
-      <PageHead eyebrow="Conversion" title="Prospects" sub="SleekFlow · Private - Prospect" right={<div className="prospect-actions">{syncInfo?.configured&&<Button variant="soft" size="sm" disabled={busy||syncInfo.running} onClick={()=>sync()}>Sync now</Button>}<Button variant="soft" size="sm" disabled={busy||loading||error} onClick={()=>{setConnecting(v=>!v);setKey('');setNotice('');}}>{syncInfo?.configured?'Connection settings':'Connect SleekFlow'}</Button></div>}/>
+    {editor&&data&&!error ? <ProspectEditor record={editor} config={config} onCancel={()=>setEditor(null)} onSaved={async()=>{setEditor(null);setNotice('Follow-up saved.');await refresh({background:true});}}/> : <>
+      <PageHead eyebrow="Conversion" title={config.title} sub={`SleekFlow · ${config.label}`} right={<div className="prospect-actions">{syncInfo?.configured&&<Button variant="soft" size="sm" disabled={busy||syncInfo.running} onClick={()=>sync()}>Sync now</Button>}<Button variant="soft" size="sm" disabled={busy||loading||error} onClick={()=>{setConnecting(v=>!v);setKey('');setNotice('');}}>{syncInfo?.configured?'Connection settings':'Connect SleekFlow'}</Button></div>}/>
       {notice&&<p role="status" className="admin-client-notice">{notice}</p>}
-      {loading&&<p role="status" className="admin-panel-note">Loading prospects…</p>}
-      {error&&<Card pad={22}><p role="alert">Prospects could not be loaded. Please check your admin session.</p><Button variant="soft" size="sm" onClick={()=>refresh()}>Try again</Button></Card>}
+      {loading&&<p role="status" className="admin-panel-note">Loading {config.noun}…</p>}
+      {error&&<Card pad={22}><p role="alert">{config.title} could not be loaded. Please check your admin session.</p><Button variant="soft" size="sm" onClick={()=>refresh()}>Try again</Button></Card>}
       {data&&!error&&<>
-        {connecting&&<Card pad={22}><form onSubmit={sync} className="prospect-connection"><h2 className="admin-card-title">Connect SleekFlow</h2><p className="admin-muted">Paste your Platform API key to import contacts labelled Private - Prospect. Your key is encrypted and is never displayed after saving.</p>
+        {connecting&&<Card pad={22}><form onSubmit={sync} className="prospect-connection"><h2 className="admin-card-title">Connect SleekFlow</h2><p className="admin-muted">Paste your Platform API key to import contacts labelled {config.label}. Your key is encrypted and is never displayed after saving.</p>
           <label>Platform API key<input type="password" autoComplete="new-password" spellCheck={false} required minLength={10} maxLength={4096} value={key} onChange={e=>setKey(e.target.value)} disabled={busy}/></label>
           <div className="admin-editor-actions"><button type="button" disabled={busy} onClick={()=>{setConnecting(false);setKey('');}}>Cancel</button><button type="submit" disabled={busy}>{busy?'Connecting and syncing…':'Connect and sync'}</button></div>
         </form></Card>}
-        {syncInfo.configured?<p className={stale?'admin-client-notice':'admin-muted'} role="status">{syncInfo.running?'Sync in progress. ':''}Auto-sync every 15 minutes · {syncInfo.last_ok_at?`Last synced ${when(syncInfo.last_ok_at)}`:'Awaiting first successful sync'}.{stale?' Showing the last available records.':''} {syncInfo.error_code?SYNC_ERRORS[syncInfo.error_code]||SYNC_ERRORS.sync_unavailable:''}</p>:<p className="admin-client-notice">Connect SleekFlow to load real prospects. No contacts have been imported yet.</p>}
-        <div className="admin-stats"><Stat icon="user-search" label="Open prospects" value={active.filter(r=>r.status!=='confirmed booking').length}/><Stat icon="calendar" label="Actions due" value={active.filter(r=>r.status!=='confirmed booking'&&r.next_action_date&&r.next_action_date<=today).length}/><Stat icon="calendar-check" label="Confirmed bookings" value={active.filter(r=>r.status==='confirmed booking').length}/></div>
-        <div className="admin-client-tools"><label className="admin-client-search"><Icon n="search" size={16}/><input aria-label="Search prospects" placeholder="Search name, mobile or remarks…" value={query} onChange={e=>change(setQuery,e.target.value)}/></label>
+        {syncInfo.configured?<p className={stale?'admin-client-notice':'admin-muted'} role="status">{syncInfo.running?'Sync in progress. ':''}Auto-sync every 15 minutes · {syncInfo.last_ok_at?`Last synced ${when(syncInfo.last_ok_at)}`:'Awaiting first successful sync'}.{stale?' Showing the last available records.':''} {syncInfo.error_code?syncError(syncInfo.error_code):''}</p>:<p className="admin-client-notice">Connect SleekFlow to load real contacts. No contacts have been imported yet.</p>}
+        <div className="admin-stats"><Stat icon="user-search" label={config.openLabel} value={active.filter(r=>r.status!=='confirmed booking').length}/><Stat icon="calendar" label="Actions due" value={active.filter(r=>r.status!=='confirmed booking'&&r.next_action_date&&r.next_action_date<=today).length}/><Stat icon="calendar-check" label="Confirmed bookings" value={active.filter(r=>r.status==='confirmed booking').length}/></div>
+        <div className="admin-client-tools"><label className="admin-client-search"><Icon n="search" size={16}/><input aria-label={config.searchLabel} placeholder="Search name, mobile or remarks…" value={query} onChange={e=>change(setQuery,e.target.value)}/></label>
           <select aria-label="Filter prospect status" value={status} onChange={e=>change(setStatus,e.target.value)}><option value="all">All statuses</option>{PROSPECT_STATUSES.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select>
-          <select aria-label="Filter prospect label" value={scope} onChange={e=>change(setScope,e.target.value)}><option value="active">Current label</option><option value="archived">Label removed</option><option value="all">All saved prospects</option></select>
+          <select aria-label="Filter prospect label" value={scope} onChange={e=>change(setScope,e.target.value)}><option value="active">Current label</option><option value="archived">Label removed</option><option value="all">All saved contacts</option></select>
           <select aria-label="Sort prospects" value={sort} onChange={e=>change(setSort,e.target.value)}>{SORTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
         </div>
-        <Card pad={0}><div className="admin-table-scroll"><table className="admin-table prospects-table"><caption className="admin-client-caption">{filtered.length} prospects · Dates shown in Hong Kong time</caption><thead><tr>{['Client name','Mobile number','Last SleekFlow conversation','Remarks','Last contact date','Next action date','Status',''].map((h,i)=><th key={i} scope="col">{h||'Action'}</th>)}</tr></thead>
+        <Card pad={0}><div className="admin-table-scroll"><table className="admin-table prospects-table"><caption className="admin-client-caption">{filtered.length} {config.noun} · Dates shown in Hong Kong time</caption><thead><tr>{['Client name','Mobile number','Last SleekFlow conversation','Remarks','Last contact date','Next action date','Status',''].map((h,i)=><th key={i} scope="col">{h||'Action'}</th>)}</tr></thead>
           <tbody>{shown.map(r=><tr key={r.id}><td data-label="Client name"><strong>{r.client_name}</strong>{!r.source_present&&<small>Label removed</small>}</td><td data-label="Mobile number">{r.mobile||'—'}</td><td data-label="Last SleekFlow conversation"><Conversation row={r}/></td><td data-label="Remarks"><p className="prospect-remarks-preview">{r.remarks||'—'}</p></td><td data-label="Last contact date">{when(r.last_contact_at)}</td><td data-label="Next action date">{day(r.next_action_date)}{r.next_action_date&&r.next_action_date<=today&&r.status!=='confirmed booking'&&<small>Follow-up due</small>}</td><td data-label="Status"><span className="prospect-status">{statusLabel(r.status)}</span></td><td><Button size="sm" variant="soft" style={{padding:'10px 12px',whiteSpace:'nowrap'}} onClick={()=>{setEditor(r);setNotice('');}}>Edit</Button></td></tr>)}</tbody></table></div>
-          {!shown.length&&<div className="admin-empty-panel"><Icon n="user-search" size={30}/><p>{rows.length?'No prospects match these filters.':syncInfo.last_ok_at?'No contacts currently have the Private - Prospect label.':'Prospects will appear after the first successful SleekFlow sync.'}</p></div>}
+          {!shown.length&&<div className="admin-empty-panel"><Icon n="user-search" size={30}/><p>{rows.length?`No ${config.noun} match these filters.`:syncInfo.last_ok_at?`No contacts currently have the ${config.label} label.`:'Contacts will appear after the first successful SleekFlow sync.'}</p></div>}
           <div className="admin-client-pagination"><span>Page {currentPage+1} of {lastPage+1}</span><div><Button variant="soft" size="sm" disabled={currentPage===0} onClick={()=>setPage(currentPage-1)}>Previous</Button><Button variant="soft" size="sm" disabled={currentPage>=lastPage} onClick={()=>setPage(currentPage+1)}>Next</Button></div></div>
         </Card>
         <p className="admin-muted">Last contact uses the latest available SleekFlow interaction. Follow-up edits stay in this portal and are kept if a label is removed.</p>

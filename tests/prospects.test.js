@@ -79,14 +79,16 @@ test('prospect SQL protects secrets and records; source sync preserves edits and
  insert into profiles values('11111111-1111-4111-8111-111111111111','admin'),('22222222-2222-4222-8222-222222222222','client'),('33333333-3333-4333-8333-333333333333','teacher');
  insert into auth.sessions select id,id,null from profiles;`);
  await db.exec(await readFile(new URL('../supabase/migrations/20260916152058_sleekflow_prospects.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20260918035715_sleekflow_booking_in_progress.sql',import.meta.url),'utf8'));
  const as=async(role,id='')=>db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${role};`);
  const admin='11111111-1111-4111-8111-111111111111';
- for(const role of ['anon','authenticated']) {await as(role,'22222222-2222-4222-8222-222222222222');await assert.rejects(db.query('select admin_prospect_directory()'),/permission denied|admin_access_required/);await assert.rejects(db.query('select begin_sleekflow_sync()'),/permission denied/);await assert.rejects(db.query("select configure_sleekflow('synthetic-key')"),/permission denied|admin_access_required/);}
- await as('authenticated','33333333-3333-4333-8333-333333333333');await assert.rejects(db.query('select admin_prospect_directory()'),/admin_access_required/);
+ for(const role of ['anon','authenticated']) {await as(role,'22222222-2222-4222-8222-222222222222');await assert.rejects(db.query('select admin_prospect_directory()'),/permission denied|admin_access_required/);await assert.rejects(db.query('select begin_sleekflow_sync()'),/permission denied/);await assert.rejects(db.query('select admin_booking_progress_directory()'),/permission denied|admin_access_required/);await assert.rejects(db.query('select begin_booking_progress_sync()'),/permission denied/);await assert.rejects(db.query("select save_booking_progress('contact-1',1,'',null,'pending us')"),/permission denied|admin_access_required/);await assert.rejects(db.query("select configure_sleekflow('synthetic-key')"),/permission denied|admin_access_required/);}
+ await as('authenticated','33333333-3333-4333-8333-333333333333');await assert.rejects(db.query('select admin_prospect_directory()'),/admin_access_required/);await assert.rejects(db.query('select admin_booking_progress_directory()'),/admin_access_required/);
  await as('authenticated',admin);await db.query("select configure_sleekflow('synthetic-key')");
  await assert.rejects(db.query('select * from vault.decrypted_secrets'),/permission denied/);await assert.rejects(db.query('select * from private.sleekflow_connection'),/permission denied/);
  const directory=async()=>(await db.query('select admin_prospect_directory() data')).rows[0].data;
- const d=await directory();assert.equal(d.sync.configured,true);assert.equal(JSON.stringify(d).includes('synthetic-key'),false);
+ const bookingDirectory=async()=>(await db.query('select admin_booking_progress_directory() data')).rows[0].data;
+ const d=await directory();assert.equal(d.sync.configured,true);assert.equal(JSON.stringify(d).includes('synthetic-key'),false);assert.equal((await bookingDirectory()).sync.configured,true);assert.equal(JSON.stringify(await bookingDirectory()).includes('synthetic-key'),false);await assert.rejects(db.query('select * from private.studio_booking_in_progress'),/permission denied/);
  await as('service_role');const begin=async()=>(await db.query('select begin_sleekflow_sync() data')).rows[0].data;
  const run=await begin();assert.equal(run.api_key,'synthetic-key');assert.equal((await begin()).status,'busy');
  const rows=[{id:'contact-1',client_name:'Synthetic',mobile:'+85255550001',last_message:'Inquiry'}];
@@ -95,11 +97,47 @@ test('prospect SQL protects secrets and records; source sync preserves edits and
  await db.query("select save_studio_prospect('contact-1',1,'Ask about Tuesday','2026-10-01','pending teacher')");
  await assert.rejects(db.query("select save_studio_prospect('contact-1',1,'Stale overwrite',null,'pending us')"),/prospect_changed/);
  await assert.rejects(db.query("select save_studio_prospect('contact-1',2,'',null,'invalid')"),/invalid_prospect_details/);
+ const beginBooking=async()=>(await db.query('select begin_booking_progress_sync() data')).rows[0].data;
+ const finishBooking=(id,data,error=null)=>db.query('select finish_booking_progress_sync($1,$2,$3)',[id,data==null?null:JSON.stringify(data),error]);
+ const nextBooking=async()=>{await db.exec("reset role;update private.sleekflow_booking_sync set last_attempt_at=null");await as('service_role');return beginBooking();};
+ const bookingRun=await nextBooking();assert.equal(bookingRun.api_key,'synthetic-key');assert.equal(bookingRun.label,'Private - Booking in Progress');assert.equal((await beginBooking()).status,'busy');
+ await finishBooking(bookingRun.run_id,[{...rows[0],last_message:'Booking inquiry'}]);await as('authenticated',admin);
+ await db.query("select save_booking_progress('contact-1',1,'Booking note','2026-10-02','pending payment')");
+ await assert.rejects(db.query("select save_booking_progress('contact-1',1,'Stale edit',null,'pending us')"),/prospect_changed/);
+ assert.equal((await directory()).rows[0].remarks,'Ask about Tuesday');assert.equal((await directory()).rows[0].last_message,'Inquiry');
+ const bookingRun2=await nextBooking();await finishBooking(bookingRun2.run_id,[{...rows[0],last_message:'Booking reply'}]);await as('authenticated',admin);
+ assert.equal((await bookingDirectory()).rows[0].remarks,'Booking note');assert.equal((await bookingDirectory()).rows[0].status,'pending payment');
+ const bookingFailed=await nextBooking();await finishBooking(bookingFailed.run_id,null,'label_not_found');await as('authenticated',admin);
+ assert.equal((await bookingDirectory()).sync.error_code,'label_not_found');assert.equal((await bookingDirectory()).rows[0].source_present,true);assert.equal((await directory()).sync.error_code,null);
+ const bookingEmpty=await nextBooking();await finishBooking(bookingEmpty.run_id,[]);await as('authenticated',admin);
+ assert.equal((await bookingDirectory()).rows[0].source_present,false);assert.equal((await bookingDirectory()).rows[0].remarks,'Booking note');assert.equal((await directory()).rows[0].source_present,true);
+ const bookingStale=await nextBooking();
+
  const next=async()=>{await db.exec("reset role;update private.sleekflow_connection set last_attempt_at=null");await as('service_role');return begin();};
  const run2=await next();await finish(run2.run_id,[{...rows[0],last_message:'A new reply'}]);
  await as('authenticated',admin);let record=(await directory()).rows[0];assert.equal(record.last_message,'A new reply');assert.equal(record.remarks,'Ask about Tuesday');assert.equal(record.status,'pending teacher');assert.equal(record.version,2);
  const failed=await next();await finish(failed.run_id,null,'private upstream details');await as('authenticated',admin);assert.equal((await directory()).sync.error_code,'sync_unavailable');assert.equal((await directory()).rows[0].source_present,true);
- const run3=await next();await as('authenticated',admin);await db.query("select configure_sleekflow('another-synthetic-key')");await as('service_role');await assert.rejects(finish(run3.run_id,[]),/stale_sync/);
+ const run3=await next();await as('authenticated',admin);await db.query("select configure_sleekflow('another-synthetic-key')");await as('service_role');await assert.rejects(finish(run3.run_id,[]),/stale_sync/);await assert.rejects(finishBooking(bookingStale.run_id,[]),/stale_sync/);
  const run4=await next();await finish(run4.run_id,[]);await as('authenticated',admin);record=(await directory()).rows[0];assert.equal(record.source_present,false);assert.equal(record.remarks,'Ask about Tuesday');
- await db.exec("reset role;update auth.sessions set not_after=now()-interval '1 minute'");await as('authenticated',admin);await assert.rejects(directory(),/admin_access_required/);
+ await db.exec("reset role;update auth.sessions set not_after=now()-interval '1 minute'");await as('authenticated',admin);await assert.rejects(directory(),/admin_access_required/);await assert.rejects(bookingDirectory(),/admin_access_required/);
+});
+
+
+test('booking sync uses only its label and scheduled failures are isolated by board',async()=>{
+ const bookingLabel={id:'booking-label',hashtag:'Private - Booking in Progress'},calls=[],conditions=[];let missingProspect=false;
+ const handler=createHandler({syncKey:'synthetic-cron-key',authorize:async()=>async()=>{},rpc:async(n,a)=>{calls.push({n,a});return n.startsWith('begin_')?{status:'ready',run_id:n,api_key:'synthetic-platform-key'}:a.p_rows.length;},
+ fetcher:async(url,options)=>{
+  if(url.endsWith('/labels'))return Response.json(missingProspect?[bookingLabel]:[label,bookingLabel]);
+  const body=JSON.parse(options.body),name=body.conditions[0].values[0];conditions.push(name);
+  return Response.json({totalContact:1,results:[{...contact(0),lables:[name]}]});
+ }});
+ const request=(body,scheduled=false)=>new Request('https://test.invalid',{method:'POST',headers:scheduled?{'x-sync-key':'synthetic-cron-key'}:{},body:JSON.stringify(body)});
+ assert.deepEqual(await (await handler(request({board:'booking_in_progress'}))).json(),{status:'synced',count:1});
+ assert.deepEqual(conditions,[bookingLabel.hashtag]);assert.equal(calls[0].n,'begin_booking_progress_sync');assert.equal(calls.at(-1).n,'finish_booking_progress_sync');
+ calls.length=0;conditions.length=0;missingProspect=true;
+ const response=await handler(request({},true)),body=await response.json();
+ assert.equal(response.status,503);assert.equal(body.results.prospects.error,'label_not_found');assert.deepEqual(body.results.booking_in_progress,{status:'synced',count:1});
+ assert.ok(calls.some(c=>c.n==='finish_sleekflow_sync'&&c.a.p_rows===null&&c.a.p_error==='label_not_found'));
+ assert.ok(calls.some(c=>c.n==='finish_booking_progress_sync'&&c.a.p_rows.length===1));
+ for(const invalid of [null,[],{board:'other'},{board:'__proto__'}])assert.equal((await handler(request(invalid))).status,400);
 });

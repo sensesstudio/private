@@ -1,0 +1,9 @@
+.admin-page.admin-payments-page{width:100%;max-width:none;padding-left:24px;padding-right:24px}
+.admin-payments-page .website-payments-table{table-layout:fixed;min-width:0}
+.admin-payments-page .website-payments-table th,.admin-payments-page .website-payments-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+.admin-payments-page .website-payments-table td small{display:block;margin-top:5px;color:var(--fg3);font-size:11px}
+.admin-payments-page .website-payments-table th:last-child{width:23%}
+.payment-status{display:inline-block;padding:5px 9px;border-radius:10px;background:var(--sand);color:var(--espresso)}
+@media(max-width:1199px){.admin-payments-page .website-payments-table,.admin-payments-page .website-payments-table tbody,.admin-payments-page .website-payments-table tr,.admin-payments-page .website-payments-table td{display:block;width:auto;min-width:0}.admin-payments-page .website-payments-table thead{display:none}.admin-payments-page .website-payments-table caption{display:block}.admin-payments-page .website-payments-table tr{padding:12px 16px;border-bottom:1px solid var(--border)}.admin-payments-page .website-payments-table td{border:0;padding:8px 0}.admin-payments-page .website-payments-table td::before{content:attr(data-label);display:block;font-size:10px;color:var(--fg3);text-transform:uppercase;margin-bottom:5px}}
+@media(min-width:760px) and (max-width:1199px){.admin-payments-page .website-payments-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}}
+@media(max-width:759px){.admin-page.admin-payments-page{padding:20px 18px 28px}}
