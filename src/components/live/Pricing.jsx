@@ -6,6 +6,7 @@ import { startCheckout } from '../../supabase/checkout.js';
 import { inputStyle } from '../../styles.js';
 import './pricing.css';
 import { GoogleSignIn } from './GoogleSignIn.jsx';
+import { PurchaseReceipt } from '../shared/PurchaseReceipt.jsx';
 
 const hkd = value => `HK$${Number(value).toLocaleString('en-HK')}`;
 function ClientSignIn({ onClose }) {
@@ -133,7 +134,7 @@ export function ClientPricing({ onBrowse }) {
     <p className="pricing-notice">Pay securely with Stripe. Buying a pack does not reserve a session. Contact the studio to arrange your first visit.</p>
     <Button full variant="accent" size="lg" iconRight="arrow-right" onClick={onBrowse}>Find my instructor</Button>
     {userId && <section className="pricing-purchases"><h2>Your purchases on this app</h2>
-      {purchases.loading ? <p>Loading purchases…</p> : purchases.error ? <p>Purchases could not be loaded. <Button variant="ghost" size="sm" onClick={() => setRefresh(n => n + 1)}>Refresh purchases</Button></p> : purchases.rows.length ? purchases.rows.map(p => <article key={p.id}><strong>{p.package_name} · {p.format}</strong><span>{p.credits} sessions purchased · {hkd(p.price_hkd)}</span><span>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'Asia/Hong_Kong' }).format(new Date(p.paid_at))} · Payment confirmed</span></article>) : <p>No purchases on this app yet.</p>}
+      {purchases.loading ? <p>Loading purchases…</p> : purchases.error ? <p>Purchases could not be loaded. <Button variant="ghost" size="sm" onClick={() => setRefresh(n => n + 1)}>Refresh purchases</Button></p> : purchases.rows.length ? purchases.rows.map(p => <article key={p.id}><strong>{p.package_name} · {p.format}</strong><span>{p.credits} sessions purchased · {hkd(p.price_hkd)}</span><span>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'Asia/Hong_Kong' }).format(new Date(p.paid_at))} · Payment confirmed</span><PurchaseReceipt orderId={p.id}/></article>) : <p>No purchases on this app yet.</p>}
     </section>}
     {authOpen && <ClientSignIn onClose={() => setAuthOpen(false)} />}
   </section>;

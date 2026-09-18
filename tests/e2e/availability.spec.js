@@ -25,7 +25,7 @@ function makeSnapshot() {
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
   const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
-  const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[], records:[], recordReads:[], recordsFailed:false };
+  const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[], records:[], recordReads:[], recordsFailed:false, receiptRequests:[], receiptFailed:false, receiptUrl:'https://pay.stripe.com/receipts/payment/synthetic' };
   const accountApi = { link:null, needsPassword:true, calls:[] };
   const activityApi={failed:false,reads:[],progress:[],payments:[],packages:[]};
   const authApi={role,failed:false,delay:0,reads:0};
@@ -126,6 +126,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.endsWith('/create-checkout')) {
       const input=route.request().postDataJSON();
       if(input.action==='availability') return respond({available:paymentApi.available,livemode:true});
+      if(input.action==='receipt') { paymentApi.receiptRequests.push(input); return paymentApi.receiptFailed ? respond({error:'unavailable'},503) : respond({url:paymentApi.receiptUrl}); }
       if(input.action==='status') return respond({status:paymentApi.status,credits:5,package_name:'5-class pack',format:'1:1'});
       paymentApi.checkouts.push(input);
       return respond({url:'https://checkout.stripe.com/c/pay/cs_live_synthetic'});
@@ -975,6 +976,15 @@ test('client progress and payment histories match Admin Clients and update witho
   await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.getByRole('button',{name:'Payment & packages',exact:true}).click();
   const history=page.getByRole('region',{name:'Payment history'});await expect(history.getByText('HK$4,750',{exact:true})).toBeVisible();
   await expect(page.getByText('4/ 10 sessions remaining',{exact:false})).toBeVisible();
+  const online=page.getByRole('region',{name:'Packages purchased online'});
+  await expect(online.getByRole('button',{name:'View receipt / PDF'})).toBeVisible();
+  await page.context().route('https://pay.stripe.com/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Synthetic Stripe receipt</h1>'}));
+  const opened=page.waitForEvent('popup');await online.getByRole('button',{name:'View receipt / PDF'}).click();const receipt=await opened;
+  await expect(receipt).toHaveURL('https://pay.stripe.com/receipts/payment/synthetic');expect(await receipt.evaluate(()=>window.opener===null)).toBeTruthy();await receipt.close();
+  expect(api.paymentApi.receiptRequests).toEqual([{action:'receipt',orderId:'synthetic-order-1'}]);
+  api.paymentApi.receiptFailed=true;await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');
+  api.paymentApi.receiptFailed=false;await page.evaluate(()=>{window.open=()=>null;});await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('link',{name:'Open receipt to download PDF'})).toHaveAttribute('href','https://pay.stripe.com/receipts/payment/synthetic');
+  api.paymentApi.receiptUrl='https://evil.test/receipt';await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');await expect(online.getByRole('link')).toHaveCount(0);
   api.activityApi.payments[0].status='refunded';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(history.getByText('Refunded',{exact:true})).toBeVisible();
   const context=await browser.newContext({viewport:testInfo.project.use.viewport,isMobile:testInfo.project.use.isMobile,hasTouch:testInfo.project.use.hasTouch});
   const admin=await context.newPage();const adminApi=await setup(admin,{role:'admin'});Object.assign(adminApi.activityApi,structuredClone(api.activityApi),{reads:[]});

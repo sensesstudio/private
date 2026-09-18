@@ -12,7 +12,8 @@ const origin = PAYMENT_ORIGINS[0];
 test('checkout migration reserves once, rejects mismatches, commits payment/credits once and protects balances', async t => {
   const db = new PGlite(); t.after(() => db.close());
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
-    create schema auth; create table auth.users(id uuid primary key);
+    create schema auth; create table auth.users(id uuid primary key,email text);
+    grant select on auth.users to service_role;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth,public to anon,authenticated,service_role;`);
   const file = path => readFile(new URL(`../supabase/${path}`, import.meta.url),'utf8');
@@ -23,7 +24,7 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   await db.exec(await file('migrations/0005_live_availability.sql'));
   await db.exec(await file('migrations/20260916072203_package_checkout.sql'));
   await db.exec(await file('migrations/20260918120533_update_private_package_prices.sql'));
-  await db.exec(`insert into auth.users values('${client}'),('${other}'); insert into public.profiles(id,role,full_name) values('${client}','client','Synthetic Buyer'),('${other}','client','Other Buyer');`);
+  await db.exec(`insert into auth.users values('${client}','buyer@example.test'),('${other}','other@example.test'); insert into public.profiles(id,role,full_name) values('${client}','client','Synthetic Buyer'),('${other}','client','Other Buyer');`);
   const as = (role, id='') => db.exec(`reset role; select set_config('request.jwt.claim.sub','${id}',false); set role ${role};`);
   const reserve = async (pkg='p11-trial', who=client) => ({ rows: (await db.query('select prepare_package_checkout($1,$2,$3,true) as o',[who,pkg,origin])).rows.map(r=>r.o) });
   const settle = (id, overrides={}) => { const p = { session:'cs_live_synthetic', who:client, amount:100000, currency:'hkd', paid:'paid', mode:true,...overrides }; return db.query('select fulfill_package_checkout($1,$2,$3,$4,$5,$6,$7) as id',[id,p.session,p.who,p.amount,p.currency,p.paid,p.mode]); };
@@ -61,20 +62,30 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   assert.equal((await db.query('select * from package_checkout_orders')).rows.length,2);
   assert.equal((await db.query('select * from credit_balances')).rows[0].balance,1);
   await assert.rejects(db.query("update package_checkout_orders set status='paid'"), /permission denied/);
+  // Existing uncertain orders retain their original Stripe request parameters.
+  await as('postgres');
+  await db.exec(await file('migrations/20260918125536_client_payment_receipts.sql'));
+  await as('service_role');
+  assert.equal((await reserve('p12-5')).rows[0].receipt_email,null);
+  const emailed=(await reserve('p11-5')).rows[0];
+  assert.equal(emailed.receipt_email,'buyer@example.test');
+  await as('postgres');await db.exec("update auth.users set email='updated@example.test'");await as('service_role');
+  assert.equal((await reserve('p11-5')).rows[0].receipt_email,'buyer@example.test');
+
 });
 
 function mocks() {
-  const calls = [], updates = [];
-  const order = { id:orderId,client_id:client,package_id:'p11-5',package_name:'5-class pack',format:'1:1',credits:5,price_hkd:4750,validity_months:3,return_origin:origin,checkout_expires_at:new Date(Date.now()+3600000).toISOString(),stripe_session_id:null };
+  const calls = [], updates = [], filters = [];
+  const order = { status:'pending',livemode:true,receipt_email:'buyer@example.test',id:orderId,client_id:client,package_id:'p11-5',package_name:'5-class pack',format:'1:1',credits:5,price_hkd:4750,validity_months:3,return_origin:origin,checkout_expires_at:new Date(Date.now()+3600000).toISOString(),stripe_session_id:null };
   const session = { id:'cs_live_synthetic',url:'https://checkout.stripe.com/c/pay/cs_live_synthetic',status:'open',payment_status:'unpaid',mode:'payment',livemode:true,currency:'hkd',amount_total:475000,client_reference_id:client,metadata:{integration:INTEGRATION,order_id:orderId} };
   let auth=true, lookup=true, fail=false;
   const admin = {
     auth:{ getUser:async()=>({data:{user:auth ? {id:client} : null},error:null}) },
     rpc:async(name,args)=> { calls.push({name,args}); return {data:name==='prepare_package_checkout' ? order : 'payment-synthetic',error:fail ? {message:'private database detail'} : null}; },
-    from:()=> { const chain={select:()=>chain,eq:()=>chain,update:value=>{updates.push(value);return chain;},maybeSingle:async()=>({data:lookup?order:null,error:null}),then:fn=>Promise.resolve({error:null}).then(fn)};return chain; },
+    from:()=> { const chain={select:()=>chain,eq:(key,value)=>{filters.push([key,value]);return chain;},update:value=>{updates.push(value);return chain;},maybeSingle:async()=>({data:lookup?order:null,error:null}),then:fn=>Promise.resolve({error:null}).then(fn)};return chain; },
   };
-  const stripe = { accounts:{retrieve:async()=>({id:STRIPE_ACCOUNT,charges_enabled:true})},checkout:{sessions:{create:async(params,options)=>{calls.push({params,options});return session;},retrieve:async()=>session}} };
-  return {admin,stripe,order,session,calls,updates,setAuth:v=>{auth=v;},setLookup:v=>{lookup=v;},setFailure:v=>{fail=v;}};
+  const stripe = { accounts:{retrieve:async()=>({id:STRIPE_ACCOUNT,charges_enabled:true})},checkout:{sessions:{create:async(params,options)=>{calls.push({params,options});return session;},retrieve:async(id,params)=>{calls.push({retrieve:id,params});return session;}}} };
+  return {admin,stripe,order,session,calls,updates,filters,setAuth:v=>{auth=v;},setLookup:v=>{lookup=v;},setFailure:v=>{fail=v;}};
 }
 const request = (body, token='valid', requestOrigin=origin) => new Request('https://example.test/create-checkout',{method:'POST',headers:{Origin:requestOrigin,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
 
@@ -84,11 +95,15 @@ test('checkout authenticates, rejects redirect injection and uses server price w
   m.setAuth(false); assert.equal((await handle(request({packageId:'p11-5',origin}))).status,401); m.setAuth(true);
   assert.equal((await handle(request({packageId:'p11-5',origin:'https://evil.test'}))).status,400);
   assert.equal((await handle(request({packageId:'p11-5',origin},'valid','https://evil.test'))).status,403);
-  const result=await handle(request({packageId:'p11-5',origin,price:1,credits:999,clientId:other}));
+  const result=await handle(request({packageId:'p11-5',origin,price:1,credits:999,clientId:other,receipt_email:'attacker@example.test'}));
   assert.equal(result.status,200);assert.match(result.headers.get('Cache-Control'),/no-store/);
-  const creation=m.calls.find(c=>c.params);
+  const creation=m.calls.find(c=>c.options);
   assert.equal(creation.params.line_items[0].price_data.unit_amount,475000);
   assert.equal(creation.params.client_reference_id,client);
+  assert.equal(creation.params.customer_email,'buyer@example.test');
+  assert.equal(creation.params.payment_intent_data.receipt_email,'buyer@example.test');
+  assert.match(creation.params.payment_intent_data.description,/5-class pack \(1:1\), 5 sessions/);
+  assert.equal('payment_intent_data' in checkoutParameters({...m.order,receipt_email:null}),false);
   assert.equal(creation.options.idempotencyKey,`package-order-${orderId}`);
   assert.equal('payment_method_types' in creation.params,false);
   assert.match(creation.params.success_url,/\{CHECKOUT_SESSION_ID\}/);
@@ -104,10 +119,36 @@ test('signed webhook credits only paid sessions and returns failure for database
   const handle=createWebhookHandler({...m,secret:'synthetic-secret',verify:async()=>{if(!valid)throw new Error('bad signature');return event;}});
   const req=()=>new Request('https://example.test/stripe-webhook',{method:'POST',headers:{'stripe-signature':'synthetic'},body:'{}'});
   valid=false;assert.equal((await handle(req())).status,400);assert.equal(m.calls.length,0);
-  valid=true;assert.equal((await handle(req())).status,200);assert.equal(m.calls.length,0);
+  valid=true;assert.equal((await handle(req())).status,200);assert.equal(m.calls.filter(c=>c.name).length,0);
   event.type='checkout.session.async_payment_succeeded';m.session.payment_status='paid';m.session.status='complete';
-  assert.equal((await handle(req())).status,200);assert.equal(m.calls[0].name,'fulfill_package_checkout');
-  assert.equal(m.calls[0].args.p_amount_total,475000);
+  assert.equal((await handle(req())).status,200);assert.equal(m.calls.find(c=>c.name).name,'fulfill_package_checkout');
+  assert.equal(m.calls.find(c=>c.name).args.p_amount_total,475000);
   m.setFailure(true);assert.equal((await handle(req())).status,500);
   assert.equal(JSON.stringify(checkoutParameters(m.order)).includes('payment_method_types'),false);
+});
+
+
+test('receipts require ownership and a verified paid Stripe session without changing payments',async()=>{
+  const m=mocks(),handle=createCheckoutHandler({...m,configured:true,livemode:true});
+  const input={action:'receipt',orderId};
+  assert.equal((await handle(request(input,null))).status,401);
+  assert.equal((await handle(request({...input,orderId:'bad'}))).status,400);
+  m.setLookup(false);assert.equal((await handle(request(input))).status,404);m.setLookup(true);
+  m.order.client_id=other;assert.equal((await handle(request(input))).status,404);m.order.client_id=client;
+  assert.equal((await handle(request(input))).status,409);
+  Object.assign(m.order,{status:'paid',stripe_session_id:m.session.id,price_hkd:900});
+  Object.assign(m.session,{status:'complete',payment_status:'paid',amount_total:90000,payment_intent:{status:'succeeded',latest_charge:{paid:true,status:'succeeded',amount:90000,currency:'hkd',livemode:true,receipt_url:'https://pay.stripe.com/receipts/payment/synthetic'}}});
+  let response=await handle(request(input));assert.equal(response.status,200);assert.match(response.headers.get('Cache-Control'),/no-store/);
+  assert.deepEqual(await response.json(),{url:'https://pay.stripe.com/receipts/payment/synthetic'});
+  assert.ok(m.filters.some(([k,v])=>k==='client_id'&&v===client));
+  assert.deepEqual(m.calls.at(-1).params,{expand:['payment_intent.latest_charge']});
+  for(const changed of [{amount_total:100000},{client_reference_id:other},{livemode:false},{metadata:{integration:'another-app',order_id:orderId}},{payment_status:'unpaid'}]) {
+    const saved={...m.session};Object.assign(m.session,changed);assert.equal((await handle(request(input))).status,409);Object.assign(m.session,saved);
+  }
+  const charge=m.session.payment_intent.latest_charge;
+  for(const unsafe of ['https://evil.test/receipt','https://pay.stripe.com.evil.test/receipt','http://pay.stripe.com/receipt','https://attacker@pay.stripe.com/receipt']) {
+    charge.receipt_url=unsafe;assert.equal((await handle(request(input))).status,503);
+  }
+  charge.receipt_url=null;assert.equal((await handle(request(input))).status,409);
+  assert.equal(m.calls.filter(c=>c.name||c.options).length,0);assert.deepEqual(m.updates,[]);
 });

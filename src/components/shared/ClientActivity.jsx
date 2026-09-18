@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Card } from './index.jsx';
 import { supabase } from '../../supabase/client.js';
 import './client-activity.css';
+import { PurchaseReceipt } from './PurchaseReceipt.jsx';
 
 const PAGE_SIZE=20;
 const when=value=>value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value))+' HKT' : 'Not recorded';
@@ -64,8 +65,8 @@ function ProgressEntry({item}) {
 function PaymentEntry({item}) {
   return <Card pad={22}><div className="client-activity-head"><h3>{item.package_name || 'Payment'}</h3><strong>{money(item.amount_hkd)}</strong></div><dl className="client-activity-fields"><div><dt>Date</dt><dd>{when(item.created_at)}</dd></div><div><dt>Status</dt><dd>{status(item.status)}</dd></div><div><dt>Payment method</dt><dd>{item.method==='stripe'?'Stripe':item.method || 'Not recorded'}</dd></div>{item.format && <div><dt>Format</dt><dd>{item.format}</dd></div>}<div><dt>Payment reference</dt><dd>{item.id}</dd></div></dl></Card>;
 }
-function OnlinePackage({item}) {
-  return <Card pad={22}><div className="client-activity-head"><h3>{item.package_name} · {item.format}</h3><strong>{money(item.price_hkd)}</strong></div><p>{item.credits} sessions purchased · {status(item.payment_status)}</p><p className="client-activity-meta">Purchased {when(item.paid_at)}</p><p>Valid for {item.validity_months} month{item.validity_months===1?'':'s'} from first visit.</p><p className="client-activity-meta">An expiry date and remaining balance for this purchase have not been recorded. Contact the studio to confirm usage.</p></Card>;
+function OnlinePackage({item,canViewReceipt}) {
+  return <Card pad={22}><div className="client-activity-head"><h3>{item.package_name} · {item.format}</h3><strong>{money(item.price_hkd)}</strong></div><p>{item.credits} sessions purchased · {status(item.payment_status)}</p><p className="client-activity-meta">Purchased {when(item.paid_at)}</p><p>Valid for {item.validity_months} month{item.validity_months===1?'':'s'} from first visit.</p><p className="client-activity-meta">An expiry date and remaining balance for this purchase have not been recorded. Contact the studio to confirm usage.</p>{canViewReceipt && <PurchaseReceipt orderId={item.id}/>}</Card>;
 }
 const config={
   progress:{title:'Your session story',empty:'No session notes or progress photos recorded yet.',Entry:ProgressEntry},
@@ -76,7 +77,7 @@ export function ClientActivity({kind,clientId}) {
   const state=useActivity(kind,clientId),{title,empty,Entry}=config[kind];
   return <section className="client-activity" aria-label={title}><h2>{title}</h2>
     {state.loading ? <p role="status">Loading records…</p> : state.error ? <Card><p role="alert">Records could not be loaded. Please retry or sign in again.</p><Button size="sm" onClick={state.reload}>Retry records</Button></Card> : state.data && <>
-      {!state.data.linked ? <Card><p>This client does not have a linked login yet. Studio package records are shown below.</p></Card> : state.data.items.length ? <div className="client-activity-list">{state.data.items.map(item=><Entry key={item.id} item={item}/>)}</div> : <Card><p>{empty}</p></Card>}
+      {!state.data.linked ? <Card><p>This client does not have a linked login yet. Studio package records are shown below.</p></Card> : state.data.items.length ? <div className="client-activity-list">{state.data.items.map(item=><Entry key={item.id} item={item} canViewReceipt={!clientId}/>)}</div> : <Card><p>{empty}</p></Card>}
       {state.data.total>PAGE_SIZE && <nav className="client-activity-pages" aria-label={`${title} pages`}><Button size="sm" variant="soft" disabled={!state.page} onClick={()=>state.setPage(p=>p-1)}>Previous</Button><span>{state.page*PAGE_SIZE+1}–{Math.min((state.page+1)*PAGE_SIZE,state.data.total)} of {state.data.total}</span><Button size="sm" variant="soft" disabled={(state.page+1)*PAGE_SIZE>=state.data.total} onClick={()=>state.setPage(p=>p+1)}>Next</Button></nav>}
       <p className="client-activity-meta">Updates automatically every minute · Checked {when(state.data.as_of)}</p>
     </>}
