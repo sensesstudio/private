@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { PGlite } from '@electric-sql/pglite';
+import { teamAccountsHandler } from '../supabase/functions/team-accounts/handler.js';
+const actor='11111111-1111-4111-8111-111111111111',target='22222222-2222-4222-8222-222222222222';
+test('team administration requires active admin sessions, protects clients and provisions unpublished teachers',async t=>{
+ const db=new PGlite();t.after(()=>db.close());
+ await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema private;
+ create type user_role as enum('client','teacher','admin');
+ create table profiles(id uuid primary key,role user_role,full_name text,email text,created_at timestamptz default now());
+ create table auth.users(id uuid primary key,email text,banned_until timestamptz,last_sign_in_at timestamptz);
+ create table auth.sessions(id uuid,user_id uuid,not_after timestamptz);
+ create table teacher_profiles(id uuid primary key,active boolean);
+ create table studio_client_accounts(user_id uuid);
+ grant usage on schema private,public to service_role,authenticated,anon;
+ insert into profiles(id,role,full_name) values('${actor}','admin','Admin'),('${target}','client','New user');
+ insert into auth.users(id,email) values('${actor}','admin@example.test'),('${target}','teacher@example.test');
+ insert into auth.sessions(id,user_id) values('${actor}','${actor}'),('${target}','${target}');`);
+ await db.exec(await readFile(new URL('../supabase/migrations/20260918062512_team_accounts.sql',import.meta.url),'utf8'));
+ const call=(a,s,action,id=null,role=null,name=null)=>db.query('select public.team_accounts_operation($1,$2,$3,$4,$5,$6) data',[a,s,action,id,role,name]);
+ for(const role of ['anon','authenticated']){await db.exec(`set role ${role}`);await assert.rejects(call(actor,actor,'list'),/permission denied/);await db.exec('reset role');}
+ await db.exec('set role service_role');
+ await assert.rejects(call(target,target,'list'),/admin_access_required/);
+ await assert.rejects(call(actor,target,'list'),/admin_access_required/);
+ await assert.rejects(call(actor,actor,'reset',target),/invalid_team_target/);
+ await assert.rejects(call(actor,actor,'reset',actor),/invalid_team_target/);
+ await call(actor,actor,'provision',target,'teacher','New teacher');
+ assert.equal((await call(actor,actor,'list')).rows[0].data.length,2);
+ await assert.rejects(call(actor,actor,'provision',target,'admin','Teacher'),/account_already_linked/);
+ await call(actor,actor,'reset',target);
+ await db.exec('reset role');
+ assert.equal((await db.query('select active from teacher_profiles')).rows[0].active,false);
+ assert.equal((await db.query('select count(*)::int n from auth.sessions where user_id=$1',[target])).rows[0].n,0);
+ await db.exec(`update auth.users set banned_until=now()+interval '1 day' where id='${actor}';set role service_role;`);
+ await assert.rejects(call(actor,actor,'list'),/admin_access_required/);
+});
+test('team endpoint rejects unauthorized callers before touching Auth administration',async()=>{
+ let writes=0;
+ const admin={auth:{getUser:async()=>({data:{user:{id:actor}}}),admin:{createUser:async()=>{writes++;}}},rpc:async()=>({error:{message:'denied'}})};
+ const handler=teamAccountsHandler({admin});
+ const token='a.'+Buffer.from(JSON.stringify({session_id:actor})).toString('base64url')+'.b';
+ const response=await handler(new Request('https://example.test',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify({action:'create'})}));
+ assert.equal(response.status,403);assert.equal(writes,0);
+});

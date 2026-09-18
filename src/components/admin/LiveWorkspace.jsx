@@ -12,6 +12,7 @@ import { AdminClients } from './Clients.jsx';
 import { WebsitePayments } from './WebsitePayments.jsx';
 import { AdminProspects } from './Prospects.jsx';
 import './admin.css';
+import { TeamAccounts } from './TeamAccounts.jsx';
 
 // Use the original Admin workspace and design components. Live panels only
 // render connected data; the preserved demo screens are never mounted here.
@@ -24,7 +25,7 @@ function Dashboard({ go }) {
   const max = Math.max(1, ...LOCATIONS.map(l => rows.filter(r => r.studio_id === l.id).length));
   return <div className="admin-page">
     <PageHead eyebrow={`Studio overview · ${today}`} title="Dashboard" sub="Across all three Hong Kong studios."
-      right={<Button variant="soft" size="sm" icon="calendar" onClick={() => go('Bookings')}>Room schedule</Button>} />
+      right={<Button variant="soft" size="sm" icon="calendar" onClick={() => go('Confirmed Bookings')}>Room schedule</Button>} />
     <div className="admin-stats">
       <Stat icon="calendar-check" label="Bookings this month · Not connected" value="—" />
       <Stat icon="banknote" label="Revenue · Not connected" value="—" />
@@ -53,7 +54,7 @@ function Dashboard({ go }) {
     </div>
     <Card pad={0}>
       <div className="admin-card-head"><h2 className="admin-card-title">Today's room schedule</h2>
-        <Button variant="ghost" size="sm" onClick={() => go('Bookings')}>View all</Button></div>
+        <Button variant="ghost" size="sm" onClick={() => go('Confirmed Bookings')}>View all</Button></div>
       {!current && <p className="admin-panel-note">Saved records may be outdated.</p>}
       {rows.slice(0, 6).map((row, i) => <div key={`${row.studio_id}-${row.starts_at}-${i}`} className="admin-room-row">
         <span className="admin-room-icon"><Icon n="calendar" size={18} color="var(--accent)" /></span>
@@ -101,7 +102,7 @@ export function LiveAdminWorkspace({ account, session }) {
   const badge = <div className="admin-account"><div className="admin-account-identity"><span className="admin-account-mark">S</span><div className="hide-mobile"><strong>{account.full_name || 'Studio Ops'}</strong><span>Studio Ops</span></div></div>
     <Button variant="ghost" size="sm" onClick={session.logout}>Sign out</Button>
   </div>;
-  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Clients' ? <AdminClients /> : tab === 'Prospects' ? <AdminProspects /> : tab === 'Booking in Progress' ? <AdminProspects board="booking_in_progress" /> : tab === 'Payments' ? <Payments /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
+  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Team accounts' ? <TeamAccounts /> : tab === 'Clients' ? <AdminClients /> : tab === 'Prospects' ? <AdminProspects /> : tab === 'Booking in Progress' ? <AdminProspects board="booking_in_progress" /> : tab === 'Payments' ? <Payments /> : tab === 'Confirmed Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
   return <Workspace title="Admin" nav={ADMIN_NAV} tab={tab} setTab={setTab} headRight={badge}>
     {session.error && <p className="admin-panel-note" role="alert">{session.error}</p>}
     <div key={tab}>{content}</div>

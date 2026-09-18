@@ -360,7 +360,7 @@ test('admin sees synced room occupancy without teacher openings and filters Hong
   await page.getByLabel('Password', { exact: true }).fill('test-password-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Confirmed Bookings', exact: true }).click();
   await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Private room availability' })).toBeVisible();
   await expect(page.getByText('Room schedule is up to date', { exact: false })).toBeVisible();
@@ -388,7 +388,7 @@ test('admin refresh replaces room records and a failed read preserves records wi
   await page.getByLabel('Password', { exact: true }).fill('test-password-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Confirmed Bookings', exact: true }).click();
   await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page.locator('.room-table tbody tr')).toHaveCount(1);
   api.setFailure(true);
@@ -405,7 +405,7 @@ test('admin refresh replaces room records and a failed read preserves records wi
 });
 
 
-test('admin keeps the original workspace and all eight sections without mock management records', async ({ page }, testInfo) => {
+test('admin keeps the original workspace and all nine sections without mock management records', async ({ page }, testInfo) => {
   const api = await setup(page, { role: 'admin' });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/#admin');
@@ -415,7 +415,7 @@ test('admin keeps the original workspace and all eight sections without mock man
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Admin navigation' });
-  await expect(nav.getByRole('button')).toHaveCount(8);
+  await expect(nav.getByRole('button')).toHaveCount(9);
   await expect(nav.getByRole('button', { name: 'Dashboard', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.admin-stats').first()).toContainText('Revenue · Not connected');
   await expect(page.getByRole('heading', { name: 'Revenue trend', exact: true })).toBeVisible();
@@ -460,7 +460,7 @@ test('room day view shows three hourly columns, partial gaps and safe stale stat
   await page.getByLabel('Email', { exact: true }).fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('test-password-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Bookings', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Confirmed Bookings', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Day view', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.room-day-grid tbody tr')).toHaveCount(15);
   await expect(page.locator('.room-column-name')).toHaveText(['Kwun Tong private room', 'Causeway Bay private room', 'Central private room']);
@@ -1048,7 +1048,7 @@ test('admin prospects connect securely and preserve editable follow-up through b
 test('booking in progress uses the shared connection and keeps records separate from prospects',async({page},testInfo)=>{
   const {bookingApi,prospectApi}=await setup(page,{role:'admin'});
   Object.assign(bookingApi.data.sync,{configured:true,last_ok_at:now});
-  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
+  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',conversation_id:'synthetic-chat',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
   bookingApi.data.rows=[row,{...row,id:'synthetic-archived',client_name:'Archived booking contact',source_present:false}];
   prospectApi.data.rows=[{...row,client_name:'Separate Prospect',remarks:'Prospect-only note'}];
   await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
@@ -1056,6 +1056,8 @@ test('booking in progress uses the shared connection and keeps records separate 
   await nav.getByRole('button',{name:'Booking in Progress',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Booking in Progress',exact:true})).toBeVisible();
   await expect(page.getByText('SleekFlow · Private - Booking in Progress',{exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('href','https://app.sleekflow.io/en/inbox?conversationId=synthetic-chat');
+  await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('target','_blank');
   await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toBeVisible();await expect(page.getByText('Separate Prospect',{exact:true})).toHaveCount(0);
   await expect(page.getByLabel('Platform API key',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Sync now',exact:true}).click();await expect.poll(()=>bookingApi.calls.length).toBe(1);expect(bookingApi.calls.at(-1)).toEqual({action:'sync',board:'booking_in_progress'});expect(prospectApi.calls).toEqual([]);
@@ -1081,4 +1083,30 @@ test('Payments lists website Stripe records with filters and private failure sta
  await page.getByLabel('Search payments',{exact:true}).fill('payer@example.test');await expect(page.getByText('Synthetic Payer',{exact:true})).toBeVisible();
  paymentApi.recordsFailed=true;await page.getByRole('button',{name:'Refresh records',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Payment records could not be loaded');await expect(page.getByText('Synthetic Payer',{exact:true})).toHaveCount(0);
  expect(paymentApi.checkouts).toEqual([]);
+});
+
+test('admin manages team logins with explicit confirmation and one-time password display',async({page})=>{
+ await setup(page,{role:'admin'});
+ const requests=[];
+ await page.route('**/functions/v1/team-accounts',route=>{
+  const body=route.request().postDataJSON();requests.push(body);
+  const data=body.action==='list'?{actor:'self',accounts:[{id:'self',full_name:'Studio Admin',email:'admin@example.test',role:'admin',last_sign_in_at:null},{id:'teacher',full_name:'Test Teacher',email:'teacher@example.test',role:'teacher',last_sign_in_at:null}]}:{email:body.email,temporary_password:'SyntheticPassword1234'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/#admin');
+ await page.getByLabel('Email',{exact:true}).fill('admin@example.test');
+ await page.getByLabel('Password',{exact:true}).fill('test-password-only');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Team accounts',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Team accounts',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Reset password',exact:true})).toHaveCount(1);
+ await page.getByRole('button',{name:'Add account',exact:true}).click();
+ await page.getByLabel('Name',{exact:true}).fill('New Teacher');
+ await page.getByLabel('Email',{exact:true}).fill('new@example.test');
+ await page.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'Create account',exact:true}).click();
+ await expect(page.getByText('SyntheticPassword1234',{exact:true})).toBeVisible();
+ expect(requests.find(r=>r.action==='create')).toMatchObject({role:'teacher',confirmed:true,email:'new@example.test'});
+ await page.getByRole('button',{name:'Hide password',exact:true}).click();
+ await expect(page.getByText('SyntheticPassword1234',{exact:true})).toHaveCount(0);
 });
