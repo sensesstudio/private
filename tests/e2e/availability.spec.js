@@ -1048,7 +1048,7 @@ test('admin prospects connect securely and preserve editable follow-up through b
 test('booking in progress uses the shared connection and keeps records separate from prospects',async({page},testInfo)=>{
   const {bookingApi,prospectApi}=await setup(page,{role:'admin'});
   Object.assign(bookingApi.data.sync,{configured:true,last_ok_at:now});
-  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',conversation_id:'synthetic-chat',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
+  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',conversation_id:'synthetic-chat',last_staff_name:'Synthetic Staff',last_staff_at:now,last_staff_kind:'note',last_staff_status:'confirmed',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
   bookingApi.data.rows=[row,{...row,id:'synthetic-archived',client_name:'Archived booking contact',source_present:false}];
   prospectApi.data.rows=[{...row,client_name:'Separate Prospect',remarks:'Prospect-only note'}];
   await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
@@ -1058,6 +1058,8 @@ test('booking in progress uses the shared connection and keeps records separate 
   await expect(page.getByText('SleekFlow · Private - Booking in Progress',{exact:true})).toBeVisible();
   await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('href','https://app.sleekflow.io/en/inbox?conversationId=synthetic-chat');
   await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('target','_blank');
+  await expect(page.getByText('Synthetic Staff',{exact:true})).toBeVisible();
+  await expect(page.locator('td[data-label="Last contact staff"]')).toContainText('Internal note');
   await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toBeVisible();await expect(page.getByText('Separate Prospect',{exact:true})).toHaveCount(0);
   await expect(page.getByLabel('Platform API key',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Sync now',exact:true}).click();await expect.poll(()=>bookingApi.calls.length).toBe(1);expect(bookingApi.calls.at(-1)).toEqual({action:'sync',board:'booking_in_progress'});expect(prospectApi.calls).toEqual([]);
@@ -1109,4 +1111,22 @@ test('admin manages team logins with explicit confirmation and one-time password
  expect(requests.find(r=>r.action==='create')).toMatchObject({role:'teacher',confirmed:true,email:'new@example.test'});
  await page.getByRole('button',{name:'Hide password',exact:true}).click();
  await expect(page.getByText('SyntheticPassword1234',{exact:true})).toHaveCount(0);
+});
+
+test('removing a prospect confirms the contact and archives only after provider success',async({page})=>{
+ const {prospectApi}=await setup(page,{role:'admin'});
+ Object.assign(prospectApi.data.sync,{configured:true,last_ok_at:now});
+ const row={id:'remove-synthetic',client_name:'Synthetic Remove Contact',mobile:'+85255550088',last_message:'Synthetic inquiry',last_contact_at:now,remarks:'Keep these notes',next_action_date:null,status:'pending us',source_present:true,version:1};
+ prospectApi.data.rows=[row];const calls=[];
+ await page.route('**/functions/v1/sleekflow-prospect-sync',route=>{const body=route.request().postDataJSON();calls.push(body);if(body.action==='remove-prospect')row.source_present=false;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'removed'})});});
+ await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Prospects',exact:true}).click();
+ await page.getByRole('button',{name:'Remove prospect',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Remove prospect?',exact:true})).toBeVisible();expect(calls).toHaveLength(0);
+ await page.getByRole('button',{name:'Confirm removal',exact:true}).click();
+ await expect(page.getByText('Private - Prospect label removed. Contact and conversation history are preserved.',{exact:true})).toBeVisible();
+ expect(calls).toEqual([{action:'remove-prospect',board:'prospects',id:'remove-synthetic',version:1,confirmed:true}]);
+ await expect(page.getByText('Synthetic Remove Contact',{exact:true})).toHaveCount(0);
+ await page.getByLabel('Filter prospect label').selectOption('archived');
+ await expect(page.getByText('Keep these notes',{exact:true})).toBeVisible();
 });

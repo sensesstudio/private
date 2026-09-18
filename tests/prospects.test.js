@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { provider,fetchProspects,findLabel } from '../supabase/functions/sleekflow-prospect-sync/provider.js';
+import { provider,fetchProspects,findLabel,lastContactStaff,enrichBookingStaff } from '../supabase/functions/sleekflow-prospect-sync/provider.js';
 import { createHandler } from '../supabase/functions/sleekflow-prospect-sync/handler.js';
 import { visibleProspects } from '../src/admin/prospects.js';
 const label={id:'label-1',hashtag:'Private - Prospect'};
@@ -80,6 +80,7 @@ test('prospect SQL protects secrets and records; source sync preserves edits and
  insert into auth.sessions select id,id,null from profiles;`);
  await db.exec(await readFile(new URL('../supabase/migrations/20260916152058_sleekflow_prospects.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20260918035715_sleekflow_booking_in_progress.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20260918064504_booking_last_contact_staff.sql',import.meta.url),'utf8'));
  const as=async(role,id='')=>db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${role};`);
  const admin='11111111-1111-4111-8111-111111111111';
  for(const role of ['anon','authenticated']) {await as(role,'22222222-2222-4222-8222-222222222222');await assert.rejects(db.query('select admin_prospect_directory()'),/permission denied|admin_access_required/);await assert.rejects(db.query('select begin_sleekflow_sync()'),/permission denied/);await assert.rejects(db.query('select admin_booking_progress_directory()'),/permission denied|admin_access_required/);await assert.rejects(db.query('select begin_booking_progress_sync()'),/permission denied/);await assert.rejects(db.query("select save_booking_progress('contact-1',1,'',null,'pending us')"),/permission denied|admin_access_required/);await assert.rejects(db.query("select configure_sleekflow('synthetic-key')"),/permission denied|admin_access_required/);}
@@ -105,8 +106,9 @@ test('prospect SQL protects secrets and records; source sync preserves edits and
  await db.query("select save_booking_progress('contact-1',1,'Booking note','2026-10-02','pending payment')");
  await assert.rejects(db.query("select save_booking_progress('contact-1',1,'Stale edit',null,'pending us')"),/prospect_changed/);
  assert.equal((await directory()).rows[0].remarks,'Ask about Tuesday');assert.equal((await directory()).rows[0].last_message,'Inquiry');
- const bookingRun2=await nextBooking();await finishBooking(bookingRun2.run_id,[{...rows[0],last_message:'Booking reply'}]);await as('authenticated',admin);
+ const bookingRun2=await nextBooking();await finishBooking(bookingRun2.run_id,[{...rows[0],last_message:'Booking reply',last_staff_name:'Synthetic Staff',last_staff_at:'2026-09-18T04:00:00Z',last_staff_kind:'note',last_staff_status:'confirmed'}]);await as('authenticated',admin);
  assert.equal((await bookingDirectory()).rows[0].remarks,'Booking note');assert.equal((await bookingDirectory()).rows[0].status,'pending payment');
+ assert.equal((await bookingDirectory()).rows[0].last_staff_name,'Synthetic Staff');assert.equal((await bookingDirectory()).rows[0].last_staff_kind,'note');
  const bookingFailed=await nextBooking();await finishBooking(bookingFailed.run_id,null,'label_not_found');await as('authenticated',admin);
  assert.equal((await bookingDirectory()).sync.error_code,'label_not_found');assert.equal((await bookingDirectory()).rows[0].source_present,true);assert.equal((await directory()).sync.error_code,null);
  const bookingEmpty=await nextBooking();await finishBooking(bookingEmpty.run_id,[]);await as('authenticated',admin);
@@ -140,4 +142,54 @@ test('booking sync uses only its label and scheduled failures are isolated by bo
  assert.ok(calls.some(c=>c.n==='finish_sleekflow_sync'&&c.a.p_rows===null&&c.a.p_error==='label_not_found'));
  assert.ok(calls.some(c=>c.n==='finish_booking_progress_sync'&&c.a.p_rows.length===1));
  for(const invalid of [null,[],{board:'other'},{board:'__proto__'}])assert.equal((await handler(request(invalid))).status,400);
+});
+
+test('removing a prospect preserves required names and removes only the target label',async()=>{
+ const {removeProspectLabel}=await import('../supabase/functions/sleekflow-prospect-sync/provider.js');
+ const calls=[];
+ const api=async(path,body)=>{calls.push({path,body});if(path==='/api/labels')return [{id:'label',hashtag:'Private - Prospect'}];if(!body)return {id:'contact',FirstName:'Synthetic',LastName:'Contact'};return {};};
+ await removeProspectLabel(api,'contact');
+ assert.deepEqual(calls.at(-1),{path:'/api/contact/update/contact',body:{firstName:'Synthetic',lastName:'Contact',removeLabels:['Private - Prospect']}});
+ await assert.rejects(removeProspectLabel(async p=>p==='/api/labels'?[{id:'label',hashtag:'Private - Prospect'}]:{id:'contact',FirstName:'Missing last name'},'contact'),/source_format/);
+});
+
+test('prospect removal requires an admin confirmation and verifies label absence before archiving',async()=>{
+ const writes=[],saved=[];let stale=false,stillLabelled=false;
+ const handler=createHandler({syncKey:'cron',authorize:async()=>async()=>({rows:[{id:'contact-0',version:1,source_present:!stale}]}),rpc:async(n,a)=>{saved.push({n,a});return n==='begin_sleekflow_sync'?{status:'ready',run_id:'lease',api_key:'synthetic-key'}:0;},fetcher:async(url,options)=>{
+  if(url.endsWith('/labels'))return Response.json([label]);
+  if(url.endsWith('/contact/contact-0'))return Response.json({id:'contact-0',FirstName:'Synthetic',LastName:'Contact'});
+  if(url.includes('/contact/update/')){writes.push(JSON.parse(options.body));return Response.json({});}
+  return Response.json({totalContact:stillLabelled?1:0,results:stillLabelled?[contact(0)]:[]});
+ }});
+ const request=(overrides={},headers={})=>new Request('https://example.test',{method:'POST',headers,body:JSON.stringify({action:'remove-prospect',board:'prospects',id:'contact-0',version:1,confirmed:true,...overrides})});
+ assert.equal((await handler(request({confirmed:false}))).status,400);
+ assert.equal((await handler(request({}, {'x-sync-key':'cron'}))).status,403);
+ assert.equal((await handler(request({board:'booking_in_progress'}))).status,403);
+ stale=true;assert.equal((await handler(request())).status,409);assert.equal(writes.length,0);stale=false;
+ assert.deepEqual(await(await handler(request())).json(),{status:'removed'});
+ assert.deepEqual(saved.at(-1).a.p_rows,[]);assert.deepEqual(writes[0].removeLabels,['Private - Prospect']);
+ stillLabelled=true;assert.equal((await handler(request())).status,503);assert.equal(saved.at(-1).a.p_rows,null);
+});
+
+
+test('last contact staff compares outbound and internal notes, ignoring newer client messages',async()=>{
+ const message=(id,at,extra={})=>({id,conversationId:'conversation',createdAt:`2026-09-18T${at}:00Z`,isSentFromSleekflow:true,sender:{id:'staff',displayName:`Staff ${id}`},channel:'whatsapp',...extra});
+ const rows=[message(1,'01:00'),message(2,'03:00',{channel:'note'}),message(3,'04:00',{isSentFromSleekflow:false}),message(4,'05:00',{status:'failed'})];
+ const result=await lastContactStaff(async()=>rows,'conversation');
+ assert.equal(result.last_staff_name,'Staff 2');assert.equal(result.last_staff_kind,'note');assert.equal(result.last_staff_status,'confirmed');
+ rows.push(message(5,'03:30'));
+ assert.equal((await lastContactStaff(async()=>rows,'conversation')).last_staff_name,'Staff 5');
+ assert.equal((await lastContactStaff(async()=>[],'conversation')).last_staff_status,'none');
+ await assert.rejects(lastContactStaff(async()=>[rows[0],rows[0]],'conversation'),/source_changed/);
+ await assert.rejects(lastContactStaff(async()=>[message(9,'06:00',{sender:{id:'staff'}})],'conversation'),/source_format/);
+ await assert.rejects(lastContactStaff(async()=>[message(9,'06:00',{conversationId:'wrong'})],'conversation'),/source_changed/);
+ const enriched=await enrichBookingStaff(async()=>{throw new Error('provider failure')},[{id:'contact',conversation_id:'conversation'}]);
+ assert.deepEqual(enriched,[{id:'contact',conversation_id:'conversation',last_staff_status:'unavailable'}]);
+});
+
+test('staff history paginates and does not claim completeness beyond the bound',async()=>{
+ let pages=0;
+ const api=async()=>Array.from({length:1000},(_,i)=>({id:pages*1000+i,conversationId:'conversation',isSentFromSleekflow:false}));
+ const result=await lastContactStaff(async()=>{const result=await api();pages++;return result;},'conversation');
+ assert.equal(pages,10);assert.deepEqual(result,{last_staff_status:'unavailable'});
 });

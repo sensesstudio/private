@@ -67,3 +67,44 @@ export async function fetchProspects(api, label = PROSPECT_LABEL) {
   }
   throw new Error('too_many_contacts');
 }
+
+// Official Contacts API update supports removeLabels (label names). Preserve
+// both required name fields: omitted names are cleared by the provider.
+export async function removeProspectLabel(api,id) {
+  const label=await findLabel(api);
+  const raw=await api(`/api/contact/${encodeURIComponent(id)}`);
+  const contact=Array.isArray(raw)&&raw.length===1?raw[0]:raw;
+  if(!contact||contact.id!==id)throw new Error('source_format');
+  const first=contact.FirstName??contact.firstName,last=contact.LastName??contact.lastName;
+  if(typeof first!=='string'||typeof last!=='string')throw new Error('source_format');
+  await api(`/api/contact/update/${encodeURIComponent(id)}`,{firstName:first,lastName:last,removeLabels:[label.hashtag]});
+}
+
+export async function lastContactStaff(api,conversationId) {
+  if(!conversationId)return {last_staff_status:'unavailable'};
+  let latest=null;const seen=new Set();
+  // Do not assume provider ordering. Only publish an answer after a complete
+  // bounded history read; notes use the same message API with channel=note.
+  for(let offset=0;offset<10000;offset+=1000){
+    const messages=await api(`/api/conversation/message/${encodeURIComponent(conversationId)}?limit=1000&offset=${offset}`);
+    if(!Array.isArray(messages)||messages.length>1000)throw new Error('source_format');
+    for(const m of messages){
+      if(m.conversationId!==conversationId||m.id==null||seen.has(String(m.id)))throw new Error('source_changed');
+      seen.add(String(m.id));
+      if(m.isSandbox===true||m.isSentFromSleekflow!==true||!m.sender?.id||['failed','undelivered','outofcredit','scheduled','sending'].includes(normalized(m.status)))continue;
+      const at=instant(m.createdAt)||instant(m.timestamp);
+      const name=text(m.sender.displayName,300)?.trim()||[text(m.sender.firstName,150),text(m.sender.lastName,150)].filter(Boolean).join(' ').trim();
+      if(!at||!name)throw new Error('source_format');
+      if(!latest||at>latest.last_staff_at)latest={last_staff_name:name,last_staff_at:at,last_staff_kind:normalized(m.channel)==='note'||normalized(m.messageType)==='note'?'note':'message'};
+    }
+    if(messages.length<1000)return {...latest,last_staff_status:latest?'confirmed':'none'};
+  }
+  return {last_staff_status:'unavailable'};
+}
+export async function enrichBookingStaff(api,rows){
+  let index=0;
+  await Promise.all(Array.from({length:Math.min(3,rows.length)},async()=>{
+    while(index<rows.length){const row=rows[index++];try{Object.assign(row,await lastContactStaff(api,row.conversation_id));}catch{row.last_staff_status='unavailable';}}
+  }));
+  return rows;
+}
