@@ -32,12 +32,13 @@ export async function findLabel(api, label = PROSPECT_LABEL) {
 export async function fetchProspects(api, label = PROSPECT_LABEL) {
   const target = await findLabel(api, label), rows = [], seen = new Set();
   let total = null;
-  // Read-only search. We filter the explicitly included labels locally because
-  // label filter operators are not specified in the provider's public contract.
-  // Only matching contacts leave this function or reach the database.
+  // SleekFlow's own contact filter serializes labels using containHashTag and
+  // label names, not fieldName: Labels/Hashtags. Verified against the live API:
+  // the matching label returns only its contacts; a missing label returns zero.
+  // The bound below applies to matching prospects, never the whole account.
   for (let offset = 0; offset <= 10000; offset += 200) {
     const data = await api('/api/contact/dynamicSearch', {
-      conditions: [], include: { labels: true, latestMessage: true, customFields: ['LastContact','LastContactFromCustomers'] },
+      conditions: [{ containHashTag: 'hashtags', conditionOperator: 'ContainsAny', nextOperator: 'And', values: [target.hashtag] }], include: { labels: true, latestMessage: true, customFields: ['LastContact','LastContactFromCustomers'] },
       pagination: { limit: 200, offset }, sort: { field: 'CreatedAt', order: 'ASC' },
     });
     if (!Array.isArray(data?.results) || !Number.isSafeInteger(data.totalContact) || data.totalContact < 0 || data.results.length > 200) throw new Error('source_format');
@@ -49,12 +50,13 @@ export async function fetchProspects(api, label = PROSPECT_LABEL) {
       seen.add(c.id);
       const labels = c.labels ?? c.lables;
       if (!Array.isArray(labels) || labels.some(l => typeof l !== 'string')) throw new Error('source_format');
-      if (!labels.some(l => normalized(l) === normalized(target.hashtag) || l === target.id)) continue;
+      // Fail closed if the provider ignores the filter: do not archive saved leads.
+      if (!labels.some(l => normalized(l) === normalized(target.hashtag) || l === target.id)) throw new Error('source_format');
       const m = c.latestMessage ?? c.lastestMessage;
       if (m != null && (typeof m !== 'object' || Array.isArray(m))) throw new Error('source_format');
       const live = m && m.isSandbox !== true;
       const messageAt = live ? instant(m.createdAt) || instant(m.timestamp) : null;
-      const lastContact = [messageAt, instant(c.lastContactedFromCompany), instant(c.lastContactedFromUser),
+      const lastContact = [messageAt, instant(c.lastContact), instant(c.lastContactFromCustomers), instant(c.lastContactedFromCompany), instant(c.lastContactedFromUser),
         ...(Array.isArray(c.customFields) ? c.customFields.filter(f => ['LastContact','LastContactFromCustomers'].includes(f.customFieldName)).map(f => instant(f.customValue)) : [])].filter(Boolean).sort().at(-1) || null;
       rows.push({ id: c.id, client_name: [text(c.firstName,150), text(c.lastName,150)].filter(Boolean).join(' ').trim() || 'Name unavailable',
         mobile: text(c.phoneNumber,80), last_message: live ? text(m.messageContent,10000) || (m.uploadedFiles?.length ? '[Attachment]' : null) : null,
