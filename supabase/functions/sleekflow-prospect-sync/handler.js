@@ -1,4 +1,4 @@
-import { provider, findLabel, fetchProspects } from './provider.js';
+import { provider, findLabel, fetchProspects, removeProspectLabel } from './provider.js';
 const cors = { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods':'POST, OPTIONS', 'Cache-Control':'no-store', 'Content-Type':'application/json' };
 const reply = (data,status=200) => new Response(JSON.stringify(data),{status,headers:cors});
 const safeError = error => ['invalid_key','rate_limited','label_not_found','source_changed','source_format','too_many_contacts'].includes(error?.message) ? error.message : 'sync_unavailable';
@@ -33,6 +33,27 @@ export function createHandler({ syncKey, authorize, rpc, fetcher = fetch }) {
       if(!body||typeof body!=='object'||Array.isArray(body))return reply({error:'invalid_request'},400);
       const board=body.board??'prospects';
       if(typeof board!=='string'||!Object.hasOwn(boards,board))return reply({error:'invalid_request'},400);
+      if (body.action === 'remove-prospect') {
+        if(scheduled||board!=='prospects')return reply({error:'admin_access_required'},403);
+        if(typeof body.id!=='string'||!body.id||body.id.length>200||!Number.isInteger(body.version)||body.confirmed!==true)return reply({error:'invalid_request'},400);
+        const directory=await user('admin_prospect_directory',{});
+        if(!directory.rows?.some(r=>r.id===body.id&&r.version===body.version&&r.source_present))return reply({error:'source_changed'},409);
+        let run;
+        try {
+          run=await rpc(boards.prospects.begin,{});
+          if(run.status!=='ready')return reply({status:run.status});
+          const api=provider(run.api_key,fetcher,AbortSignal.timeout(105000));
+          await removeProspectLabel(api,body.id);
+          const rows=await fetchProspects(api);
+          if(rows.some(r=>r.id===body.id))throw new Error('source_changed');
+          await rpc(boards.prospects.finish,{p_run_id:run.run_id,p_rows:rows,p_error:null});
+          return reply({status:'removed'});
+        }catch(error){
+          const code=safeError(error);
+          if(run?.run_id){try{await rpc(boards.prospects.finish,{p_run_id:run.run_id,p_rows:null,p_error:code});}catch{}}
+          return reply({error:code},503);
+        }
+      }
       if (body.action === 'connect') {
         if (scheduled) return reply({error:'admin_access_required'},403);
         const key = typeof body.api_key === 'string' ? body.api_key.trim() : '';

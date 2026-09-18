@@ -52,6 +52,7 @@ export function AdminProspects({board='prospects'}) {
   const [query,setQuery]=useState(''),[status,setStatus]=useState('all'),[scope,setScope]=useState('active'),[sort,setSort]=useState('next_action_date:asc'),[page,setPage]=useState(0);
   const [editor,setEditor]=useState(null),[connecting,setConnecting]=useState(false),[key,setKey]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
   const working=useRef(false);
+  const [removing,setRemoving]=useState(null);
   async function sync(event) {
     event?.preventDefault();if(working.current)return;working.current=true;setBusy(true);setNotice('');
     const apiKey=key;setKey('');
@@ -65,6 +66,17 @@ export function AdminProspects({board='prospects'}) {
     }catch{setNotice(SYNC_ERRORS.sync_unavailable);}
     finally{working.current=false;setBusy(false);}
   }
+  async function removeProspect() {
+    if(working.current||!removing)return;working.current=true;setBusy(true);setNotice('');
+    try {
+      const {data:result,error:failed}=await supabase.functions.invoke('sleekflow-prospect-sync',{body:{action:'remove-prospect',board:'prospects',id:removing.id,version:removing.version,confirmed:true}});
+      if(failed||result?.error)setNotice('Removal could not be verified. Refresh before retrying; the label may already have been removed.');
+      else if(result.status==='removed'){setRemoving(null);setNotice('Private - Prospect label removed. Contact and conversation history are preserved.');}
+      else setNotice('A sync is running or was just requested. Please retry shortly.');
+      await refresh({background:true});
+    }catch{setNotice('Removal could not be verified. Please refresh before retrying.');}
+    finally{working.current=false;setBusy(false);}
+  }
   const rows=data?.rows||[],syncInfo=data?.sync;
   const filtered=visibleProspects(rows,{query,status,scope,sort});
   const lastPage=Math.max(0,Math.ceil(filtered.length/25)-1),currentPage=Math.min(page,lastPage),shown=filtered.slice(currentPage*25,(currentPage+1)*25);
@@ -74,6 +86,7 @@ export function AdminProspects({board='prospects'}) {
   return <div className="admin-page admin-prospects-page">
     {editor&&data&&!error ? <ProspectEditor record={editor} config={config} onCancel={()=>setEditor(null)} onSaved={async()=>{setEditor(null);setNotice('Follow-up saved.');await refresh({background:true});}}/> : <>
       <PageHead eyebrow="Conversion" title={config.title} sub={`SleekFlow · ${config.label}`} right={<div className="prospect-actions">{syncInfo?.configured&&<Button variant="soft" size="sm" disabled={busy||syncInfo.running} onClick={()=>sync()}>Sync now</Button>}<Button variant="soft" size="sm" disabled={busy||loading||error} onClick={()=>{setConnecting(v=>!v);setKey('');setNotice('');}}>{syncInfo?.configured?'Connection settings':'Connect SleekFlow'}</Button></div>}/>
+      {removing&&<Card pad={22}><h2 className="admin-card-title">Remove prospect?</h2><p>Remove the Private - Prospect label from <strong>{removing.client_name}</strong> ({removing.mobile||'No mobile number'}) in SleekFlow? Their contact, conversations and other labels will remain. Saved follow-up details remain under Label removed.</p><div className="admin-editor-actions"><button type="button" disabled={busy} onClick={()=>setRemoving(null)}>Cancel</button><button type="button" disabled={busy} onClick={removeProspect}>{busy?'Removing…':'Confirm removal'}</button></div></Card>}
       {notice&&<p role="status" className="admin-client-notice">{notice}</p>}
       {loading&&<p role="status" className="admin-panel-note">Loading {config.noun}…</p>}
       {error&&<Card pad={22}><p role="alert">{config.title} could not be loaded. Please check your admin session.</p><Button variant="soft" size="sm" onClick={()=>refresh()}>Try again</Button></Card>}
@@ -90,7 +103,7 @@ export function AdminProspects({board='prospects'}) {
           <select aria-label="Sort prospects" value={sort} onChange={e=>change(setSort,e.target.value)}>{SORTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
         </div>
         <Card pad={0}><div className="admin-table-scroll"><table className="admin-table prospects-table"><caption className="admin-client-caption">{filtered.length} {config.noun} · Dates shown in Hong Kong time</caption><thead><tr>{['Client name','Mobile number','Last SleekFlow conversation','Remarks','Last contact date','Next action date','Status',''].map((h,i)=><th key={i} scope="col">{h||'Action'}</th>)}</tr></thead>
-          <tbody>{shown.map(r=><tr key={r.id}><td data-label="Client name"><strong>{r.client_name}</strong>{!r.source_present&&<small>Label removed</small>}</td><td data-label="Mobile number"><ContactPhone row={r}/></td><td data-label="Last SleekFlow conversation"><Conversation row={r}/></td><td data-label="Remarks"><p className="prospect-remarks-preview">{r.remarks||'—'}</p></td><td data-label="Last contact date">{when(r.last_contact_at)}</td><td data-label="Next action date">{day(r.next_action_date)}{r.next_action_date&&r.next_action_date<=today&&r.status!=='confirmed booking'&&<small>Follow-up due</small>}</td><td data-label="Status"><span className="prospect-status">{statusLabel(r.status)}</span></td><td><Button size="sm" variant="soft" style={{padding:'10px 12px',whiteSpace:'nowrap'}} onClick={()=>{setEditor(r);setNotice('');}}>Edit</Button></td></tr>)}</tbody></table></div>
+          <tbody>{shown.map(r=><tr key={r.id}><td data-label="Client name"><strong>{r.client_name}</strong>{!r.source_present&&<small>Label removed</small>}</td><td data-label="Mobile number"><ContactPhone row={r}/></td><td data-label="Last SleekFlow conversation"><Conversation row={r}/></td><td data-label="Remarks"><p className="prospect-remarks-preview">{r.remarks||'—'}</p></td><td data-label="Last contact date">{when(r.last_contact_at)}</td><td data-label="Next action date">{day(r.next_action_date)}{r.next_action_date&&r.next_action_date<=today&&r.status!=='confirmed booking'&&<small>Follow-up due</small>}</td><td data-label="Status"><span className="prospect-status">{statusLabel(r.status)}</span></td><td><Button size="sm" variant="soft" style={{padding:'10px 12px',whiteSpace:'nowrap'}} onClick={()=>{setEditor(r);setNotice('');}}>Edit</Button>{board==='prospects'&&r.source_present&&<Button size="sm" variant="ghost" disabled={busy} onClick={()=>{setRemoving(r);setNotice('');}}>Remove prospect</Button>}</td></tr>)}</tbody></table></div>
           {!shown.length&&<div className="admin-empty-panel"><Icon n="user-search" size={30}/><p>{rows.length?`No ${config.noun} match these filters.`:syncInfo.last_ok_at?`No contacts currently have the ${config.label} label.`:'Contacts will appear after the first successful SleekFlow sync.'}</p></div>}
           <div className="admin-client-pagination"><span>Page {currentPage+1} of {lastPage+1}</span><div><Button variant="soft" size="sm" disabled={currentPage===0} onClick={()=>setPage(currentPage-1)}>Previous</Button><Button variant="soft" size="sm" disabled={currentPage>=lastPage} onClick={()=>setPage(currentPage+1)}>Next</Button></div></div>
         </Card>

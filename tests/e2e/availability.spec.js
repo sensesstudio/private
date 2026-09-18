@@ -1110,3 +1110,21 @@ test('admin manages team logins with explicit confirmation and one-time password
  await page.getByRole('button',{name:'Hide password',exact:true}).click();
  await expect(page.getByText('SyntheticPassword1234',{exact:true})).toHaveCount(0);
 });
+
+test('removing a prospect confirms the contact and archives only after provider success',async({page})=>{
+ const {prospectApi}=await setup(page,{role:'admin'});
+ Object.assign(prospectApi.data.sync,{configured:true,last_ok_at:now});
+ const row={id:'remove-synthetic',client_name:'Synthetic Remove Contact',mobile:'+85255550088',last_message:'Synthetic inquiry',last_contact_at:now,remarks:'Keep these notes',next_action_date:null,status:'pending us',source_present:true,version:1};
+ prospectApi.data.rows=[row];const calls=[];
+ await page.route('**/functions/v1/sleekflow-prospect-sync',route=>{const body=route.request().postDataJSON();calls.push(body);if(body.action==='remove-prospect')row.source_present=false;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'removed'})});});
+ await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Prospects',exact:true}).click();
+ await page.getByRole('button',{name:'Remove prospect',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Remove prospect?',exact:true})).toBeVisible();expect(calls).toHaveLength(0);
+ await page.getByRole('button',{name:'Confirm removal',exact:true}).click();
+ await expect(page.getByText('Private - Prospect label removed. Contact and conversation history are preserved.',{exact:true})).toBeVisible();
+ expect(calls).toEqual([{action:'remove-prospect',board:'prospects',id:'remove-synthetic',version:1,confirmed:true}]);
+ await expect(page.getByText('Synthetic Remove Contact',{exact:true})).toHaveCount(0);
+ await page.getByLabel('Filter prospect label').selectOption('archived');
+ await expect(page.getByText('Keep these notes',{exact:true})).toBeVisible();
+});

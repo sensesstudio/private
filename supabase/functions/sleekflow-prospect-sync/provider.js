@@ -67,3 +67,15 @@ export async function fetchProspects(api, label = PROSPECT_LABEL) {
   }
   throw new Error('too_many_contacts');
 }
+
+// Official Contacts API update supports removeLabels (label names). Preserve
+// both required name fields: omitted names are cleared by the provider.
+export async function removeProspectLabel(api,id) {
+  const label=await findLabel(api);
+  const raw=await api(`/api/contact/${encodeURIComponent(id)}`);
+  const contact=Array.isArray(raw)&&raw.length===1?raw[0]:raw;
+  if(!contact||contact.id!==id)throw new Error('source_format');
+  const first=contact.FirstName??contact.firstName,last=contact.LastName??contact.lastName;
+  if(typeof first!=='string'||typeof last!=='string')throw new Error('source_format');
+  await api(`/api/contact/update/${encodeURIComponent(id)}`,{firstName:first,lastName:last,removeLabels:[label.hashtag]});
+}

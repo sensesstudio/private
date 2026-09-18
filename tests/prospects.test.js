@@ -141,3 +141,30 @@ test('booking sync uses only its label and scheduled failures are isolated by bo
  assert.ok(calls.some(c=>c.n==='finish_booking_progress_sync'&&c.a.p_rows.length===1));
  for(const invalid of [null,[],{board:'other'},{board:'__proto__'}])assert.equal((await handler(request(invalid))).status,400);
 });
+
+test('removing a prospect preserves required names and removes only the target label',async()=>{
+ const {removeProspectLabel}=await import('../supabase/functions/sleekflow-prospect-sync/provider.js');
+ const calls=[];
+ const api=async(path,body)=>{calls.push({path,body});if(path==='/api/labels')return [{id:'label',hashtag:'Private - Prospect'}];if(!body)return {id:'contact',FirstName:'Synthetic',LastName:'Contact'};return {};};
+ await removeProspectLabel(api,'contact');
+ assert.deepEqual(calls.at(-1),{path:'/api/contact/update/contact',body:{firstName:'Synthetic',lastName:'Contact',removeLabels:['Private - Prospect']}});
+ await assert.rejects(removeProspectLabel(async p=>p==='/api/labels'?[{id:'label',hashtag:'Private - Prospect'}]:{id:'contact',FirstName:'Missing last name'},'contact'),/source_format/);
+});
+
+test('prospect removal requires an admin confirmation and verifies label absence before archiving',async()=>{
+ const writes=[],saved=[];let stale=false,stillLabelled=false;
+ const handler=createHandler({syncKey:'cron',authorize:async()=>async()=>({rows:[{id:'contact-0',version:1,source_present:!stale}]}),rpc:async(n,a)=>{saved.push({n,a});return n==='begin_sleekflow_sync'?{status:'ready',run_id:'lease',api_key:'synthetic-key'}:0;},fetcher:async(url,options)=>{
+  if(url.endsWith('/labels'))return Response.json([label]);
+  if(url.endsWith('/contact/contact-0'))return Response.json({id:'contact-0',FirstName:'Synthetic',LastName:'Contact'});
+  if(url.includes('/contact/update/')){writes.push(JSON.parse(options.body));return Response.json({});}
+  return Response.json({totalContact:stillLabelled?1:0,results:stillLabelled?[contact(0)]:[]});
+ }});
+ const request=(overrides={},headers={})=>new Request('https://example.test',{method:'POST',headers,body:JSON.stringify({action:'remove-prospect',board:'prospects',id:'contact-0',version:1,confirmed:true,...overrides})});
+ assert.equal((await handler(request({confirmed:false}))).status,400);
+ assert.equal((await handler(request({}, {'x-sync-key':'cron'}))).status,403);
+ assert.equal((await handler(request({board:'booking_in_progress'}))).status,403);
+ stale=true;assert.equal((await handler(request())).status,409);assert.equal(writes.length,0);stale=false;
+ assert.deepEqual(await(await handler(request())).json(),{status:'removed'});
+ assert.deepEqual(saved.at(-1).a.p_rows,[]);assert.deepEqual(writes[0].removeLabels,['Private - Prospect']);
+ stillLabelled=true;assert.equal((await handler(request())).status,503);assert.equal(saved.at(-1).a.p_rows,null);
+});
