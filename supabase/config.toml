@@ -31,3 +31,7 @@ verify_jwt = false
 # Validates either the scheduled sync key or a current admin session.
 [functions.sleekflow-prospect-sync]
 verify_jwt = false
+
+# Auth verifies tokens; server-only RPC checks the stored admin role and session.
+[functions.team-accounts]
+verify_jwt = false

@@ -7,7 +7,7 @@ import { useClientStore, getClientProfile, pregnancyFromEDD } from '../../client
 import { tdStyle } from '../../styles.js';
 import { EmptyState } from '../client/ClientDetail.jsx';
 
-export const ADMIN_NAV = [['layout-dashboard', 'Dashboard'], ['users-round', 'Clients'], ['flower-2', 'Teachers'], ['user-check', 'Approvals'], ['user-search', 'Prospects'], ['calendar-clock', 'Booking in Progress'], ['calendar', 'Bookings'], ['wallet', 'Payments']];
+export const ADMIN_NAV = [['layout-dashboard', 'Dashboard'], ['users-round', 'Clients'], ['flower-2', 'Teachers'], ['user-check', 'Approvals'], ['user-search', 'Prospects'], ['calendar-clock', 'Booking in Progress'], ['calendar', 'Confirmed Bookings'], ['wallet', 'Payments'], ['users-round', 'Team accounts']];
 
 export function Workspace({ title, nav, tab, setTab, children, headRight }) {
   const { mobile } = useVP();
