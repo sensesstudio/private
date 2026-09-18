@@ -2,7 +2,10 @@
 -- identical parameters. New orders snapshot the account email for receipts.
 alter table public.package_checkout_orders add column receipt_email text;
 
-create or replace function public.prepare_package_checkout(p_client_id uuid,p_package_id text,p_origin text,p_livemode boolean)
+-- The Edge Function passes the email from auth.getUser(), never browser input.
+-- Keep the default for in-flight calls from the previous deployed function.
+drop function public.prepare_package_checkout(uuid,text,text,boolean);
+create function public.prepare_package_checkout(p_client_id uuid,p_package_id text,p_origin text,p_livemode boolean,p_receipt_email text default null)
 returns jsonb language plpgsql security invoker set search_path='' as $$
 declare p public.packages; o public.package_checkout_orders;
 begin
@@ -17,10 +20,10 @@ begin
  select * into o from public.package_checkout_orders where client_id=p_client_id and package_id=p.id and status='pending';
  if o.id is not null then return to_jsonb(o); end if;
  insert into public.package_checkout_orders(client_id,package_id,package_name,format,is_trial,credits,price_hkd,validity_months,return_origin,livemode,receipt_email)
- values(p_client_id,p.id,p.name,p.format,p.is_trial,p.credits,p.price_hkd,p.validity_months,p_origin,p_livemode,(select nullif(trim(email),'') from auth.users where id=p_client_id)) returning * into o;
+ values(p_client_id,p.id,p.name,p.format,p.is_trial,p.credits,p.price_hkd,p.validity_months,p_origin,p_livemode,nullif(trim(p_receipt_email),'')) returning * into o;
  return to_jsonb(o);
 end;
 $$;
-revoke all on function public.prepare_package_checkout(uuid,text,text,boolean) from public,anon,authenticated;
-grant execute on function public.prepare_package_checkout(uuid,text,text,boolean) to service_role;
+revoke all on function public.prepare_package_checkout(uuid,text,text,boolean,text) from public,anon,authenticated;
+grant execute on function public.prepare_package_checkout(uuid,text,text,boolean,text) to service_role;
 

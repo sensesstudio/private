@@ -58,7 +58,7 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
       }
       if (typeof input.packageId !== 'string' || input.packageId.length > 80 || !PAYMENT_ORIGINS.includes(input.origin)) return json({ error: 'Invalid package request.' }, 400);
       for (let attempt = 0; attempt < 2; attempt++) {
-        const { data: order, error } = await admin.rpc('prepare_package_checkout', { p_client_id: auth.user.id, p_package_id: input.packageId, p_origin: input.origin, p_livemode: livemode });
+        const { data: order, error } = await admin.rpc('prepare_package_checkout', { p_client_id: auth.user.id, p_package_id: input.packageId, p_origin: input.origin, p_livemode: livemode, p_receipt_email: auth.user.email || null });
         if (error) {
           if (error.message?.includes('trial_already_purchased')) return json({ error: 'You have already purchased this trial offer.' }, 409);
           if (error.message?.includes('client_account_required')) return json({ error: 'Please sign in with a client account to buy a package.' }, 403);

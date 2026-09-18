@@ -12,8 +12,7 @@ const origin = PAYMENT_ORIGINS[0];
 test('checkout migration reserves once, rejects mismatches, commits payment/credits once and protects balances', async t => {
   const db = new PGlite(); t.after(() => db.close());
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
-    create schema auth; create table auth.users(id uuid primary key,email text);
-    grant select on auth.users to service_role;
+    create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth,public to anon,authenticated,service_role;`);
   const file = path => readFile(new URL(`../supabase/${path}`, import.meta.url),'utf8');
@@ -24,9 +23,10 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   await db.exec(await file('migrations/0005_live_availability.sql'));
   await db.exec(await file('migrations/20260916072203_package_checkout.sql'));
   await db.exec(await file('migrations/20260918120533_update_private_package_prices.sql'));
-  await db.exec(`insert into auth.users values('${client}','buyer@example.test'),('${other}','other@example.test'); insert into public.profiles(id,role,full_name) values('${client}','client','Synthetic Buyer'),('${other}','client','Other Buyer');`);
+  await db.exec(`insert into auth.users values('${client}'),('${other}'); insert into public.profiles(id,role,full_name) values('${client}','client','Synthetic Buyer'),('${other}','client','Other Buyer');`);
   const as = (role, id='') => db.exec(`reset role; select set_config('request.jwt.claim.sub','${id}',false); set role ${role};`);
-  const reserve = async (pkg='p11-trial', who=client) => ({ rows: (await db.query('select prepare_package_checkout($1,$2,$3,true) as o',[who,pkg,origin])).rows.map(r=>r.o) });
+  let receiptEmail;
+  const reserve = async (pkg='p11-trial', who=client) => ({ rows: (await db.query(receiptEmail === undefined ? 'select prepare_package_checkout($1,$2,$3,true) as o' : 'select prepare_package_checkout($1,$2,$3,true,$4) as o',receiptEmail === undefined ? [who,pkg,origin] : [who,pkg,origin,receiptEmail])).rows.map(r=>r.o) });
   const settle = (id, overrides={}) => { const p = { session:'cs_live_synthetic', who:client, amount:100000, currency:'hkd', paid:'paid', mode:true,...overrides }; return db.query('select fulfill_package_checkout($1,$2,$3,$4,$5,$6,$7) as id',[id,p.session,p.who,p.amount,p.currency,p.paid,p.mode]); };
   await as('anon');
   assert.equal((await db.query('select count(*)::int n from packages where active')).rows[0].n,8);
@@ -67,10 +67,12 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   await db.exec(await file('migrations/20260918125536_client_payment_receipts.sql'));
   await as('service_role');
   assert.equal((await reserve('p12-5')).rows[0].receipt_email,null);
+  receiptEmail='buyer@example.test';
   const emailed=(await reserve('p11-5')).rows[0];
   assert.equal(emailed.receipt_email,'buyer@example.test');
-  await as('postgres');await db.exec("update auth.users set email='updated@example.test'");await as('service_role');
+  receiptEmail='updated@example.test';
   assert.equal((await reserve('p11-5')).rows[0].receipt_email,'buyer@example.test');
+  await as('authenticated',client);await assert.rejects(reserve('p11-5'),/permission denied/);
 
 });
 
@@ -80,7 +82,7 @@ function mocks() {
   const session = { id:'cs_live_synthetic',url:'https://checkout.stripe.com/c/pay/cs_live_synthetic',status:'open',payment_status:'unpaid',mode:'payment',livemode:true,currency:'hkd',amount_total:475000,client_reference_id:client,metadata:{integration:INTEGRATION,order_id:orderId} };
   let auth=true, lookup=true, fail=false;
   const admin = {
-    auth:{ getUser:async()=>({data:{user:auth ? {id:client} : null},error:null}) },
+    auth:{ getUser:async()=>({data:{user:auth ? {id:client,email:'buyer@example.test'} : null},error:null}) },
     rpc:async(name,args)=> { calls.push({name,args}); return {data:name==='prepare_package_checkout' ? order : 'payment-synthetic',error:fail ? {message:'private database detail'} : null}; },
     from:()=> { const chain={select:()=>chain,eq:(key,value)=>{filters.push([key,value]);return chain;},update:value=>{updates.push(value);return chain;},maybeSingle:async()=>({data:lookup?order:null,error:null}),then:fn=>Promise.resolve({error:null}).then(fn)};return chain; },
   };
@@ -100,6 +102,7 @@ test('checkout authenticates, rejects redirect injection and uses server price w
   const creation=m.calls.find(c=>c.options);
   assert.equal(creation.params.line_items[0].price_data.unit_amount,475000);
   assert.equal(creation.params.client_reference_id,client);
+  assert.equal(m.calls.find(c=>c.name==='prepare_package_checkout').args.p_receipt_email,'buyer@example.test');
   assert.equal(creation.params.customer_email,'buyer@example.test');
   assert.equal(creation.params.payment_intent_data.receipt_email,'buyer@example.test');
   assert.match(creation.params.payment_intent_data.description,/5-class pack \(1:1\), 5 sessions/);
