@@ -3,7 +3,7 @@ import { supabase } from '../supabase/client.js';
 
 // Private data lives only in this mounted Admin view, never in localStorage,
 // the shared availability store, logs, or static files.
-export function useProspects() {
+export function useProspects(directoryRpc = 'admin_prospect_directory') {
   const [state, setState] = useState({ data: null, loading: true, error: false });
   const pending = useRef(null);
   const refresh = useCallback(async ({ background = false } = {}) => {
@@ -13,13 +13,13 @@ export function useProspects() {
     if (!background) setState({ data: null, loading: true, error: false });
     try {
       if (!supabase) throw new Error('not_configured');
-      const { data, error } = await supabase.rpc('admin_prospect_directory').abortSignal(request.signal);
+      const { data, error } = await supabase.rpc(directoryRpc).abortSignal(request.signal);
       if (error || !Array.isArray(data?.rows) || !data.sync) throw new Error('unavailable');
       if (!request.signal.aborted) setState({ data, loading: false, error: false });
     } catch {
       if (!request.signal.aborted) setState({ data: null, loading: false, error: true });
     }
-  }, []);
+  }, [directoryRpc]);
   useEffect(() => {
     refresh();
     const automatic = () => { if (document.visibilityState === 'visible') refresh({ background: true }); };

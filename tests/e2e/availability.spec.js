@@ -25,11 +25,12 @@ function makeSnapshot() {
 async function setup(page, { role = 'teacher', failed = false, stale = false, empty = false } = {}) {
   const data = makeSnapshot(); let fail = failed, detailsFail = false, clientsFail = false; const detailReads = []; const writes = [], websockets = [];
   const clientDirectory = clientDirectoryFixture(); const clientReads = []; const clientWrites = [];
-  const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[] };
+  const paymentApi = { available:true, failed:false, status:'pending', purchases:[], checkouts:[], signups:[], records:[], recordReads:[], recordsFailed:false };
   const accountApi = { link:null, needsPassword:true, calls:[] };
   const activityApi={failed:false,reads:[],progress:[],payments:[],packages:[]};
   const authApi={role,failed:false,delay:0,reads:0};
   const prospectApi={data:{rows:[],sync:{configured:false,label:'Private - Prospect',running:false}},calls:[],writes:[],failed:false,conflict:false};
+  const bookingApi={data:{rows:[],sync:{configured:false,label:'Private - Booking in Progress',running:false}},calls:[],writes:[],failed:false,conflict:false};
   const profileApi = {failed:false,saves:[],signatures:[],data:{contact:{name:'Example Package Holder',email:'holder@example.test',phone:'+85255550001'},profile:{profile_version:1},waiver_document:{version:'2026-09-16',title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}},waiver_signatures:[]}};
   const onboardingApi = { profile:{status:'ready'}, saves:[], failed:false };
   const googleApi = { enabled:false, authorize:[], exchanges:[], error:false };
@@ -47,17 +48,25 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
   await page.route('https://availability-test.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    if(path.endsWith('/admin_prospect_directory'))return respond(prospectApi.data);
-    if(path.endsWith('/sleekflow-prospect-sync')) {
-      const input=route.request().postDataJSON();prospectApi.calls.push(input);
-      if(prospectApi.failed)return respond({error:'invalid_key'},503);
-      Object.assign(prospectApi.data.sync,{configured:true,last_ok_at:now});
-      return respond({status:'synced',count:prospectApi.data.rows.length});
+    if(path.endsWith('/admin_website_payments')) {
+      const input=route.request().postDataJSON();paymentApi.recordReads.push(input);
+      if(paymentApi.recordsFailed)return respond({message:'unavailable'},503);
+      const items=paymentApi.records.filter(r=>(input.p_status==='all'||r.status===input.p_status)&&JSON.stringify(r).toLowerCase().includes(input.p_query.toLowerCase()));
+      return respond({items:items.slice(input.p_offset,input.p_offset+input.p_limit),total:items.length,as_of:now});
     }
-    if(path.endsWith('/save_studio_prospect')) {
-      const input=route.request().postDataJSON();prospectApi.writes.push(input);
-      if(prospectApi.conflict)return respond({code:'40001',message:'prospect_changed'},409);
-      const row=prospectApi.data.rows.find(r=>r.id===input.p_id);
+    if(path.endsWith('/admin_prospect_directory'))return respond(prospectApi.data);
+    if(path.endsWith('/admin_booking_progress_directory'))return respond(bookingApi.data);
+    if(path.endsWith('/sleekflow-prospect-sync')) {
+      const input=route.request().postDataJSON(),api=input.board==='booking_in_progress'?bookingApi:prospectApi;api.calls.push(input);
+      if(api.failed)return respond({error:'invalid_key'},503);
+      Object.assign(api.data.sync,{configured:true,last_ok_at:now});
+      return respond({status:'synced',count:api.data.rows.length});
+    }
+    if(path.endsWith('/save_studio_prospect')||path.endsWith('/save_booking_progress')) {
+      const api=path.endsWith('/save_booking_progress')?bookingApi:prospectApi;
+      const input=route.request().postDataJSON();api.writes.push(input);
+      if(api.conflict)return respond({code:'40001',message:'prospect_changed'},409);
+      const row=api.data.rows.find(r=>r.id===input.p_id);
       Object.assign(row,{remarks:input.p_remarks,status:input.p_status,next_action_date:input.p_next_action_date,version:row.version+1});return respond(null);
     }
     if (path.endsWith('/settings')) return respond({external:{google:googleApi.enabled,email:true}});
@@ -171,7 +180,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.includes('/functions/')) return respond({ message: 'not deployed' }, 404);
     return respond([]);
   });
-  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, activityApi, authApi, prospectApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
+  return { data, writes, detailReads, clientWrites, clientDirectory, clientReads, paymentApi, accountApi, googleApi, onboardingApi, profileApi, activityApi, authApi, prospectApi, bookingApi, setClientsFailure: value => { clientsFail = value; }, setDetailsFailure: value => { detailsFail = value; }, setFailure: value => { fail = value; } };
 }
 
 test('client uses real HK dates, filters actual slot studios and cannot book a blocked room', async ({ page }) => {
@@ -413,14 +422,25 @@ test('admin keeps the original workspace and all eight sections without mock man
   await expect(page.getByRole('heading', { name: 'By studio', exact: true })).toBeVisible();
   if (testInfo.project.name === 'desktop') await expect(page.locator('aside')).toHaveCSS('width', '248px');
   await page.screenshot({ path: `test-results/admin-dashboard-${testInfo.project.name}.png`, fullPage: true });
-  for (const section of ['Teachers', 'Approvals', 'Prospects', 'Payouts', 'Refunds']) {
+  for (const section of ['Teachers', 'Approvals', 'Prospects', 'Booking in Progress']) {
     await nav.getByRole('button', { name: section, exact: true }).click();
-    if(section==='Prospects') await expect(page.getByRole('button',{name:'Connect SleekFlow',exact:true})).toBeVisible();
+    if(section==='Prospects'||section==='Booking in Progress') await expect(page.getByRole('button',{name:'Connect SleekFlow',exact:true})).toBeVisible();
     else await expect(page.getByText('Not connected yet', { exact: true })).toBeVisible();
     expect(await page.locator('body').innerText()).not.toMatch(/[\u3400-\u9fff]/);
     await expect(page.getByText(/Mara Whitfield|Hailey Saw|Yuki Mori|Grace Lau|768,000|49,400/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Approve|Send reminder|Confirm refund/ })).toHaveCount(0);
   }
+  await expect(nav.getByRole('button',{name:'Payouts',exact:true})).toHaveCount(0);
+  await expect(nav.getByRole('button',{name:'Refunds',exact:true})).toHaveCount(0);
+  await nav.getByRole('button',{name:'Payments',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Payments',exact:true})).toBeVisible();
+  const paymentNav=page.getByRole('navigation',{name:'Payment sections'});
+  await expect(paymentNav.getByRole('button',{name:'Payment records',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByText('No website payment records yet.',{exact:true})).toBeVisible();
+  await paymentNav.getByRole('button',{name:'Payouts',exact:true}).click();
+  await expect(page.getByText('Payout reporting is not connected yet.',{exact:true})).toBeVisible();
+  await paymentNav.getByRole('button',{name:'Refunds',exact:true}).click();
+  await expect(page.getByText('Refund requests and processing are not connected yet.',{exact:true})).toBeVisible();
   await nav.getByRole('button', { name: 'Dashboard', exact: true }).click();
   await page.getByRole('button', { name: 'Room schedule', exact: true }).click();
   await page.getByRole('button', { name: 'List', exact: true }).click();
@@ -1022,4 +1042,43 @@ test('admin prospects connect securely and preserve editable follow-up through b
   await page.locator('.prospects-table').scrollIntoViewIfNeeded();
   await page.screenshot({path:`test-results/prospects-${testInfo.project.name}.png`,fullPage:true});
   await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByText('Synthetic Prospect',{exact:true})).toHaveCount(0);
+});
+
+
+test('booking in progress uses the shared connection and keeps records separate from prospects',async({page},testInfo)=>{
+  const {bookingApi,prospectApi}=await setup(page,{role:'admin'});
+  Object.assign(bookingApi.data.sync,{configured:true,last_ok_at:now});
+  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
+  bookingApi.data.rows=[row,{...row,id:'synthetic-archived',client_name:'Archived booking contact',source_present:false}];
+  prospectApi.data.rows=[{...row,client_name:'Separate Prospect',remarks:'Prospect-only note'}];
+  await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  const nav=page.getByRole('navigation',{name:'Admin navigation'});
+  await nav.getByRole('button',{name:'Booking in Progress',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Booking in Progress',exact:true})).toBeVisible();
+  await expect(page.getByText('SleekFlow · Private - Booking in Progress',{exact:true})).toBeVisible();
+  await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toBeVisible();await expect(page.getByText('Separate Prospect',{exact:true})).toHaveCount(0);
+  await expect(page.getByLabel('Platform API key',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Sync now',exact:true}).click();await expect.poll(()=>bookingApi.calls.length).toBe(1);expect(bookingApi.calls.at(-1)).toEqual({action:'sync',board:'booking_in_progress'});expect(prospectApi.calls).toEqual([]);
+  await page.getByRole('button',{name:'Edit',exact:true}).click();await page.getByLabel('Remarks',{exact:true}).fill('Follow up with the teacher');await page.getByLabel('Status',{exact:true}).selectOption('pending payment');await page.getByRole('button',{name:'Save changes',exact:true}).click();
+  await expect(page.getByText('Follow-up saved.',{exact:true})).toBeVisible();expect(bookingApi.writes).toHaveLength(1);expect(prospectApi.writes).toHaveLength(0);
+  await page.locator('.prospects-table').scrollIntoViewIfNeeded();await page.screenshot({path:`test-results/booking-progress-${testInfo.project.name}.png`,fullPage:true});
+  await nav.getByRole('button',{name:'Prospects',exact:true}).click();await expect(page.getByText('Separate Prospect',{exact:true})).toBeVisible();await expect(page.getByText('Prospect-only note',{exact:true})).toBeVisible();await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toHaveCount(0);
+  await nav.getByRole('button',{name:'Booking in Progress',exact:true}).click();await page.getByLabel('Filter prospect label').selectOption('archived');await expect(page.getByText('Archived booking contact',{exact:true})).toBeVisible();await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByText('Archived booking contact',{exact:true})).toHaveCount(0);
+});
+
+
+test('Payments lists website Stripe records with filters and private failure states',async({page})=>{
+ const {paymentApi}=await setup(page,{role:'admin'});paymentApi.available=false;
+ const row={id:'synthetic-paid-order',created_at:now,paid_at:now,client_name:'Synthetic Payer',client_email:'payer@example.test',package_name:'Private ten',format:'1:1',credits:10,price_hkd:9000,status:'paid',stripe_session_id:'cs_live_synthetic_example'};
+ paymentApi.records=[row,{...row,id:'synthetic-pending-order',client_name:'Pending Payer',status:'pending',paid_at:null}];
+ await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Payments',exact:true}).click();
+ await expect(page.getByText('Stripe checkout is not enabled yet.',{exact:false})).toBeVisible();
+ await expect(page.getByText('Synthetic Payer',{exact:true})).toBeVisible();await expect(page.getByText('Pending Payer',{exact:true})).toBeVisible();
+ await page.getByLabel('Payment status',{exact:true}).selectOption('paid');await expect(page.getByText('Pending Payer',{exact:true})).toHaveCount(0);await expect(page.getByText('Synthetic Payer',{exact:true})).toBeVisible();
+ await page.getByLabel('Search payments',{exact:true}).fill('missing');await expect(page.getByText('No payment records match these filters.',{exact:true})).toBeVisible();
+ await page.getByLabel('Search payments',{exact:true}).fill('payer@example.test');await expect(page.getByText('Synthetic Payer',{exact:true})).toBeVisible();
+ paymentApi.recordsFailed=true;await page.getByRole('button',{name:'Refresh records',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Payment records could not be loaded');await expect(page.getByText('Synthetic Payer',{exact:true})).toHaveCount(0);
+ expect(paymentApi.checkouts).toEqual([]);
 });

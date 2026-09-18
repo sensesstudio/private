@@ -1,4 +1,8 @@
 export const PROSPECT_STATUSES = ['matching teacher','pending teacher','pending payment','pending us','confirmed booking'];
+export const FOLLOWUP_BOARDS = {
+ prospects: {title:'Prospects',label:'Private - Prospect',directoryRpc:'admin_prospect_directory',saveRpc:'save_studio_prospect',noun:'prospects',openLabel:'Open prospects',searchLabel:'Search prospects',editorLabel:'Edit prospect',eyebrow:'Prospect follow-up'},
+ booking_in_progress: {title:'Booking in Progress',label:'Private - Booking in Progress',directoryRpc:'admin_booking_progress_directory',saveRpc:'save_booking_progress',noun:'contacts',openLabel:'Bookings in progress',searchLabel:'Search booking contacts',editorLabel:'Edit booking contact',eyebrow:'Booking follow-up'},
+};
 export const statusLabel = value => value[0].toUpperCase() + value.slice(1);
 export function visibleProspects(rows,{query='',status='all',scope='active',sort='next_action_date:asc'}) {
   const term=query.trim().toLowerCase(),phone=term.replace(/\D/g,'');
@@ -18,7 +22,7 @@ export const SYNC_ERRORS={
  rate_limited:'SleekFlow’s API limit was reached. The next scheduled sync will try again.',
  source_changed:'Contacts changed during the sync. Your saved records are unchanged; the next sync will retry.',
  source_format:'SleekFlow returned an unexpected format. Saved records are unchanged; please contact the studio administrator.',
- too_many_contacts:'The number of matching prospects exceeds the current sync limit. Saved records are unchanged.',
+ too_many_contacts:'The number of matching contacts exceeds the current sync limit. Saved records are unchanged.',
  sync_unavailable:'SleekFlow sync could not finish. Check the connection and try again.',
  admin_access_required:'Please sign in again with your admin account.',
 };

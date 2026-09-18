@@ -9,6 +9,7 @@ import { LOCATIONS, locName } from '../../data.js';
 import { useAdminRoomDetails } from '../../availability/adminRoomDetails.js';
 import { RoomBookingDetails } from '../live/RoomBookingDetails.jsx';
 import { AdminClients } from './Clients.jsx';
+import { WebsitePayments } from './WebsitePayments.jsx';
 import { AdminProspects } from './Prospects.jsx';
 import './admin.css';
 
@@ -71,15 +72,24 @@ const UNCONNECTED = {
   Refunds: { eyebrow: 'Client care', title: 'Refunds', description: 'Refund requests and processing are not connected yet.', icon: 'rotate-ccw' },
 };
 
-function UnconnectedSection({ section }) {
+function UnconnectedSection({ section, embedded = false }) {
   const content = UNCONNECTED[section];
-  return <div className="admin-page">
-    <PageHead eyebrow={content.eyebrow} title={content.title} sub="Not connected yet" />
+  return <div className={embedded ? undefined : "admin-page"}>
+    {!embedded && <PageHead eyebrow={content.eyebrow} title={content.title} sub="Not connected yet" />}
     {content.stats && <div className="admin-stats">{content.stats.map(([icon, label]) => <Stat key={label} icon={icon} label={label} value="—" />)}</div>}
     <Card pad={content.columns ? 0 : 32}>
       {content.columns && <div className="admin-table-scroll"><table className="admin-table"><thead><tr>{content.columns.map(h => <th key={h}>{h}</th>)}</tr></thead></table></div>}
       <div className="admin-empty-panel"><Icon n={content.icon || 'database'} size={30} color="var(--accent)" /><p>{content.description}</p></div>
     </Card>
+  </div>;
+}
+
+function Payments() {
+  const [section, setSection] = useState('Payment records');
+  return <div className="admin-page admin-payments-page">
+    <PageHead eyebrow="Studio finance" title="Payments" sub="Client website payments, payouts and refunds" />
+    <nav aria-label="Payment sections" className="admin-subnav">{['Payment records','Payouts','Refunds'].map(name => <button key={name} aria-pressed={section === name} onClick={() => setSection(name)}>{name}</button>)}</nav>
+    {section === 'Payment records' ? <WebsitePayments /> : <UnconnectedSection section={section} embedded />}
   </div>;
 }
 
@@ -91,7 +101,7 @@ export function LiveAdminWorkspace({ account, session }) {
   const badge = <div className="admin-account"><div className="admin-account-identity"><span className="admin-account-mark">S</span><div className="hide-mobile"><strong>{account.full_name || 'Studio Ops'}</strong><span>Studio Ops</span></div></div>
     <Button variant="ghost" size="sm" onClick={session.logout}>Sign out</Button>
   </div>;
-  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Clients' ? <AdminClients /> : tab === 'Prospects' ? <AdminProspects /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
+  const content = tab === 'Dashboard' ? <Dashboard go={setTab} /> : tab === 'Clients' ? <AdminClients /> : tab === 'Prospects' ? <AdminProspects /> : tab === 'Booking in Progress' ? <AdminProspects board="booking_in_progress" /> : tab === 'Payments' ? <Payments /> : tab === 'Bookings' ? <div className="admin-page"><RoomSchedule embedded /></div> : <UnconnectedSection section={tab} />;
   return <Workspace title="Admin" nav={ADMIN_NAV} tab={tab} setTab={setTab} headRight={badge}>
     {session.error && <p className="admin-panel-note" role="alert">{session.error}</p>}
     <div key={tab}>{content}</div>
