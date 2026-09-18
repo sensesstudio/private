@@ -8,19 +8,30 @@ import { visibleProspects } from '../src/admin/prospects.js';
 const label={id:'label-1',hashtag:'Private - Prospect'};
 const contact=i=>({id:`contact-${i}`,firstName:'Synthetic',lastName:String(i),phoneNumber:'+85255550001',lables:i%2?['Unrelated']:[label.hashtag],lastestMessage:{messageContent:'Test inquiry',channel:'whatsappcloudapi',createdAt:'2026-09-16T03:30:00Z',conversationId:'test-conversation'}});
 
-test('SleekFlow documented pagination imports only exact label and latest live conversation',async()=>{
- const contacts=Array.from({length:205},(_,i)=>contact(i)),calls=[];
- const api=async(path,body)=>{calls.push({path,body});return path==='/api/labels'?[label]:{totalContact:contacts.length,results:contacts.slice(body.pagination.offset,body.pagination.offset+200)};};
- contacts[0].lables=[' private - prospect '];contacts[2].lables=['private - prospects'];
+test('SleekFlow scopes every page to the resolved label even for large accounts',async()=>{
+ // Only these 205 synthetic matches are queried, regardless of account size.
+ const contacts=Array.from({length:205},(_,i)=>({...contact(i),lables:[label.hashtag]})),calls=[];
+ const api=async(path,body)=>{
+  calls.push({path,body});if(path==='/api/labels')return [label];
+  assert.deepEqual(body.conditions,[{containHashTag:'hashtags',conditionOperator:'ContainsAny',nextOperator:'And',values:[label.hashtag]}]);
+  assert.equal(body.include.labels,true);assert.equal(body.include.latestMessage,true);
+  return {totalContact:contacts.length,results:contacts.slice(body.pagination.offset,body.pagination.offset+200)};
+ };
+ contacts[0].lables=[' private - prospect '];contacts[2].lables=[label.id];
  contacts[4].lastestMessage={...contacts[4].lastestMessage,isSandbox:true};
  contacts[6].lastestMessage={uploadedFiles:[{}],timestamp:1789529400};
+ contacts[8]={...contacts[8],labels:[label.hashtag],lables:undefined,latestMessage:null,lastestMessage:null,lastContact:'2026-09-18T02:00:00Z',lastContactFromCustomers:'2026-09-18T03:00:00Z'};
  const rows=await fetchProspects(api);
- assert.equal(rows.length,102);assert.equal(rows[0].last_message,'Test inquiry');assert.equal(rows[0].last_contact_at,'2026-09-16T03:30:00.000Z');
+ assert.equal(rows.length,205);assert.equal(rows[0].last_message,'Test inquiry');assert.equal(rows[0].last_contact_at,'2026-09-16T03:30:00.000Z');
  assert.equal(rows.find(r=>r.id==='contact-4').last_message,null);assert.equal(rows.find(r=>r.id==='contact-6').last_message,'[Attachment]');
+ assert.equal(rows.find(r=>r.id==='contact-8').last_contact_at,'2026-09-18T03:00:00.000Z');
  assert.deepEqual(calls.slice(1).map(c=>c.body.pagination.offset),[0,200]);assert.ok(rows.every(r=>!('email' in r)));
  for(const data of [{results:[],totalContact:3},{results:[contact(0),contact(0)],totalContact:2},{results:[{...contact(0),lables:null}],totalContact:1},{results:[],totalContact:10001}]) {
   await assert.rejects(fetchProspects(async p=>p==='/api/labels'?[label]:data),/source_changed|source_format|too_many_contacts/);
  }
+ // Never silently skip non-matches in a supposedly label-scoped snapshot.
+ for(const bad of ['Unrelated','Private - Prospects'])await assert.rejects(fetchProspects(async p=>p==='/api/labels'?[label]:{totalContact:1,results:[{...contact(0),lables:[bad]}]}),/source_format/);
+ assert.deepEqual(await fetchProspects(async p=>p==='/api/labels'?[label]:{totalContact:0,results:[]}),[]);
  await assert.rejects(findLabel(async()=>[{id:'x',hashtag:'private - prospects'}]),/label_not_found/);
  await assert.rejects(findLabel(async()=>[label,label]),/label_not_found/);
  let captured;await provider('synthetic-key',async(u,o)=>{captured={u,o};return Response.json([label]);})('/api/labels');

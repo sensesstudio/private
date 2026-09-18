@@ -18,7 +18,7 @@ export const SYNC_ERRORS={
  rate_limited:'SleekFlow’s API limit was reached. The next scheduled sync will try again.',
  source_changed:'Contacts changed during the sync. Your saved records are unchanged; the next sync will retry.',
  source_format:'SleekFlow returned an unexpected format. Saved records are unchanged; please contact the studio administrator.',
- too_many_contacts:'This SleekFlow account exceeds the current sync limit. Saved records are unchanged.',
+ too_many_contacts:'The number of matching prospects exceeds the current sync limit. Saved records are unchanged.',
  sync_unavailable:'SleekFlow sync could not finish. Check the connection and try again.',
  admin_access_required:'Please sign in again with your admin account.',
 };
