@@ -1,4 +1,4 @@
-import { provider, findLabel, fetchProspects, removeProspectLabel } from './provider.js';
+import { provider, findLabel, fetchProspects, removeProspectLabel, enrichBookingStaff } from './provider.js';
 const cors = { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods':'POST, OPTIONS', 'Cache-Control':'no-store', 'Content-Type':'application/json' };
 const reply = (data,status=200) => new Response(JSON.stringify(data),{status,headers:cors});
 const safeError = error => ['invalid_key','rate_limited','label_not_found','source_changed','source_format','too_many_contacts'].includes(error?.message) ? error.message : 'sync_unavailable';
@@ -12,7 +12,9 @@ export function createHandler({ syncKey, authorize, rpc, fetcher = fetch }) {
     try {
       run=await rpc(config.begin,{});
       if(run.status!=='ready')return {status:run.status};
-      const rows=await fetchProspects(provider(run.api_key,fetcher,AbortSignal.timeout(105000)),config.label);
+      const api=provider(run.api_key,fetcher,AbortSignal.timeout(105000));
+      const rows=await fetchProspects(api,config.label);
+      if(board==='booking_in_progress')await enrichBookingStaff(api,rows);
       const count=await rpc(config.finish,{p_run_id:run.run_id,p_rows:rows,p_error:null});
       return {status:'synced',count};
     } catch(error) {

@@ -1048,7 +1048,7 @@ test('admin prospects connect securely and preserve editable follow-up through b
 test('booking in progress uses the shared connection and keeps records separate from prospects',async({page},testInfo)=>{
   const {bookingApi,prospectApi}=await setup(page,{role:'admin'});
   Object.assign(bookingApi.data.sync,{configured:true,last_ok_at:now});
-  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',conversation_id:'synthetic-chat',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
+  const row={id:'synthetic-shared-contact',client_name:'Synthetic Booking Contact',mobile:'+85255550009',conversation_id:'synthetic-chat',last_staff_name:'Synthetic Staff',last_staff_at:now,last_staff_kind:'note',last_staff_status:'confirmed',last_message:'Please confirm the booking time',message_at:now,last_contact_at:now,channel:'WhatsApp',remarks:'',next_action_date:null,status:'pending teacher',source_present:true,version:1};
   bookingApi.data.rows=[row,{...row,id:'synthetic-archived',client_name:'Archived booking contact',source_present:false}];
   prospectApi.data.rows=[{...row,client_name:'Separate Prospect',remarks:'Prospect-only note'}];
   await page.goto('/#admin');await page.getByLabel('Email',{exact:true}).fill('admin@example.test');await page.getByLabel('Password',{exact:true}).fill('test-password-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
@@ -1058,6 +1058,8 @@ test('booking in progress uses the shared connection and keeps records separate 
   await expect(page.getByText('SleekFlow · Private - Booking in Progress',{exact:true})).toBeVisible();
   await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('href','https://app.sleekflow.io/en/inbox?conversationId=synthetic-chat');
   await expect(page.getByRole('link',{name:'+85255550009',exact:true})).toHaveAttribute('target','_blank');
+  await expect(page.getByText('Synthetic Staff',{exact:true})).toBeVisible();
+  await expect(page.locator('td[data-label="Last contact staff"]')).toContainText('Internal note');
   await expect(page.getByText('Synthetic Booking Contact',{exact:true})).toBeVisible();await expect(page.getByText('Separate Prospect',{exact:true})).toHaveCount(0);
   await expect(page.getByLabel('Platform API key',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Sync now',exact:true}).click();await expect.poll(()=>bookingApi.calls.length).toBe(1);expect(bookingApi.calls.at(-1)).toEqual({action:'sync',board:'booking_in_progress'});expect(prospectApi.calls).toEqual([]);
