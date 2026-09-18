@@ -405,7 +405,7 @@ test('admin refresh replaces room records and a failed read preserves records wi
 });
 
 
-test('admin keeps the original workspace and all eight sections without mock management records', async ({ page }, testInfo) => {
+test('admin keeps the original workspace and all nine sections without mock management records', async ({ page }, testInfo) => {
   const api = await setup(page, { role: 'admin' });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/#admin');
