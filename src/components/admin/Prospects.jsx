@@ -9,6 +9,12 @@ import './prospects.css';
 const when = value => value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value)) + ' HKT' : '—';
 const day = value => value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:'Asia/Hong_Kong'}).format(new Date(`${value}T00:00:00+08:00`)) : '—';
 const SORTS=[['next_action_date:asc','Next action: earliest first'],['next_action_date:desc','Next action: latest first'],['last_contact_at:desc','Last contact: newest first'],['last_contact_at:asc','Last contact: oldest first'],['client_name:asc','Name: A–Z'],['client_name:desc','Name: Z–A'],['status:asc','Status: A–Z']];
+function ContactPhone({row}) {
+  if (!row.mobile) return '—';
+  const id=typeof row.conversation_id==='string'?row.conversation_id.trim():'';
+  if (!id) return <span title="Chat link is not available yet">{row.mobile}</span>;
+  return <a href={`https://app.sleekflow.io/en/inbox?conversationId=${encodeURIComponent(id)}`} target="_blank" rel="noopener noreferrer" title="Open SleekFlow chat in a new tab" style={{color:'var(--ink)',textDecoration:'underline',textUnderlineOffset:3}}>{row.mobile}</a>;
+}
 function Conversation({row,full=false}) {
   return <div className="prospect-message"><p className={full?'':'prospect-message-preview'}>{row.last_message || 'No message available'}</p>
     <small>{row.message_at ? when(row.message_at) : ''}{row.channel ? ` · ${row.channel}` : ''}</small></div>;
@@ -26,7 +32,7 @@ function ProspectEditor({record,config,onCancel,onSaved}) {
     finally {pending.current=false;setSaving(false);}
   }
   return <section aria-label={config.editorLabel}>
-    <PageHead eyebrow={config.eyebrow} title={record.client_name} sub={record.mobile||'Mobile number unavailable'}/>
+    <PageHead eyebrow={config.eyebrow} title={record.client_name} sub={<ContactPhone row={record}/>} />
     <Card pad={22}><dl className="admin-client-fields"><div><dt>Last contact date</dt><dd>{when(record.last_contact_at)}</dd></div><div><dt>SleekFlow label</dt><dd>{record.source_present?config.label:'Label removed · Saved follow-up retained'}</dd></div></dl>
       <h2 className="admin-card-title prospect-conversation-title">Last SleekFlow conversation</h2><Conversation row={record} full/>
       <form onSubmit={submit}><fieldset disabled={saving} className="admin-editor-fields prospect-editor">
@@ -84,7 +90,7 @@ export function AdminProspects({board='prospects'}) {
           <select aria-label="Sort prospects" value={sort} onChange={e=>change(setSort,e.target.value)}>{SORTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
         </div>
         <Card pad={0}><div className="admin-table-scroll"><table className="admin-table prospects-table"><caption className="admin-client-caption">{filtered.length} {config.noun} · Dates shown in Hong Kong time</caption><thead><tr>{['Client name','Mobile number','Last SleekFlow conversation','Remarks','Last contact date','Next action date','Status',''].map((h,i)=><th key={i} scope="col">{h||'Action'}</th>)}</tr></thead>
-          <tbody>{shown.map(r=><tr key={r.id}><td data-label="Client name"><strong>{r.client_name}</strong>{!r.source_present&&<small>Label removed</small>}</td><td data-label="Mobile number">{r.mobile||'—'}</td><td data-label="Last SleekFlow conversation"><Conversation row={r}/></td><td data-label="Remarks"><p className="prospect-remarks-preview">{r.remarks||'—'}</p></td><td data-label="Last contact date">{when(r.last_contact_at)}</td><td data-label="Next action date">{day(r.next_action_date)}{r.next_action_date&&r.next_action_date<=today&&r.status!=='confirmed booking'&&<small>Follow-up due</small>}</td><td data-label="Status"><span className="prospect-status">{statusLabel(r.status)}</span></td><td><Button size="sm" variant="soft" style={{padding:'10px 12px',whiteSpace:'nowrap'}} onClick={()=>{setEditor(r);setNotice('');}}>Edit</Button></td></tr>)}</tbody></table></div>
+          <tbody>{shown.map(r=><tr key={r.id}><td data-label="Client name"><strong>{r.client_name}</strong>{!r.source_present&&<small>Label removed</small>}</td><td data-label="Mobile number"><ContactPhone row={r}/></td><td data-label="Last SleekFlow conversation"><Conversation row={r}/></td><td data-label="Remarks"><p className="prospect-remarks-preview">{r.remarks||'—'}</p></td><td data-label="Last contact date">{when(r.last_contact_at)}</td><td data-label="Next action date">{day(r.next_action_date)}{r.next_action_date&&r.next_action_date<=today&&r.status!=='confirmed booking'&&<small>Follow-up due</small>}</td><td data-label="Status"><span className="prospect-status">{statusLabel(r.status)}</span></td><td><Button size="sm" variant="soft" style={{padding:'10px 12px',whiteSpace:'nowrap'}} onClick={()=>{setEditor(r);setNotice('');}}>Edit</Button></td></tr>)}</tbody></table></div>
           {!shown.length&&<div className="admin-empty-panel"><Icon n="user-search" size={30}/><p>{rows.length?`No ${config.noun} match these filters.`:syncInfo.last_ok_at?`No contacts currently have the ${config.label} label.`:'Contacts will appear after the first successful SleekFlow sync.'}</p></div>}
           <div className="admin-client-pagination"><span>Page {currentPage+1} of {lastPage+1}</span><div><Button variant="soft" size="sm" disabled={currentPage===0} onClick={()=>setPage(currentPage-1)}>Previous</Button><Button variant="soft" size="sm" disabled={currentPage>=lastPage} onClick={()=>setPage(currentPage+1)}>Next</Button></div></div>
         </Card>
