@@ -4,6 +4,8 @@ export const INTEGRATION = 'senses-private-packages-rqjzkmnp';
 export function checkoutParameters(order) {
   return {
     mode: 'payment', locale: 'en', integration_identifier: INTEGRATION,
+    // Snapshot the recipient with the order so retries use identical parameters.
+    ...(order.receipt_email ? { customer_email: order.receipt_email, payment_intent_data: { receipt_email: order.receipt_email, description: `Senses Studio — ${order.package_name} (${order.format}), ${order.credits} session${order.credits === 1 ? '' : 's'}` } } : {}),
     line_items: [{ quantity: 1, price_data: { currency: 'hkd', unit_amount: order.price_hkd * 100,
       product_data: { name: `Senses Studio — ${order.package_name} (${order.format})`, description: `${order.credits} session${order.credits === 1 ? '' : 's'}. Valid for ${order.validity_months} month${order.validity_months === 1 ? '' : 's'} from first visit.` } } }],
     success_url: `${order.return_origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}#client`,

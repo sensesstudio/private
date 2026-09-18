@@ -69,3 +69,11 @@ Source fields (name, mobile, latest message, contact time) are independent from 
 All records/settings are in the private schema, accessed through current-session admin RPCs or service-only worker RPCs. RPC wrappers in public are invokers. The UI never persists prospect records or API keys in browser storage. Latest conversation is a text preview, not a complete chat transcript; attachment contents are not downloaded. Provider errors are reduced to fixed codes.
 
 Live importing requires the studio administrator to enter their SleekFlow Platform API key in the deployed connection form. Synthetic test fixtures verify the documented contract; they do not establish that a particular production API key or plan has access. Official reference: https://apidoc.sleekflow.io/docs/platform-api/branches/main/hhpzcos4fmvyf-search-contacts-with-dynamic-included-fields .
+
+## Customer receipts — September 2026
+
+Client Payment & packages and Pricing purchase history offer **View receipt / PDF**. The authenticated `create-checkout` receipt action accepts an order ID, checks ownership and the paid order snapshot, then retrieves `payment_intent.latest_charge` from Stripe. Only verified Stripe receipt hosts are returned, with `no-store`. The hosted receipt offers PDF download; no separate paid-invoice product is enabled. Receipt lookup never writes payments or credits. Admin client-record views do not offer this client-only action.
+
+New checkout orders snapshot the authenticated account email in `package_checkout_orders.receipt_email`; Checkout uses it for `customer_email` and `payment_intent_data.receipt_email`. Stripe sends the payment receipt after successful live payment, with the package description. Existing orders are not backfilled or re-emailed, so retries retain identical Stripe parameters and historical receipts retain the actual paid amount. A Stripe email address/receipt URL does not prove inbox delivery. Historical email delivery can be checked in the Stripe payment's receipt history.
+
+References: https://docs.stripe.com/receipts and https://docs.stripe.com/api/checkout/sessions/create .

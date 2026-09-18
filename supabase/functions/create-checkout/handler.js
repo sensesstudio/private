@@ -1,4 +1,4 @@
-import { PAYMENT_ORIGINS, STRIPE_ACCOUNT, checkoutParameters, fulfillSession } from '../_shared/payments.js';
+import { PAYMENT_ORIGINS, STRIPE_ACCOUNT, INTEGRATION, checkoutParameters, fulfillSession } from '../_shared/payments.js';
 export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
   return async request => {
     const origin = request.headers.get('Origin');
@@ -25,6 +25,27 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
       if (!configured || !stripe) return json({ error: 'Online payments are temporarily unavailable.' }, 503);
       const account = await stripe.accounts.retrieve();
       if (account.id !== STRIPE_ACCOUNT || !account.charges_enabled) return json({ error: 'Online payments are temporarily unavailable.' }, 503);
+      if (input.action === 'receipt') {
+        if (typeof input.orderId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.orderId)) return json({ error: 'Invalid purchase reference.' }, 400);
+        const { data: order, error } = await admin.from('package_checkout_orders').select('*').eq('id', input.orderId).eq('client_id', auth.user.id).maybeSingle();
+        if (error) throw error;
+        if (!order || order.client_id !== auth.user.id) return json({ error: 'Purchase not found for this account.' }, 404);
+        if (order.status !== 'paid' || !order.stripe_session_id || order.livemode !== livemode) return json({ error: 'A receipt is available after payment is confirmed.' }, 409);
+        // Read only: opening a receipt must never create a payment or add credits.
+        const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, { expand: ['payment_intent.latest_charge'] });
+        const intent = session.payment_intent, charge = intent?.latest_charge;
+        if (session.id !== order.stripe_session_id || session.metadata?.integration !== INTEGRATION || session.metadata?.order_id !== order.id ||
+            session.client_reference_id !== auth.user.id || session.mode !== 'payment' || session.payment_status !== 'paid' ||
+            session.livemode !== order.livemode || session.amount_total !== order.price_hkd * 100 || session.currency !== 'hkd' ||
+            intent?.status !== 'succeeded' || charge?.paid !== true || charge?.status !== 'succeeded' ||
+            charge?.amount !== session.amount_total || charge?.currency !== session.currency || charge?.livemode !== order.livemode) {
+          return json({ error: 'This receipt could not be verified. Please contact the studio.' }, 409);
+        }
+        if (!charge.receipt_url) return json({ error: 'Your receipt is not ready yet. Please try again shortly.' }, 409);
+        const url = new URL(charge.receipt_url);
+        if (url.protocol !== 'https:' || !['pay.stripe.com', 'receipt.stripe.com'].includes(url.hostname) || url.username || url.password || url.port) throw new Error('invalid_receipt_url');
+        return json({ url: url.href });
+      }
       if (input.action === 'status') {
         if (typeof input.sessionId !== 'string' || !/^cs_[a-zA-Z0-9_]+$/.test(input.sessionId)) return json({ error: 'Invalid checkout reference.' }, 400);
         const { data: order, error } = await admin.from('package_checkout_orders').select('*').eq('stripe_session_id', input.sessionId).eq('client_id', auth.user.id).maybeSingle();
@@ -37,7 +58,7 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
       }
       if (typeof input.packageId !== 'string' || input.packageId.length > 80 || !PAYMENT_ORIGINS.includes(input.origin)) return json({ error: 'Invalid package request.' }, 400);
       for (let attempt = 0; attempt < 2; attempt++) {
-        const { data: order, error } = await admin.rpc('prepare_package_checkout', { p_client_id: auth.user.id, p_package_id: input.packageId, p_origin: input.origin, p_livemode: livemode });
+        const { data: order, error } = await admin.rpc('prepare_package_checkout', { p_client_id: auth.user.id, p_package_id: input.packageId, p_origin: input.origin, p_livemode: livemode, p_receipt_email: auth.user.email || null });
         if (error) {
           if (error.message?.includes('trial_already_purchased')) return json({ error: 'You have already purchased this trial offer.' }, 409);
           if (error.message?.includes('client_account_required')) return json({ error: 'Please sign in with a client account to buy a package.' }, 403);
@@ -68,6 +89,6 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
         return json({ url: session.url });
       }
       return json({ error: 'Please try checkout again.' }, 409);
-    } catch { return json({ error: 'Could not confirm checkout. Please retry or contact the studio.' }, 503); }
+    } catch { return json({ error: input.action === 'receipt' ? 'Could not load your receipt. Please retry or contact the studio.' : 'Could not confirm checkout. Please retry or contact the studio.' }, 503); }
   };
 }
