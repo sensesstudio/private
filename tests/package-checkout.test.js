@@ -22,10 +22,11 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   await db.exec('grant select,insert,update,delete on all tables in schema public to anon,authenticated,service_role;');
   await db.exec(await file('migrations/0005_live_availability.sql'));
   await db.exec(await file('migrations/20260916072203_package_checkout.sql'));
+  await db.exec(await file('migrations/20260918120533_update_private_package_prices.sql'));
   await db.exec(`insert into auth.users values('${client}'),('${other}'); insert into public.profiles(id,role,full_name) values('${client}','client','Synthetic Buyer'),('${other}','client','Other Buyer');`);
   const as = (role, id='') => db.exec(`reset role; select set_config('request.jwt.claim.sub','${id}',false); set role ${role};`);
   const reserve = async (pkg='p11-trial', who=client) => ({ rows: (await db.query('select prepare_package_checkout($1,$2,$3,true) as o',[who,pkg,origin])).rows.map(r=>r.o) });
-  const settle = (id, overrides={}) => { const p = { session:'cs_live_synthetic', who:client, amount:90000, currency:'hkd', paid:'paid', mode:true,...overrides }; return db.query('select fulfill_package_checkout($1,$2,$3,$4,$5,$6,$7) as id',[id,p.session,p.who,p.amount,p.currency,p.paid,p.mode]); };
+  const settle = (id, overrides={}) => { const p = { session:'cs_live_synthetic', who:client, amount:100000, currency:'hkd', paid:'paid', mode:true,...overrides }; return db.query('select fulfill_package_checkout($1,$2,$3,$4,$5,$6,$7) as id',[id,p.session,p.who,p.amount,p.currency,p.paid,p.mode]); };
   await as('anon');
   assert.equal((await db.query('select count(*)::int n from packages where active')).rows[0].n,8);
   await assert.rejects(db.query('select * from credit_balances'), /permission denied/);
@@ -34,7 +35,8 @@ test('checkout migration reserves once, rejects mismatches, commits payment/cred
   await as('service_role');
   await assert.rejects(reserve('trial'), /package_unavailable/);
   const order = (await reserve()).rows[0];
-  assert.equal(order.price_hkd,900); assert.equal(order.validity_months,1);
+  assert.equal(order.price_hkd,1000); assert.equal(order.validity_months,1);
+  assert.deepEqual((await db.query("select id,price_hkd from packages where active and format='1:1' order by sort_order")).rows,[{id:'p11-trial',price_hkd:1000},{id:'p11-single',price_hkd:1200},{id:'p11-5',price_hkd:5250},{id:'p11-10',price_hkd:10000}]);
   assert.equal((await reserve()).rows[0].id,order.id);
   for (const wrong of [{amount:1},{currency:'usd'},{paid:'unpaid'},{who:other},{mode:false}]) await assert.rejects(settle(order.id,wrong), /checkout_mismatch/);
   assert.equal((await db.query('select count(*)::int n from payments')).rows[0].n,0);

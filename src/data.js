@@ -99,10 +99,10 @@ export const locName = (id) => (LOCATIONS.find(l => l.id === id) || {}).name || 
 
 export const PACKAGES = LIVE_AVAILABILITY ? [] : [
   // Private 1:1
-  { id: 'p11-trial',  format: '1:1', name: 'Trial session', credits: 1,  price: 900,                validityMonths: 1, tag: 'Begin',       blurb: 'A single private to find your fit.' },
+  { id: 'p11-trial',  format: '1:1', name: 'Trial session', credits: 1,  price: 1000,               validityMonths: 1, tag: 'Begin',       blurb: 'A single private to find your fit.' },
   { id: 'p11-single', format: '1:1', name: 'Single class',  credits: 1,  price: 1200,               validityMonths: 1, tag: '',            blurb: 'One private session, pay as you go.' },
-  { id: 'p11-5',      format: '1:1', name: '5-class pack',  credits: 5,  price: 4750,  per: 950,    validityMonths: 3, tag: '',            blurb: 'Five private sessions.' },
-  { id: 'p11-10',     format: '1:1', name: '10-class pack', credits: 10, price: 9000,  per: 900,    validityMonths: 6, tag: 'Most chosen', blurb: 'Ten private sessions · best value.', popular: true },
+  { id: 'p11-5',      format: '1:1', name: '5-class pack',  credits: 5,  price: 5250,  per: 1050,   validityMonths: 3, tag: '',            blurb: 'Five private sessions.' },
+  { id: 'p11-10',     format: '1:1', name: '10-class pack', credits: 10, price: 10000, per: 1000,   validityMonths: 6, tag: 'Most chosen', blurb: 'Ten private sessions · best value.', popular: true },
   // Semi-private 1:2 — prices are the total for two people sharing the session.
   { id: 'p12-trial',  format: '1:2', name: 'Trial session', credits: 1,  price: 1200,               validityMonths: 1, tag: 'Begin',       blurb: 'A semi-private taster, for two.' },
   { id: 'p12-single', format: '1:2', name: 'Single class',  credits: 1,  price: 1600,               validityMonths: 1, tag: '',            blurb: 'One semi-private session, pay as you go.' },
