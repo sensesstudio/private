@@ -35,12 +35,12 @@ export function PackageCard({pack,detail=false}) {
   const total=Number.isFinite(pack.total) ? pack.total : null;
   return <section className="profile-dark package-card">
     <div className="profile-card-meta"><span>{pack.name} · Credits</span></div>
-    <p className="profile-credit-number"><strong>{remaining ?? '—'}</strong><span>/ {total ?? '—'} sessions remaining</span></p>
+    <p className="profile-credit-number"><strong>{remaining ?? (pack.source==='website'?total:'—')}</strong><span>{pack.source==='website'&&remaining===null?' sessions purchased':`/ ${total ?? '—'} sessions remaining`}</span></p>
     {remaining!==null && total>0 && <progress max={total} value={Math.max(0,Math.min(total,remaining))} aria-label={`${pack.name} remaining sessions`} />}
-    <p className="profile-source">Expiry date · {recordDate(pack.expires_on)}</p>
+    <p className="profile-source">{pack.source==='website'?`Valid for ${pack.validity_months} month${pack.validity_months===1?'':'s'} from the first booked class. Expiry date is set when activation is recorded.`:`Expiry date · ${recordDate(pack.expires_on)}`}</p>
     {pack.needs_review && <p>Balance needs review. Please confirm with the studio.</p>}
-    {pack.current===false && <p>This package is not currently usable in Mindbody.</p>}
-    {detail && <><dl><div><dt>Sessions used</dt><dd>{total!==null && remaining!==null ? Math.max(0,total-remaining) : 'Not recorded'}</dd></div><div><dt>Purchase date</dt><dd>{recordDate(pack.purchased_on)}</dd></div></dl><p className="profile-source">{pack.synced_at ? `Mindbody last updated ${instant(pack.synced_at)}.${pack.sync_status!=='synced' || Date.now()-new Date(pack.synced_at).getTime()>30*60000 ? ' Update delayed; showing last available values.' : ''}` : 'Studio record · Not yet linked to Mindbody.'}</p></>}
+    {pack.current===false && <p>{pack.source==='website'?'Payment refunded.':'This package is not currently usable in Mindbody.'}</p>}
+    {detail && <><dl><div><dt>Sessions used</dt><dd>{pack.payment_status==='refunded'?'Not applicable':total!==null && remaining!==null ? Math.max(0,total-remaining) : 'Not recorded per package'}</dd></div><div><dt>Purchase date</dt><dd>{recordDate(pack.purchased_on)}</dd></div></dl><p className="profile-source">{pack.source==='website'?'Purchased on this website · Payment confirmed.':pack.synced_at ? `Mindbody last updated ${instant(pack.synced_at)}.${pack.sync_status!=='synced' || Date.now()-new Date(pack.synced_at).getTime()>30*60000 ? ' Update delayed; showing last available values.' : ''}` : 'Studio record · Not yet linked to Mindbody.'}</p></>}
     <img className="profile-watermark" src="/assets/submark-brown-trim.png" alt="" aria-hidden="true"/>
   </section>;
 }

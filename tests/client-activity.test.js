@@ -22,7 +22,7 @@ test('client and admin share real histories with pagination, session gates and p
   await db.exec(await readFile(new URL('../supabase/seed.sql', import.meta.url), 'utf8'));
   await db.exec(await migration('0004_mindbody_rooms.sql'));
   await db.exec('grant select,insert,update,delete on all tables in schema public to anon,authenticated,service_role;');
-  for (const name of ['0002_session_photos.sql','0005_live_availability.sql','20260916072203_package_checkout.sql','20260916070412_admin_client_csv.sql','20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql','20260916141227_google_client_onboarding.sql','20260916141926_client_profile_records.sql','20260916145035_client_activity_sync.sql']) await db.exec(await migration(name));
+  for (const name of ['0002_session_photos.sql','0005_live_availability.sql','20260916072203_package_checkout.sql','20260916070412_admin_client_csv.sql','20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql','20260916141227_google_client_onboarding.sql','20260916141926_client_profile_records.sql','20260916145035_client_activity_sync.sql','20260918142247_include_online_client_packages.sql']) await db.exec(await migration(name));
 
   const ids={admin:'11111111-0000-4000-8000-000000000001',one:'11111111-0000-4000-8000-000000000002',two:'11111111-0000-4000-8000-000000000003',teacher:'11111111-0000-4000-8000-000000000004',otherTeacher:'11111111-0000-4000-8000-000000000005'};
   for(const [kind,id] of Object.entries(ids)) {
@@ -65,6 +65,8 @@ test('client and admin share real histories with pagination, session gates and p
   const next=await mine('progress',20);assert.equal(next.items.length,3);assert.equal(new Set([...own.items,...next.items].map(n=>n.id)).size,23);
   assert.deepEqual((await db.query('select name from storage.objects')).rows.map(r=>r.name),[path]);
   const payments=await mine('payments');assert.equal(payments.total,1);assert.equal(payments.items[0].amount_hkd,4750);assert.equal(payments.items[0].package_name,'5-class pack');
+  const snapshot=(await db.query('select my_client_account() data')).rows[0].data;
+  assert.equal(snapshot.packages.length,1);assert.equal(snapshot.packages[0].source,'website');assert.equal(snapshot.packages[0].name,'5-class pack - 1:1');assert.equal(snapshot.packages[0].remaining,5);assert.equal(snapshot.packages[0].expires_on,null);
   const packages=await mine('packages');assert.equal(packages.total,1);assert.equal(packages.items[0].credits,5);assert.equal(packages.items[0].payment_status,'paid');assert.equal('remaining' in packages.items[0],false);
   await as('admin');
   for(const [kind,expected] of [['progress',own],['payments',payments],['packages',packages]])assert.deepEqual((await admin(undefined,kind)).items,expected.items);
