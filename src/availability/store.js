@@ -44,11 +44,14 @@ export function createAvailabilityStore({ load, subscribe, references = () => {}
       if (!active || connection !== generation || burst) return;
       burst = setTimeout(() => { burst = null; if (active && connection === generation) void refresh(); }, coalesceMs);
     };
+    // Sign-in and sign-out change what the snapshot may contain, so they
+    // refresh at once rather than waiting out the window.
+    const refreshNow = () => { if (active && connection === generation) void refresh(); };
     cleanup = subscribe(coalesce, status => {
       if (!active || connection !== generation) return;
       if (status === 'SUBSCRIBED') void refresh();
       else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) { failed = true; publish(); }
-    });
+    }, refreshNow);
     void refresh();
     poll = setInterval(refresh, 30000);
     clock = setInterval(publish, 1000);

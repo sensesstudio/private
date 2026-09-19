@@ -3,6 +3,8 @@ import { Button } from '../shared/index.jsx';
 import { supabase } from '../../supabase/client.js';
 import { useAccount } from '../../supabase/useAccount.js';
 import { inputStyle } from '../../styles.js';
+import { PhoneField } from './PhoneField.jsx';
+import { compactPhone, isValidPhone } from '../../phone.js';
 
 // Run for every client entry point, including the return from pricing OAuth.
 export function ClientOnboarding({ children }) {
@@ -29,8 +31,8 @@ export function ClientOnboarding({ children }) {
 
   async function save(event) {
     event.preventDefault(); if (busy) return;
-    const mobile = phone.replace(/[\s().-]/g, '');
-    if (!/^\+[1-9]\d{6,14}$/.test(mobile)) { setError('Enter a valid mobile number including the country code.'); return; }
+    const mobile = compactPhone(phone);
+    if (!isValidPhone(phone)) { setError('Enter a valid mobile number.'); return; }
     setBusy(true); setError('');
     try {
       const { data, error: failure } = await supabase.rpc('complete_my_client_profile', { p_name: name.trim(), p_phone: mobile });
@@ -54,8 +56,8 @@ export function ClientOnboarding({ children }) {
       <form onSubmit={save}>
         <label>Full name<input style={inputStyle} autoComplete="name" required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label>
         <label>Email<input style={inputStyle} type="email" autoComplete="email" readOnly value={check.email} /></label>
-        <label>Mobile number<input style={inputStyle} type="tel" autoComplete="tel" required maxLength={32} value={phone} onChange={e => setPhone(e.target.value)} aria-describedby="onboarding-phone-help" /></label>
-        <p id="onboarding-phone-help">Include your country code, for example +852 for Hong Kong.</p>
+        <PhoneField id="onboarding-phone" value={phone} onChange={setPhone} describedBy="onboarding-phone-help" />
+        <p id="onboarding-phone-help">Choose your country code and enter the rest of your number.</p>
         <button className="live-link" type="submit" disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save and continue'}</button>
       </form>
     </> : check.status === 'link_required' ? <>

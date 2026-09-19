@@ -73,8 +73,8 @@ test('store coalesces realtime events, retries errors and isolates late response
 });
 
 test('store absorbs a burst of realtime events into one snapshot request and drops the burst on unsubscribe', async () => {
-  const requests = []; let change;
-  const store = createAvailabilityStore({ now: () => now, coalesceMs: 40, load: () => new Promise(resolve => requests.push(resolve)), subscribe: c => { change = c; return () => {}; } });
+  const requests = []; let change, refreshNow;
+  const store = createAvailabilityStore({ now: () => now, coalesceMs: 40, load: () => new Promise(resolve => requests.push(resolve)), subscribe: (c, s, r) => { change = c; refreshNow = r; return () => {}; } });
   const stop = store.subscribe(() => {});
   requests[0](snapshot()); await flush();
   for (let i = 0; i < 25; i++) change(); // one Mindbody sync = many row events
@@ -83,6 +83,8 @@ test('store absorbs a burst of realtime events into one snapshot request and dro
   requests[1](snapshot()); await flush();
   change(); change(); await flush(60); assert.equal(requests.length, 3); // next burst is its own request
   requests[2](snapshot()); await flush();
+  refreshNow(); assert.equal(requests.length, 4); // sign-in and sign-out skip the window
+  requests[3](snapshot()); await flush();
   change(); stop(); await flush(60);
-  assert.equal(requests.length, 3); // an armed burst never fires after the last subscriber leaves
+  assert.equal(requests.length, 4); // an armed burst never fires after the last subscriber leaves
 });

@@ -39,7 +39,7 @@ function SessionPreview({ slotId, onClose }) {
   const text = slot && teacher ? `Hello, I would like to enquire about a private session with ${teacher.name} on ${hkDateKey(slot.startsAt)} at ${hkTime(slot.startsAt)} HKT, ${studio?.name || ''}. Please confirm availability.` : '';
   return <Sheet open onClose={onClose}><section className="live-section">
     <h2>Session details</h2>
-    {slot && teacher && <><h3>{teacher.name}</h3><p>{hkLabel(slot.startsAt)} · {hkTime(slot.startsAt)}–{hkTime(slot.endsAt)} HKT</p><p>{studio?.name}<br />{studio?.address}</p></>}
+    {slot && teacher && <><h3>{teacher.name}</h3><p>{hkLabel(slot.startsAt)} · {hkTime(slot.startsAt)}–{hkTime(slot.endsAt)} HKT</p><p>{studio?.name}<br />{studio?.address}{studio?.address_zh && <><br />{studio.address_zh}</>}</p></>}
     <p role="status">{available ? 'Online confirmation is coming soon. This slot has not been held or booked; contact the studio to confirm.' : 'This session is no longer available. Please choose another time.'}</p>
     {available && <a className="live-link" href={`https://wa.me/85298818081?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer">Enquire on WhatsApp</a>}
     <Button variant="ghost" onClick={onClose}>Back</Button>

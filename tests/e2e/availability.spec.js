@@ -15,7 +15,7 @@ const slots = [
 function makeSnapshot() {
   return {
     teachers: [{ id: teacherId, full_name: 'Test Instructor', home_studio_id: 'central', studio_ids: ['central', 'cwb'], headline: 'Reformer & rehabilitation', specs: ['Reformer'], langs: ['Cantonese'], certs: ['Test certificate'], rate_hkd: 950 }, { id: teacher2, full_name: 'Other Instructor', home_studio_id: 'kt', studio_ids: ['kt'], specs: ['Mat'], langs: ['English'], rate_hkd: 950 }],
-    studios: [{ id: 'central', name: 'Central', address: 'Central studio address' }, { id: 'cwb', name: 'Causeway Bay', address: 'Causeway Bay studio address' }, { id: 'kt', name: 'Kwun Tong', address: 'Kwun Tong studio address' }],
+    studios: [{ id: 'central', name: 'Central', address: 'Central studio address' }, { id: 'cwb', name: 'Causeway Bay', address: 'Causeway Bay studio address', address_zh: '銅鑼灣測試地址', note: 'Legacy tagline' }, { id: 'kt', name: 'Kwun Tong', address: 'Kwun Tong studio address' }],
     slots: structuredClone(slots),
     room_busy: [{ studio_id: 'kt', starts_at: '2026-09-30T04:15:00Z', ends_at: '2026-09-30T05:00:00Z' }],
     reservations: [], rooms: ['central', 'cwb', 'kt'].map(studio_id => ({ studio_id, active: true, resource_id: 1 })),
@@ -202,6 +202,7 @@ test('client uses real HK dates, filters actual slot studios and cannot book a b
   await page.locator('button[title="2026-10-01"]').click();
   await page.getByText('12:00', { exact: true }).click();
   await expect(page.getByText('Causeway Bay studio address', { exact: false })).toBeVisible();
+  await expect(page.getByText('銅鑼灣測試地址', { exact: false })).toBeVisible();
   await expect(page.getByText('Online confirmation is coming soon.', { exact: false })).toBeVisible();
   await expect(page.getByText("You're booked", { exact: false })).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -718,7 +719,7 @@ test('prototype pages retain navigation and never display sample client records'
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await page.getByRole('button',{name:'See full progress',exact:true}).click();
   await expect(page.getByText('28 sessions recorded so far. Your next milestone is 30 sessions.',{exact:true})).toBeVisible();
-  for(const [label,text] of [['About me','Your details'],['Bookings','Upcoming'],['Favourite teachers','Choose the instructors you would like to save.'],['Progress log','Your session story'],['Payment & packages','Payment history'],['Studios & locations','Central'],['Preferences','Booking reminders'],['Terms & Conditions','Re-scheduling'],['Liability waiver','Please read and sign your waiver']]) {
+  for(const [label,text] of [['About me','Your details'],['Bookings','Upcoming'],['Favourite teachers','Choose the instructors you would like to save.'],['Progress log','Your session story'],['Payment & packages','Payment history'],['Studios & locations','銅鑼灣測試地址'],['Preferences','Booking reminders'],['Terms & Conditions','Re-scheduling'],['Liability waiver','Please read and sign your waiver']]) {
     await page.getByRole('button',{name:label==='Liability waiver' ? /^Liability waiver/ : label,exact:label!=='Liability waiver'}).click();
     await expect(page.getByText(text,{exact:false}).first()).toBeVisible();
     await page.getByRole('button',{name:'Profile',exact:true}).first().click();
@@ -850,16 +851,17 @@ for (const destination of ['account','pricing']) test(`new Google customer compl
   await page.reload();
   await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toBeVisible();
   await page.getByLabel('Full name',{exact:true}).fill('New customer');
+  await expect(page.getByLabel('Country code')).toHaveValue('+852');
   await page.getByLabel('Mobile number',{exact:true}).fill('5555');
   await page.getByRole('button',{name:'Save and continue'}).click();
-  await expect(page.getByRole('alert')).toContainText('including the country code');
+  await expect(page.getByRole('alert')).toContainText('valid mobile number');
   expect(api.onboardingApi.saves).toEqual([]);
   await page.getByLabel('Mobile number',{exact:true}).fill('+852 5555 0001');
   await page.screenshot({path:`test-results/new-google-client-${destination}-${testInfo.project.name}.png`,fullPage:true});
   api.onboardingApi.failed=true;
   await page.getByRole('button',{name:'Save and continue'}).click();
   await expect(page.getByRole('alert')).toContainText('could not save');
-  await expect(page.getByLabel('Mobile number',{exact:true})).toHaveValue('+852 5555 0001');
+  await expect(page.getByLabel('Country code')).toHaveValue('+852');await expect(page.getByLabel('Mobile number',{exact:true})).toHaveValue('5555 0001');
   api.onboardingApi.failed=false;
   await page.getByRole('button',{name:'Save and continue'}).click();
   await expect(page.getByRole('heading',{name:'Welcome to Senses'})).toHaveCount(0);
@@ -908,7 +910,7 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   await page.getByLabel('Email',{exact:true}).fill('holder@example.test');await page.getByLabel('Password',{exact:true}).fill('SyntheticPassword123');await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await page.getByRole('button',{name:'About me',exact:true}).click();
   await page.getByLabel('Full name',{exact:true}).fill('Updated client');
-  await page.getByLabel('Mobile number',{exact:true}).fill('+85255550099');
+  await page.getByLabel('Country code').selectOption('+852');await page.getByLabel('Mobile number',{exact:true}).fill('55550099');
   for(const label of ['Build strength','35–44','Some experience','English','Knees','Early morning','Central'])await page.getByRole('button',{name:label,exact:true}).click();
   await page.getByLabel('Instructor notes').fill('Synthetic client preference');
   await page.getByRole('group',{name:'Are you pregnant?'}).getByRole('button',{name:'No',exact:true}).click();

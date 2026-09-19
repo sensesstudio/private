@@ -5,6 +5,8 @@ import { useLiveAvailability } from '../../availability/live.js';
 import { supabase } from '../../supabase/client.js';
 import { inputStyle } from '../../styles.js';
 import { SignaturePad } from './SignaturePad.jsx';
+import { PhoneField } from './PhoneField.jsx';
+import { isValidPhone } from '../../phone.js';
 
 export const profileInstant = value => value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value))+' HKT' : 'Not recorded';
 export function DocumentSections({sections=[]}) { return sections.map((s,i)=><section className="profile-document" key={i}>{s.h && <h3>{s.h}</h3>}{s.paras?.map((p,j)=><p key={j}>{p}</p>)}{!!s.bullets?.length && <ul>{s.bullets.map((p,j)=><li key={j}>{p}</li>)}</ul>}{s.after && <p>{s.after}</p>}</section>); }
@@ -61,12 +63,12 @@ export function ClientIntakeForm({record}) {
   const exclusive=(key,value,none)=>change(key,value.at(-1)===none ? [none] : value.filter(v=>v!==none));
   async function submit(e){
     e.preventDefault();if(busy)return;setError('');setSaved(false);
-    if(!/^\+[1-9]\d{6,14}$/.test(form.phone.replace(/[\s().-]/g,''))){setError('Include a valid country code and mobile number.');return;}
+    if(!isValidPhone(form.phone)){setError('Enter a valid mobile number.');return;}
     if(!form.languages.length || [form.pregnant,form.recent_surgery,form.doctor_cleared].some(v=>v===null)){setError('Choose a teaching language and answer all three health questions.');return;}
     setBusy(true);try{await record.save('about',{...form,edd:form.pregnant ? form.edd : null});setSaved(true);}catch(e){setError(e.message);}finally{setBusy(false);}
   }
   return <form className="profile-stack profile-edit-form" onSubmit={submit}>
-    <Card pad={22}><h2>Your details</h2><label>Full name<input style={inputStyle} autoComplete="name" required maxLength={200} value={form.name} onChange={e=>change('name',e.target.value)}/></label><label>Login email<input style={inputStyle} type="email" readOnly value={contact.email || ''}/></label><label>Mobile number<input style={inputStyle} type="tel" autoComplete="tel" required maxLength={32} value={form.phone} onChange={e=>change('phone',e.target.value)}/></label><p className="profile-source">Your answers are shared with studio admins to help arrange your sessions.</p></Card>
+    <Card pad={22}><h2>Your details</h2><label>Full name<input style={inputStyle} autoComplete="name" required maxLength={200} value={form.name} onChange={e=>change('name',e.target.value)}/></label><label>Login email<input style={inputStyle} type="email" readOnly value={contact.email || ''}/></label><PhoneField id="about-phone" value={form.phone} onChange={v=>change('phone',v)}/><p className="profile-source">Your answers are shared with studio admins to help arrange your sessions.</p></Card>
     <Choices title="What brings you to the mat?" options={GOALS} multiple value={form.goals} onChange={v=>change('goals',v)}/>
     <Choices title="A little about you" options={['Under 25','25–34','35–44','45–54','55+']} value={form.age_band} onChange={v=>change('age_band',v)}/>
     <Choices title="Where are you in your practice?" options={LEVELS} value={form.level} onChange={v=>change('level',v)}/>

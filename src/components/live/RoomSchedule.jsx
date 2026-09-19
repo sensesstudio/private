@@ -46,7 +46,7 @@ export function RoomSchedule({ embedded = false }) {
   const Heading = embedded ? 'h2' : 'h1';
   return <section className={`live-section room-schedule${embedded ? ' room-schedule-embedded' : ''}`} aria-labelledby="room-schedule-title">
     <div className="room-heading room-private-heading"><div><Eyebrow>Studio portal · Daily ops</Eyebrow><Heading id="room-schedule-title">Private room <span>availability</span></Heading><p>When each studio's private room is free. Kwun Tong, Causeway Bay and Central.</p></div>
-      <div className="room-refresh"><Button variant="soft" disabled={refreshing} onClick={() => { liveStore.refresh(); details.refresh(); }}>{refreshing ? 'Refreshing…' : 'Refresh list'}</Button><span>Checked {fullTime(fetchedAt)}</span></div>
+      <div className="room-refresh"><Button variant="soft" onClick={() => { liveStore.refresh(); details.refresh(); }}>{refreshing ? 'Refreshing…' : 'Refresh list'}</Button><span>Checked {fullTime(fetchedAt)}</span></div>
     </div>
     <details className="room-sync room-sync-details" data-state={current ? 'current' : 'warning'}>
       <summary><span role="status">{STATUS[status]}</span> · Sync details</summary>

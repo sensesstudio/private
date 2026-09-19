@@ -3,11 +3,11 @@ import { LIVE_AVAILABILITY } from './features.js';
 import { STUDIO_IDS } from './availability/model.js';
 
 const DEMO_LOCATIONS = [
-  { id: 'central', name: 'Central',      blurb: 'Refined energy in the heart of the city', note: 'Flagship · 3 reformer studios', address: '1701, 17/F, H Queen’s, 80 Queen’s Road Central' },
-  { id: 'cwb',     name: 'Causeway Bay', blurb: 'Vibrant and social — always in motion',   note: 'Open late · 6 days',            address: '20/F, The Hedon, 11 Matheson Street, Causeway Bay' },
-  { id: 'qb',      name: 'Quarry Bay',   blurb: 'Sea-view stillness above the harbour',    note: 'Harbour-view studio', sea: true, address: '1906, 19/F, Westlands Centre, 20 Westlands Road, Quarry Bay' },
-  { id: 'kt',      name: 'Kwun Tong',    blurb: 'Industrial calm, athletic focus',         note: 'Largest mat space',             address: '30B, TG Place, 10 Shing Yip Street, Kwun Tong' },
-  { id: 'lck',     name: 'Lai Chi Kok',  blurb: 'Quiet, local and grounded',               note: 'Neighbourhood studio',          address: 'B, 31/F, Billion Plaza II, 10 Cheung Yue Street, Lai Chi Kok' },
+  { id: 'central', name: 'Central',      blurb: 'Refined energy in the heart of the city', note: '', address_zh: '中環皇后大道中80號H Queen’s 17樓', address: '1701, 17/F, H Queen’s, 80 Queen’s Road Central' },
+  { id: 'cwb',     name: 'Causeway Bay', blurb: 'Vibrant and social — always in motion',   note: '', address_zh: '銅鑼灣勿地臣街 11 號 The Hedon 20 樓', address: '20/F, The Hedon, 11 Matheson Street, Causeway Bay' },
+  { id: 'qb',      name: 'Quarry Bay',   blurb: 'Sea-view stillness above the harbour',    note: '', sea: true, address: '1906, 19/F, Westlands Centre, 20 Westlands Road, Quarry Bay' },
+  { id: 'kt',      name: 'Kwun Tong',    blurb: 'Industrial calm, athletic focus',         note: '', address_zh: '觀塘成業街 10 號電訊一代廣場 (TG Place) 30 樓 B 室', address: '30B, TG Place, 10 Shing Yip Street, Kwun Tong' },
+  { id: 'lck',     name: 'Lai Chi Kok',  blurb: 'Quiet, local and grounded',               note: '', address: 'B, 31/F, Billion Plaza II, 10 Cheung Yue Street, Lai Chi Kok' },
 ];
 
 const DEMO_TEACHERS = [

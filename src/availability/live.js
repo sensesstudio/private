@@ -11,14 +11,14 @@ export const liveStore = createAvailabilityStore({
     return data;
   },
   references: replaceLiveReferenceData,
-  subscribe(onChange, onStatus) {
+  subscribe(onChange, onStatus, refreshNow) {
     if (!supabase) return () => {};
     let channel = supabase.channel('live-availability');
     for (const table of ['slots', 'room_busy', 'sync_state', 'mindbody_rooms', 'teacher_profiles', 'studios']) {
       channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
     }
     channel.subscribe(onStatus);
-    const auth = supabase.auth.onAuthStateChange(() => { queueMicrotask(onChange); });
+    const auth = supabase.auth.onAuthStateChange(() => { queueMicrotask(refreshNow); });
     const visible = () => { if (document.visibilityState === 'visible') onChange(); };
     window.addEventListener('online', onChange);
     document.addEventListener('visibilitychange', visible);
