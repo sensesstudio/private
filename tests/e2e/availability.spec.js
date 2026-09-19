@@ -126,6 +126,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     if (path.endsWith('/create-checkout')) {
       const input=route.request().postDataJSON();
       if(input.action==='availability') return respond({available:paymentApi.available,livemode:true});
+      if(input.action==='official-receipt') { paymentApi.receiptRequests.push(input); return paymentApi.receiptFailed ? respond({error:'unavailable'},503) : respond({pdf_base64:Buffer.from('%PDF-1.4\nsynthetic receipt').toString('base64'),filename:'Senses-Official-Receipt-SS-2026-00000001.pdf'}); }
       if(input.action==='receipt') { paymentApi.receiptRequests.push(input); return paymentApi.receiptFailed ? respond({error:'unavailable'},503) : respond({url:paymentApi.receiptUrl}); }
       if(input.action==='status') return respond({status:paymentApi.status,credits:5,package_name:'5-class pack',format:'1:1'});
       paymentApi.checkouts.push(input);
@@ -949,6 +950,7 @@ test('client intake, preferences, favourites and signed waiver persist and are v
 });
 
 
+function assertReceiptDownload(download){expect(download.suggestedFilename()).toBe('Senses-Official-Receipt-SS-2026-00000001.pdf');}
 async function recheckSession(page,event='SIGNED_IN') {
   await page.evaluate(async event=>{
     const {supabase}=await import('/src/supabase/client.js');
@@ -977,14 +979,15 @@ test('client progress and payment histories match Admin Clients and update witho
   const history=page.getByRole('region',{name:'Payment history'});await expect(history.getByText('HK$4,750',{exact:true})).toBeVisible();
   await expect(page.getByText('4/ 10 sessions remaining',{exact:false})).toBeVisible();
   const online=page.getByRole('region',{name:'Packages purchased online'});
-  await expect(online.getByRole('button',{name:'View receipt / PDF'})).toBeVisible();
+  await expect(online.getByRole('button',{name:'Stripe Receipt'})).toBeVisible();
+  const downloaded=page.waitForEvent('download');await online.getByRole('button',{name:'Download Official Receipt'}).click();assertReceiptDownload(await downloaded);api.paymentApi.receiptRequests=[];
   await page.context().route('https://pay.stripe.com/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Synthetic Stripe receipt</h1>'}));
-  const opened=page.waitForEvent('popup');await online.getByRole('button',{name:'View receipt / PDF'}).click();const receipt=await opened;
+  const opened=page.waitForEvent('popup');await online.getByRole('button',{name:'Stripe Receipt'}).click();const receipt=await opened;
   await expect(receipt).toHaveURL('https://pay.stripe.com/receipts/payment/synthetic');expect(await receipt.evaluate(()=>window.opener===null)).toBeTruthy();await receipt.close();
   expect(api.paymentApi.receiptRequests).toEqual([{action:'receipt',orderId:'synthetic-order-1'}]);
-  api.paymentApi.receiptFailed=true;await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');
-  api.paymentApi.receiptFailed=false;await page.evaluate(()=>{window.open=()=>null;});await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('link',{name:'Open receipt to download PDF'})).toHaveAttribute('href','https://pay.stripe.com/receipts/payment/synthetic');
-  api.paymentApi.receiptUrl='https://evil.test/receipt';await online.getByRole('button',{name:'View receipt / PDF'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');await expect(online.getByRole('link')).toHaveCount(0);
+  api.paymentApi.receiptFailed=true;await online.getByRole('button',{name:'Stripe Receipt'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');
+  api.paymentApi.receiptFailed=false;await page.evaluate(()=>{window.open=()=>null;});await online.getByRole('button',{name:'Stripe Receipt'}).click();await expect(online.getByRole('link',{name:'Open receipt to download PDF'})).toHaveAttribute('href','https://pay.stripe.com/receipts/payment/synthetic');
+  api.paymentApi.receiptUrl='https://evil.test/receipt';await online.getByRole('button',{name:'Stripe Receipt'}).click();await expect(online.getByRole('alert')).toContainText('could not be loaded');await expect(online.getByRole('link')).toHaveCount(0);
   api.activityApi.payments[0].status='refunded';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(history.getByText('Refunded',{exact:true})).toBeVisible();
   const context=await browser.newContext({viewport:testInfo.project.use.viewport,isMobile:testInfo.project.use.isMobile,hasTouch:testInfo.project.use.hasTouch});
   const admin=await context.newPage();const adminApi=await setup(admin,{role:'admin'});Object.assign(adminApi.activityApi,structuredClone(api.activityApi),{reads:[]});
@@ -1139,4 +1142,16 @@ test('removing a prospect confirms the contact and archives only after provider 
  await expect(page.getByText('Synthetic Remove Contact',{exact:true})).toHaveCount(0);
  await page.getByLabel('Filter prospect label').selectOption('archived');
  await expect(page.getByText('Keep these notes',{exact:true})).toBeVisible();
+});
+
+
+test('paid online trial appears in My packages with its original amount and no empty message',async({page})=>{
+ const api=await setup(page,{role:'client'});api.accountApi.needsPassword=false;
+ api.accountApi.records={status:'active',name:'Synthetic Buyer',packages:[{id:'website:paid-trial',order_id:'paid-trial',source:'website',name:'Trial session - 1:1',total:1,remaining:1,validity_months:1,purchased_on:'2026-09-18',expires_on:null,payment_status:'paid',price_hkd:900}]};
+ await page.goto('/?account=1');await page.getByLabel('Email',{exact:true}).fill('buyer@example.test');await page.getByLabel('Password',{exact:true}).fill('SyntheticPersonal1234');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('button',{name:'Payment & packages',exact:true}).click();
+ await expect(page.locator('.client-account-packages')).toContainText('Trial session - 1:1');
+ await expect(page.locator('.client-account-packages')).toContainText('1/ 1 sessions remaining');
+ await expect(page.getByText('No packages recorded',{exact:true})).toHaveCount(0);
+ await expect(page.locator('.client-account-packages')).toContainText('first booked class');
 });
