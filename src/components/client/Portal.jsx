@@ -866,7 +866,7 @@ function ClientProfile({ onRestart, answers, credits = 7, onWaiver, waiver, name
       )}
 
       <div style={{ borderRadius: 22, background: 'var(--espresso)', color: 'var(--cream)', padding: '22px 22px 20px', position: 'relative', overflow: 'hidden', marginBottom: 18 }}>
-        <img src="assets/submark-black-trim.png" alt="" style={{ position: 'absolute', right: -14, top: -8, height: 110, filter: 'brightness(0) invert(1)', opacity: .1 }} />
+        <img src="assets/submark-black-trim.webp" alt="" style={{ position: 'absolute', right: -14, top: -8, height: 110, filter: 'brightness(0) invert(1)', opacity: .1 }} />
         <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 10.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--blush)' }}>10-class pack · credits</div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 0 2px' }}>
           <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 38, color: 'var(--cream)', lineHeight: 1 }}>{credits}</span>
@@ -949,7 +949,7 @@ function ClientLocations({ onBack }) {
         {studios.map(l => (
           <div key={l.id} style={{ background: 'var(--ivory)', borderRadius: 20, overflow: 'hidden', border: '1.5px solid var(--border-soft)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ height: 158, position: 'relative', background: 'linear-gradient(135deg, var(--blush), var(--sand))' }}>
-              <img src={`assets/locations/${l.id}.jpg`} alt={l.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img src={`assets/locations/${l.id}.webp`} alt={l.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             <div style={{ padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>

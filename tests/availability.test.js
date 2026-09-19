@@ -52,10 +52,10 @@ test('teacher mapping never invents ratings, photos, matches or extra studios', 
   assert.equal(teacher.soon, '2026-09-30 · 11:00');
 });
 
-const flush = () => new Promise(resolve => setImmediate(resolve));
+const flush = (ms = 5) => new Promise(resolve => setTimeout(resolve, ms));
 test('store coalesces realtime events, retries errors and isolates late responses after unsubscribe', async () => {
   const requests = []; let change, status, connections = 0, cleanups = 0;
-  const store = createAvailabilityStore({ now: () => now, load: () => new Promise((resolve, reject) => requests.push({ resolve, reject })), subscribe: (c, s) => { change = c; status = s; connections++; return () => cleanups++; } });
+  const store = createAvailabilityStore({ now: () => now, coalesceMs: 0, load: () => new Promise((resolve, reject) => requests.push({ resolve, reject })), subscribe: (c, s) => { change = c; status = s; connections++; return () => cleanups++; } });
   const a = store.subscribe(() => {}), b = store.subscribe(() => {});
   assert.equal(connections, 1); assert.equal(requests.length, 1);
   change(); change(); requests[0].resolve(snapshot()); await flush();
@@ -64,10 +64,25 @@ test('store coalesces realtime events, retries errors and isolates late response
   status('CHANNEL_ERROR'); assert.equal(store.getSnapshot().slots[0].status, 'blocked');
   status('SUBSCRIBED'); requests[2].resolve(snapshot()); await flush();
   assert.equal(store.getSnapshot().slots[0].status, 'open');
-  change(); requests[3].reject(new Error('offline')); await flush();
+  change(); await flush(); requests[3].reject(new Error('offline')); await flush();
   assert.equal(store.getSnapshot().error, 'availability_unavailable');
-  change(); a(); b();
+  change(); await flush(); a(); b();
   assert.equal(cleanups, 1);
   requests[4].resolve(snapshot()); await flush();
   assert.equal(store.getSnapshot().error, 'availability_unavailable');
+});
+
+test('store absorbs a burst of realtime events into one snapshot request and drops the burst on unsubscribe', async () => {
+  const requests = []; let change;
+  const store = createAvailabilityStore({ now: () => now, coalesceMs: 40, load: () => new Promise(resolve => requests.push(resolve)), subscribe: c => { change = c; return () => {}; } });
+  const stop = store.subscribe(() => {});
+  requests[0](snapshot()); await flush();
+  for (let i = 0; i < 25; i++) change(); // one Mindbody sync = many row events
+  await flush(); assert.equal(requests.length, 1); // nothing fires inside the window
+  await flush(60); assert.equal(requests.length, 2); // exactly one refresh for the whole burst
+  requests[1](snapshot()); await flush();
+  change(); change(); await flush(60); assert.equal(requests.length, 3); // next burst is its own request
+  requests[2](snapshot()); await flush();
+  change(); stop(); await flush(60);
+  assert.equal(requests.length, 3); // an armed burst never fires after the last subscriber leaves
 });

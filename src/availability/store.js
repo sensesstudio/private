@@ -2,9 +2,9 @@ import { projectSlots, mapTeachers } from './model.js';
 
 // One connection shared by every useSlots subscriber. Dependency injection keeps
 // refresh races and reconnect behaviour testable without a production database.
-export function createAvailabilityStore({ load, subscribe, references = () => {}, now = Date.now }) {
+export function createAvailabilityStore({ load, subscribe, references = () => {}, now = Date.now, coalesceMs = 400 }) {
   let snapshot = null, fetchedAt = 0, failed = false, pending = false, queued = false;
-  let generation = 0, active = false, cleanup, poll, clock;
+  let generation = 0, active = false, cleanup, poll, clock, burst = null;
   let state = { slots: [], loading: true, refreshing: false, fetchedAt: null, error: null, snapshot: null };
   const listeners = new Set();
   const publish = () => {
@@ -37,7 +37,14 @@ export function createAvailabilityStore({ load, subscribe, references = () => {}
   function start() {
     active = true; generation++;
     const connection = generation;
-    cleanup = subscribe(() => { if (active && connection === generation) void refresh(); }, status => {
+    // A Mindbody sync writes many rows in one burst and every row raises a
+    // realtime event. One snapshot per burst is enough: the first event arms a
+    // short window and the rest are absorbed until it fires.
+    const coalesce = () => {
+      if (!active || connection !== generation || burst) return;
+      burst = setTimeout(() => { burst = null; if (active && connection === generation) void refresh(); }, coalesceMs);
+    };
+    cleanup = subscribe(coalesce, status => {
       if (!active || connection !== generation) return;
       if (status === 'SUBSCRIBED') void refresh();
       else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) { failed = true; publish(); }
@@ -56,7 +63,7 @@ export function createAvailabilityStore({ load, subscribe, references = () => {}
         listeners.delete(fn);
         if (!listeners.size) {
           active = false; generation++; pending = false; queued = false;
-          clearInterval(poll); clearInterval(clock); cleanup?.();
+          clearInterval(poll); clearInterval(clock); clearTimeout(burst); burst = null; cleanup?.();
         }
       };
     },

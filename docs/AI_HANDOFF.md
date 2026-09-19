@@ -10,7 +10,7 @@ A bilingual (EN/Cantonese) Pilates private-session booking platform for Senses S
 
 ## Stack & accounts
 - **Frontend**: React 18 + Vite, no router lib (hash-based), CSS-in-JS + `src/global.css` tokens. Deployed by **Railway** (project "Private Pilates", service `private`) on push to `main`.
-- **Backend**: Supabase project ref `wvyqxafhiawwyexiggxh` ("Senses Private") — Postgres + Auth + Edge Functions. Schema in `supabase/migrations/` (0001–0004 applied).
+- **Backend**: Supabase project ref `wvyqxafhiawwyexiggxh` ("Senses Private") — Postgres + Auth + Edge Functions. Region `ap-southeast-2` (Sydney); the frontend on Railway runs in Singapore and users are in Hong Kong, so every query pays a ~130ms round trip. To move the project, restore into a new project in `ap-southeast-1` (Singapore), then set the repository variable `SUPABASE_PROJECT_REF` and the Railway variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`; the `supabase` workflow reads the ref from that variable. Schema in `supabase/migrations/` (0001–0004 applied).
 - **Mindbody**: rooms/schedule source of truth. Site ID `5720465` ("Senses Studio"). Public API v6.
 - **Stripe**: checkout edge functions written; webhook config on Stripe side still pending.
 - **Repo is PUBLIC** → never commit secrets, tokens, or keys. CI secrets live in GitHub Actions secrets; runtime secrets in Supabase Edge Function secrets.

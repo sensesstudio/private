@@ -10,7 +10,7 @@ import { useSlots, openSlotsForDay } from '../../slots.js';
 
 // Drop image paths here to enable the hero carousel
 const HERO_PHOTOS = [
-  'assets/hero/cover.jpg',
+  'assets/hero/cover.webp',
 ];
 
 // Hong Kong general (public) holidays 2026. ⚠️ Best-effort — please verify the
@@ -180,7 +180,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false, onPickSlot }) {
       {!embedded && (
         <>
           <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 4px' }}>
-            <img src="assets/logo5-trim.png" alt="Senses Studio" style={{ height: 26 }} />
+            <img src="assets/logo5-trim.webp" alt="Senses Studio" style={{ height: 26 }} />
             <button className="tap card-hover" onClick={onGate} style={{ cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 11.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--espresso)', background: 'var(--ivory)', border: '1px solid var(--border)', borderRadius: 999, padding: '9px 18px', minHeight: 40, boxShadow: 'var(--shadow-md)' }}>Sign in</button>
           </div>
 
@@ -280,7 +280,7 @@ export function ClientBrowse({ onGate, onOpen, embedded = false, onPickSlot }) {
             {SESSION_TYPES.map(s => (
               <div key={s.id} className="tap card-hover" onClick={embedded ? () => setSeg('Teachers') : onGate} style={{ background: 'var(--ivory)', border: '1px solid var(--border-soft)', borderRadius: 18, padding: 15, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ width: '100%', height: 96, borderRadius: 12, overflow: 'hidden', marginBottom: 12, position: 'relative', background: 'linear-gradient(135deg, var(--blush), var(--sand))' }}>
-                  <img src={`assets/needs/${s.id}.jpg`} alt={s.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={`assets/needs/${s.id}.webp`} alt={s.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 15, color: 'var(--espresso)', lineHeight: 1.2, minHeight: '2.4em', display: 'flex', alignItems: 'flex-start' }}>{s.name}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 11.5, color: 'var(--fg3)', margin: '6px 0 10px', lineHeight: 1.45, flex: 1 }}>{s.blurb}</div>

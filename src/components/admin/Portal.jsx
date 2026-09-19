@@ -16,7 +16,7 @@ export function Workspace({ title, nav, tab, setTab, children, headRight }) {
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--cream)' }}>
         <div style={{ flex: 'none', padding: '14px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', background: 'var(--cream)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="assets/submark-brown-trim.png" alt="" style={{ height: 26 }} />
+            <img src="assets/submark-brown-trim.webp" alt="" style={{ height: 26 }} />
             <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 12, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--taupe)' }}>{title}</span>
           </div>
           {headRight}
@@ -40,7 +40,7 @@ export function Workspace({ title, nav, tab, setTab, children, headRight }) {
     <div style={{ display: 'flex', height: '100%', background: 'var(--cream)', overflow: 'hidden' }}>
       <aside style={{ width: 248, flex: 'none', borderRight: '1px solid var(--border)', padding: '26px 18px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0 8px 22px' }}>
-          <img src="assets/submark-brown-trim.png" alt="" style={{ height: 32 }} />
+          <img src="assets/submark-brown-trim.webp" alt="" style={{ height: 32 }} />
           <div>
             <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 17, color: 'var(--espresso)', lineHeight: 1 }}>Senses</div>
             <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--fg3)', marginTop: 3 }}>{title}</div>

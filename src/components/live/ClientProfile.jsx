@@ -41,7 +41,7 @@ export function PackageCard({pack,detail=false}) {
     {pack.needs_review && <p>Balance needs review. Please confirm with the studio.</p>}
     {pack.current===false && <p>{pack.source==='website'?'Payment refunded.':'This package is not currently usable in Mindbody.'}</p>}
     {detail && <><dl><div><dt>Sessions used</dt><dd>{pack.payment_status==='refunded'?'Not applicable':total!==null && remaining!==null ? Math.max(0,total-remaining) : 'Not recorded per package'}</dd></div><div><dt>Purchase date</dt><dd>{recordDate(pack.purchased_on)}</dd></div></dl><p className="profile-source">{pack.source==='website'?'Purchased on this website · Payment confirmed.':pack.synced_at ? `Mindbody last updated ${instant(pack.synced_at)}.${pack.sync_status!=='synced' || Date.now()-new Date(pack.synced_at).getTime()>30*60000 ? ' Update delayed; showing last available values.' : ''}` : 'Studio record · Not yet linked to Mindbody.'}</p></>}
-    <img className="profile-watermark" src="/assets/submark-brown-trim.png" alt="" aria-hidden="true"/>
+    <img className="profile-watermark" src="/assets/submark-brown-trim.webp" alt="" aria-hidden="true"/>
   </section>;
 }
 function NextVisit({data}) {

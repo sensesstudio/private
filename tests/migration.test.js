@@ -23,6 +23,7 @@ test('migration executes on PostgreSQL and enforces identity, ownership, conflic
   await db.exec((await sqlFile('migrations/0004_mindbody_rooms.sql')).replace(/create extension if not exists pg_(cron|net);/g, ''));
   await db.exec('grant select, insert, update, delete on all tables in schema public to anon, authenticated, service_role;');
   await db.exec(await sqlFile('migrations/0005_live_availability.sql'));
+  await db.exec(await sqlFile('migrations/20260919021500_availability_snapshot_indexes.sql'));
   await db.exec(`insert into auth.users values ('${teacher}'), ('${client}'), ('${admin}');
     insert into profiles (id, role, full_name, email) values ('${teacher}', 'teacher', 'Test Instructor', 'private-teacher@example.test'), ('${client}', 'client', 'Secret Client', 'private-client@example.test'), ('${admin}', 'admin', 'Test Admin', null);
     insert into teacher_profiles(id, home_studio_id, studio_ids, bio) values ('${teacher}', 'central', array['central','cwb'], 'Private biography');

@@ -1,6 +1,6 @@
 /* Senses Studio — app UI kit theme (paths relative to ui_kits/app/) */
-@font-face{font-family:"Eyesome Script";src:url("../../fonts/EyesomeScript.otf") format("opentype");}
-@font-face{font-family:"Eyesome Serif";src:url("../../fonts/EyesomeRegular.otf") format("opentype");font-style:normal;}
+@font-face{font-family:"Eyesome Script";src:url("../../fonts/EyesomeScript.woff2") format("woff2"),url("../../fonts/EyesomeScript.otf") format("opentype");}
+@font-face{font-family:"Eyesome Serif";src:url("../../fonts/EyesomeRegular.woff2") format("woff2"),url("../../fonts/EyesomeRegular.otf") format("opentype");font-style:normal;}
 :root{
   --cream:#f5efea; --ivory:#faf7f3; --sand:#ece2d6; --linen:#e3d6c6; --clay:#c9b29c;
   --taupe:#66554b; --taupe-soft:#8a7869; --espresso:#3a322c; --ink:#232323;

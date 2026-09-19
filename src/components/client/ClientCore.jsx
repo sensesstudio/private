@@ -70,7 +70,7 @@ export function ClientLogin({ onBrowse, onSignIn, onBack }) {
 
       <div style={{ flex: 1, padding: '6px 26px 30px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 6px' }}>
-          <img src="assets/logo5-trim.png" alt="Senses Studio · Yoga + Pilates" style={{ height: 58 }} />
+          <img src="assets/logo5-trim.webp" alt="Senses Studio · Yoga + Pilates" style={{ height: 58 }} />
         </div>
         <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontWeight: 300, fontSize: 15, lineHeight: 1.6, color: 'var(--taupe)', margin: '8px auto 24px', maxWidth: 320 }}>
           Matched with a private instructor who moves the way you want to move.

@@ -23,7 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_REF: wvyqxafhiawwyexiggxh
+      # Repository variable SUPABASE_PROJECT_REF overrides the default when the
+      # project moves (for example to a closer region); no code change needed.
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'wvyqxafhiawwyexiggxh' }}
     steps:
       - uses: actions/checkout@v4
 

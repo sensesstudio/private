@@ -78,7 +78,7 @@ export default function App() {
   return (
     <>
       <div id="chrome">
-        <img src="assets/logo5-trim.png" alt="Senses Pilates" style={{ height: 30 }} />
+        <img src="assets/logo5-trim.webp" alt="Senses Pilates" style={{ height: 30 }} />
         {!LIVE_AVAILABILITY && <span className="demo-label">Demo</span>}
         {!CLIENT_ONLY && <PortalSwitch portal={portal} setPortal={go} />}
       </div>

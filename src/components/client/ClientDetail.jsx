@@ -15,9 +15,9 @@ export function sortByMatch(arr) { return [...arr].sort((a, b) => b.match - a.ma
 // Home promo slides — edit freely. `tab` is where the CTA goes; `img` loads from
 // assets/promos (gradient `ph` shows until a photo is added).
 const PROMOS = [
-  { id: 'promo1', eyebrow: 'Opening offer', title: 'Your first session, your way', text: 'Try a private 1:1 or semi-private 1:2 with any instructor.', cta: 'Book a trial', tab: 'Search', img: 'assets/promos/promo1.jpg', ph: 'blush' },
-  { id: 'promo2', eyebrow: 'Best value', title: '10-class packs', text: 'Save across all five studios — credits never tied to one place.', cta: 'See pricing', tab: 'Pricing', img: 'assets/promos/promo2.jpg', ph: 'sage' },
-  { id: 'promo3', eyebrow: 'Five studios', title: 'One pass, all of Hong Kong', text: '5 studios now and more coming.', cta: 'Explore studios', tab: 'Locations', img: 'assets/promos/promo3.jpg', ph: 'almond' },
+  { id: 'promo1', eyebrow: 'Opening offer', title: 'Your first session, your way', text: 'Try a private 1:1 or semi-private 1:2 with any instructor.', cta: 'Book a trial', tab: 'Search', img: 'assets/promos/promo1.webp', ph: 'blush' },
+  { id: 'promo2', eyebrow: 'Best value', title: '10-class packs', text: 'Save across all five studios — credits never tied to one place.', cta: 'See pricing', tab: 'Pricing', img: 'assets/promos/promo2.webp', ph: 'sage' },
+  { id: 'promo3', eyebrow: 'Five studios', title: 'One pass, all of Hong Kong', text: '5 studios now and more coming.', cta: 'Explore studios', tab: 'Locations', img: 'assets/promos/promo3.webp', ph: 'almond' },
 ];
 
 function PromoHero({ goTab }) {
