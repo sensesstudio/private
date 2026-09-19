@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Card, Icon } from '../shared/index.jsx';
 import { supabase } from '../../supabase/client.js';
 import './payments.css';
+import { ReceiptEmailSettings } from './ReceiptEmailSettings.jsx';
 const statuses=['paid','pending','failed','expired','refunded'];
 const title=value=>value[0].toUpperCase()+value.slice(1);
 const when=value=>value?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value))+' HKT':'—';
@@ -36,6 +37,7 @@ export function WebsitePayments() {
   function filter(set,value){pending.current?.abort();setState({loading:true,data:null,error:false});setPage(0);set(value);}
   const {data,loading,error}=state,pages=Math.max(1,Math.ceil((data?.total||0)/25));
   return <section aria-label="Website payment records">
+    <ReceiptEmailSettings/>
     <p role="status" className="admin-client-notice">{connection==='checking'?'Checking Stripe checkout…':connection==='available'?'Stripe checkout is available.':connection==='test'?'Stripe is in test mode. Only live website records are listed below.':connection==='unavailable'?'Stripe checkout is not enabled yet. Existing website records are shown below.':'Stripe connection could not be checked. Saved website records are shown below.'}</p>
     <div className="admin-client-tools"><label className="admin-client-search"><Icon n="search" size={16}/><input aria-label="Search payments" maxLength={200} placeholder="Search client, email, package or reference…" value={query} onChange={e=>filter(setQuery,e.target.value)}/></label>
       <select aria-label="Payment status" value={status} onChange={e=>filter(setStatus,e.target.value)}><option value="all">All statuses</option>{statuses.map(s=><option key={s} value={s}>{title(s)}</option>)}</select>

@@ -35,3 +35,7 @@ verify_jwt = false
 # Auth verifies tokens; server-only RPC checks the stored admin role and session.
 [functions.team-accounts]
 verify_jwt = false
+
+# Internal receipt email worker authenticates x-sync-key; downloads use create-checkout Auth.
+[functions.official-receipts]
+verify_jwt = false
