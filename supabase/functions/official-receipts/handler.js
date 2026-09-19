@@ -1,3 +1,4 @@
+import { sendWaiverEmails } from './waiver.js';
 import { PAYMENT_ORIGINS, STRIPE_ACCOUNT } from '../_shared/payments.js';
 import { getOfficialReceipt, bytesToBase64, SUPPORT_EMAIL, stripeReceiptUrl } from '../_shared/official-receipt.js';
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,8 +23,9 @@ export function officialReceiptsHandler({admin,stripe,renderPdf,syncKey,fetchImp
   // Only the internal scheduler can dispatch customer email. There is no arbitrary recipient endpoint.
   if(!syncKey || request.headers.get('x-sync-key')!==syncKey)return json({error:'Unauthorized.'},401);
   try {
+   const waiver=await sendWaiverEmails(admin,fetchImpl).catch(()=>({error:'Waiver delivery is unavailable.'}));
    const {data:config,error}=await admin.rpc('receipt_worker_jobs');if(error)throw error;
-   if(!config.configured)return json({configured:false,sent:0});
+   if(!config.configured)return json({configured:false,sent:0,waiver});
    const account=await stripe.accounts.retrieve();if(account.id!==STRIPE_ACCOUNT)throw new Error('wrong_account');
    let sent=0,failed=0;
    for(const order of config.jobs){
@@ -42,7 +44,7 @@ export function officialReceiptsHandler({admin,stripe,renderPdf,syncKey,fetchImp
      if(claim)await admin.rpc('finish_receipt_email',{p_order_id:order.id,p_attempt:claim.attempt,p_provider_id:null,p_error:'delivery_failed'});
     }
    }
-   return json({configured:true,sent,failed});
+   return json({configured:true,sent,failed,waiver});
   }catch{return json({error:'Receipt delivery is unavailable.'},503);}
  };
 }
