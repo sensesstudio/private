@@ -1,3 +1,4 @@
+import { WaiverEmailSettings } from './WaiverEmailSettings.jsx';
 import { ClientActivity } from '../shared/ClientActivity.jsx';
 import { ClientSubmittedDetails } from './ClientSubmittedDetails.jsx';
 import { ClientEditor } from './ClientEditor.jsx';
@@ -117,6 +118,7 @@ export function AdminClients() {
   return <div className="admin-page admin-clients-page">
     <PageHead eyebrow="Studio community" title="Clients" sub={loading ? 'Loading client records…' : data ? `${clients.length} clients · ${data.rows.length} package records` : 'Client records'}
       right={<div className="admin-editor-actions"><Button size="sm" disabled={loading || error} onClick={() => setEditor({ kind: 'client', record: null })}>Add client</Button><Button variant="soft" size="sm" icon="refresh-cw" disabled={loading} onClick={() => { setSelectedId(null); refresh(); }}>Refresh clients</Button></div>} />
+    <WaiverEmailSettings/>
     {data && <>
       <SyncStatus sync={data.sync} />
       <p className="admin-client-source admin-muted">{batch ? `Client CSV dated ${date(batch.as_of)}. ` : ''}Last and next visit dates are from the client CSV. Studio records include admin updates and client submissions. Package status as of {date(asOf)}.</p>

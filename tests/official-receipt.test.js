@@ -20,6 +20,7 @@ function mocks(){
  const admin={auth:{getUser:async()=>({data:{user:{id:client}}})},from:table=>{const chain={select:()=>chain,eq:()=>chain,maybeSingle:async()=>({data:table==='profiles'?{full_name:'Synthetic Buyer'}:order})};return chain;},rpc:async(name,args)=>{
   calls.push({name,args});
   if(name==='ensure_official_receipt'){snapshot??={document:args.p_snapshot,receipt_number:document.receipt_number};return {data:snapshot};}
+  if(name==='waiver_worker_jobs')return {data:{configured:false}};
   if(name==='receipt_worker_jobs')return {data:{configured:true,key:'synthetic-key',sender:'cs@senses-studio.co',jobs:[order]}};
   if(name==='claim_receipt_email'){if(claimed)return {data:null};claimed=true;return {data:{payload:args.p_payload,attempt:1}};}
   return {data:null};
@@ -52,5 +53,5 @@ test('mail includes branded PDF with terms and Stripe link; cron auth and claims
 test('mail transport failure is queued and never reported as accepted',async()=>{
  const m=mocks(),handler=officialReceiptsHandler({...m,renderPdf,syncKey:'cron',fetchImpl:async()=>new Response('{}',{status:503})});
  const response=await handler(new Request('https://example.test',{method:'POST',headers:{'x-sync-key':'cron'}}));
- assert.deepEqual(await response.json(),{configured:true,sent:0,failed:1});assert.equal(m.calls.find(c=>c.name==='finish_receipt_email').args.p_provider_id,null);
+ assert.deepEqual(await response.json(),{configured:true,sent:0,failed:1,waiver:{configured:false,sent:0}});assert.equal(m.calls.find(c=>c.name==='finish_receipt_email').args.p_provider_id,null);
 });
