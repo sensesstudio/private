@@ -1,5 +1,6 @@
 import { PAYMENT_ORIGINS, STRIPE_ACCOUNT, INTEGRATION, checkoutParameters, fulfillSession } from '../_shared/payments.js';
-export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
+import { getOfficialReceipt, bytesToBase64 } from '../_shared/official-receipt.js';
+export function createCheckoutHandler({ stripe, admin, configured, livemode, renderPdf }) {
   return async request => {
     const origin = request.headers.get('Origin');
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin',
@@ -25,12 +26,16 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
       if (!configured || !stripe) return json({ error: 'Online payments are temporarily unavailable.' }, 503);
       const account = await stripe.accounts.retrieve();
       if (account.id !== STRIPE_ACCOUNT || !account.charges_enabled) return json({ error: 'Online payments are temporarily unavailable.' }, 503);
-      if (input.action === 'receipt') {
+      if (['receipt','official-receipt'].includes(input.action)) {
         if (typeof input.orderId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.orderId)) return json({ error: 'Invalid purchase reference.' }, 400);
         const { data: order, error } = await admin.from('package_checkout_orders').select('*').eq('id', input.orderId).eq('client_id', auth.user.id).maybeSingle();
         if (error) throw error;
         if (!order || order.client_id !== auth.user.id) return json({ error: 'Purchase not found for this account.' }, 404);
         if (order.status !== 'paid' || !order.stripe_session_id || order.livemode !== livemode) return json({ error: 'A receipt is available after payment is confirmed.' }, 409);
+        if(input.action==='official-receipt') {
+          const result=await getOfficialReceipt({admin,stripe,renderPdf},order);
+          return json({pdf_base64:bytesToBase64(result.pdf),filename:result.filename,receipt_number:result.receipt.receipt_number});
+        }
         // Read only: opening a receipt must never create a payment or add credits.
         const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, { expand: ['payment_intent.latest_charge'] });
         const intent = session.payment_intent, charge = intent?.latest_charge;
@@ -89,6 +94,6 @@ export function createCheckoutHandler({ stripe, admin, configured, livemode }) {
         return json({ url: session.url });
       }
       return json({ error: 'Please try checkout again.' }, 409);
-    } catch { return json({ error: input.action === 'receipt' ? 'Could not load your receipt. Please retry or contact the studio.' : 'Could not confirm checkout. Please retry or contact the studio.' }, 503); }
+    } catch { return json({ error: ['receipt','official-receipt'].includes(input.action) ? 'Could not load your receipt. Please retry or contact the studio.' : 'Could not confirm checkout. Please retry or contact the studio.' }, 503); }
   };
 }

@@ -77,3 +77,13 @@ Client Payment & packages and Pricing purchase history offer **View receipt / PD
 New checkout orders snapshot the authenticated account email in `package_checkout_orders.receipt_email`; Checkout uses it for `customer_email` and `payment_intent_data.receipt_email`. Stripe sends the payment receipt after successful live payment, with the package description. Existing orders are not backfilled or re-emailed, so retries retain identical Stripe parameters and historical receipts retain the actual paid amount. A Stripe email address/receipt URL does not prove inbox delivery. Historical email delivery can be checked in the Stripe payment's receipt history.
 
 References: https://docs.stripe.com/receipts and https://docs.stripe.com/api/checkout/sessions/create .
+
+## Senses Official Receipts
+
+`create-checkout` also supports authenticated `official-receipt` requests by order ID. The server checks order ownership and re-verifies the paid Stripe Session before generating a one-page A4 PDF with the supplied Senses logo, Cormorant Garamond title, original paid amount and all nine terms (15 September 2026). The private receipt snapshot is immutable; a unique sequential receipt number is assigned once. Historical purchases retain their actual amount and can be downloaded without triggering email. The shared template contains no customer data.
+
+Admin → Payments → Email settings accepts a Resend API key, encrypted in Vault. Verify `senses-studio.co` with Resend first; sender and reply-to are `cs@senses-studio.co`. There is no key in source or browser persistence. The scheduled `official-receipts` worker sends new live purchases a PDF attachment plus the Stripe receipt link. Stripe's own receipt email remains enabled by Checkout's `receipt_email`. Email delivery requires the sender/domain and key; provider acceptance is not proof of inbox delivery.
+
+The private outbox persists the exact email payload, claims jobs with a lease and uses a per-order provider idempotency key. Uncertain attempts stop before Resend's 24-hour deduplication window. Failed and uncertain deliveries are visible in Email settings and need operator review; downloading a receipt remains independent of email. The existing GitHub deployment workflow deploys the worker and schedules it every minute.
+
+Paid website packages now appear in `my_client_account` alongside imported studio packages. They are not written to Mindbody. Untouched online credits show the purchased balance; if a non-purchase ledger adjustment exists, per-package usage remains unknown instead of inventing allocation. The first-class activation date/expiry requires a recorded booking association; it is never computed from the payment date.
