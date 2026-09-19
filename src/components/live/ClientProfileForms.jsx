@@ -4,6 +4,7 @@ import { GOALS, INJURIES, LEVELS, SCHEDULES } from '../../data.js';
 import { useLiveAvailability } from '../../availability/live.js';
 import { supabase } from '../../supabase/client.js';
 import { inputStyle } from '../../styles.js';
+import { SignaturePad } from './SignaturePad.jsx';
 
 export const profileInstant = value => value ? new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Hong_Kong'}).format(new Date(value))+' HKT' : 'Not recorded';
 export function DocumentSections({sections=[]}) { return sections.map((s,i)=><section className="profile-document" key={i}>{s.h && <h3>{s.h}</h3>}{s.paras?.map((p,j)=><p key={j}>{p}</p>)}{!!s.bullets?.length && <ul>{s.bullets.map((p,j)=><li key={j}>{p}</li>)}</ul>}{s.after && <p>{s.after}</p>}</section>); }
@@ -19,10 +20,27 @@ export function useClientProfile() {
   },[retry]);
   async function mutate(rpc,args) {
     const {data,error}=await supabase.rpc(rpc,args);
-    if(error || !data?.contact) throw new Error(error?.message==='profile_changed_reload' ? 'Your profile changed in another window. Reload this page before saving again.' : 'Your changes could not be saved. Please retry, or sign in again.');
+    if(error || !data?.contact) throw new Error(error?.message==='profile_changed_reload' ? 'Your profile changed in another window. Reload this page before saving again.'
+      : error?.message==='waiver_signature_required' ? 'Please draw your signature in the box before signing.'
+      : error?.message==='waiver_changed_reload' ? 'The waiver was updated. Reload this page and read the new version before signing.'
+      : 'Your changes could not be saved. Please retry, or sign in again.');
     setState({loading:false,data,error:false});return data;
   }
   return {...state,reload:()=>setRetry(n=>n+1),save:(section,details)=>mutate('save_my_client_profile',{p_section:section,p_details:details,p_version:state.data?.profile?.profile_version || 1}),sign:args=>mutate('sign_my_client_waiver',args)};
+}
+export function SignatureImage({signatureId,alt='Signature'}) {
+  const [state,setState]=useState({loading:true});
+  useEffect(()=>{
+    let active=true;setState({loading:true});
+    supabase.from('client_waiver_signature_images').select('image').eq('signature_id',signatureId).maybeSingle().then(({data,error})=>{
+      if(active)setState(error ? {error:true} : {image:typeof data?.image==='string' && data.image.startsWith('data:image/png;base64,') ? data.image : null});
+    }).catch(()=>{if(active)setState({error:true});});
+    return()=>{active=false;};
+  },[signatureId]);
+  if(state.loading)return <p className="profile-source">Loading signature…</p>;
+  if(state.error)return <p className="profile-source">The drawn signature could not be loaded.</p>;
+  if(!state.image)return <p className="profile-source">Signed by typed name; no drawn signature is on file.</p>;
+  return <img className="profile-signature-image" src={state.image} alt={alt}/>;
 }
 export function ProfileRecordGate({record,children}) {
   if(record.loading)return <p role="status">Loading your saved details…</p>;
@@ -81,11 +99,12 @@ export function ClientWaiverForm({record}) {
   const signed=record.data?.waiver_signatures?.find(s=>s.version===document?.version);
   const [read,setRead]=useState(false),[agreed,setAgreed]=useState(false),[name,setName]=useState(''),[capacity,setCapacity]=useState('');
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function submit(e){e.preventDefault();if(busy || !read || !agreed)return;setBusy(true);setError('');try{await record.sign({p_version:document.version,p_name:name.trim(),p_capacity:capacity,p_agreed:agreed});}catch(e){setError(e.message);}finally{setBusy(false);}}
+  const [signature,setSignature]=useState(null);
+  async function submit(e){e.preventDefault();if(busy || !read || !agreed || !signature)return;setBusy(true);setError('');try{await record.sign({p_version:document.version,p_name:name.trim(),p_capacity:capacity,p_agreed:agreed,p_signature:signature});}catch(e){setError(e.message);}finally{setBusy(false);}}
   if(!document)return <Card><p>The waiver is unavailable. Please contact the studio.</p></Card>;
   return <div className="profile-stack">
-    <Card><h2>{signed?'Waiver signed':'Please read and sign your waiver'}</h2>{signed ? <><p>Signed by {signed.signed_name} · {profileInstant(signed.signed_at)}</p><p>Participant: {signed.participant_name} · {signed.signer_capacity==='parent_guardian'?'Parent / legal guardian':'Participant'}</p></> : <p>Your signed waiver will be saved with your client record.</p>}<p className="profile-source">Version {document.version}</p></Card>
+    <Card><h2>{signed?'Waiver signed':'Please read and sign your waiver'}</h2>{signed ? <><p>Signed by {signed.signed_name} · {profileInstant(signed.signed_at)}</p><p>Participant: {signed.participant_name} · {signed.signer_capacity==='parent_guardian'?'Parent / legal guardian':'Participant'}</p><SignatureImage signatureId={signed.id} alt="Your signature"/></> : <p>Your signed waiver will be saved with your client record.</p>}<p className="profile-source">Version {document.version}</p></Card>
     <div className="profile-waiver-scroll" tabIndex={0} role="region" aria-label="Waiver document" onScroll={e=>{const v=e.currentTarget;if(v.scrollTop+v.clientHeight>=v.scrollHeight-16)setRead(true);}}><h2>{document.title}</h2><DocumentSections sections={document.body.sections}/><p>End of waiver</p></div>
-    {!signed && <form className="profile-stack profile-edit-form" onSubmit={submit}><p className="profile-source">{read?'You have reached the end of the waiver.':'Scroll to the end of the waiver to continue.'}</p><label className="profile-consent"><input type="checkbox" disabled={!read} checked={agreed} onChange={e=>setAgreed(e.target.checked)}/>I have read, understood and agree to this Waiver and Release of Liability, and I am signing voluntarily.</label><label>Signing as<select style={inputStyle} required value={capacity} onChange={e=>setCapacity(e.target.value)}><option value="">Select…</option><option value="self">Participant, aged 18 or above</option><option value="parent_guardian">Parent / legal guardian of a participant under 18</option></select></label><p>Participant: {record.data.contact.name}</p><label>Full legal name<input style={inputStyle} required maxLength={200} autoComplete="name" value={name} onChange={e=>setName(e.target.value)}/></label>{error && <p role="alert">{error}</p>}<button className="live-link" type="submit" disabled={busy || !read || !agreed || !name.trim() || !capacity}>{busy?'Saving…':'Agree & sign'}</button></form>}
+    {!signed && <form className="profile-stack profile-edit-form" onSubmit={submit}><p className="profile-source">{read?'You have reached the end of the waiver.':'Scroll to the end of the waiver to continue.'}</p><label className="profile-consent"><input type="checkbox" disabled={!read} checked={agreed} onChange={e=>setAgreed(e.target.checked)}/>I have read, understood and agree to this Waiver and Release of Liability, and I am signing voluntarily.</label><label>Signing as<select style={inputStyle} required value={capacity} onChange={e=>setCapacity(e.target.value)}><option value="">Select…</option><option value="self">Participant, aged 18 or above</option><option value="parent_guardian">Parent / legal guardian of a participant under 18</option></select></label><p>Participant: {record.data.contact.name}</p><label>Full legal name<input style={inputStyle} required maxLength={200} autoComplete="name" value={name} onChange={e=>setName(e.target.value)}/></label><div className="profile-signature-field"><span>Signature</span><SignaturePad onChange={setSignature}/></div>{error && <p role="alert">{error}</p>}<button className="live-link" type="submit" disabled={busy || !read || !agreed || !name.trim() || !capacity || !signature}>{busy?'Saving…':'Agree & sign'}</button></form>}
   </div>;
 }

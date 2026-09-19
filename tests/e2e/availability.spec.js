@@ -103,6 +103,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
       return respond(profileApi.data);
     }
     if(path.endsWith('/client_waiver_documents'))return respond({title:WAIVER_TITLE,body:{sections:WAIVER_SECTIONS}});
+    if(path.endsWith('/client_waiver_signature_images'))return respond({image:profileApi.signatures.at(-1)?.p_signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='});
     if (path.endsWith('/ensure_my_client_profile')) return respond(onboardingApi.profile);
     if (path.endsWith('/complete_my_client_profile')) {
       const input=route.request().postDataJSON();onboardingApi.saves.push(input);
@@ -928,11 +929,19 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.getByRole('button',{name:/^Liability waiver/}).click();
   await expect(page.getByRole('button',{name:'Agree & sign'})).toBeDisabled();
   await page.getByRole('region',{name:'Waiver document'}).evaluate(el=>{el.scrollTop=el.scrollHeight;});
-  await page.getByRole('checkbox',{name:/I have read/}).check();await page.getByLabel('Signing as').selectOption('self');await page.getByLabel('Full legal name').fill('Synthetic signer');await page.getByRole('button',{name:'Agree & sign'}).click();
-  await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();
+  await page.getByRole('checkbox',{name:/I have read/}).check();await page.getByLabel('Signing as').selectOption('self');await page.getByLabel('Full legal name').fill('Synthetic signer');
+  await expect(page.getByRole('button',{name:'Agree & sign'})).toBeDisabled(); // a typed name alone is not a signature
+  const pad=page.getByRole('img',{name:'Draw your signature'});await pad.scrollIntoViewIfNeeded();const box=await pad.boundingBox();
+  await page.mouse.move(box.x+24,box.y+box.height*0.6);await page.mouse.down();await page.mouse.move(box.x+box.width*0.5,box.y+box.height*0.3,{steps:6});await page.mouse.move(box.x+box.width-24,box.y+box.height*0.7,{steps:6});await page.mouse.up();
+  await expect(page.getByText('Signature captured.')).toBeVisible();
+  await page.getByRole('button',{name:'Clear'}).click();await expect(page.getByRole('button',{name:'Agree & sign'})).toBeDisabled();
+  await page.mouse.move(box.x+24,box.y+box.height*0.5);await page.mouse.down();await page.mouse.move(box.x+box.width-24,box.y+box.height*0.5,{steps:6});await page.mouse.up();
+  await page.getByRole('button',{name:'Agree & sign'}).click();
+  await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();await expect(page.getByRole('img',{name:'Your signature'})).toBeVisible();
   await page.reload();await page.getByRole('button',{name:/^Liability waiver/}).click();await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();
   expect(api.profileApi.signatures).toHaveLength(1);
-  expect(api.profileApi.signatures[0]).toEqual({p_version:'2026-09-16',p_name:'Synthetic signer',p_capacity:'self',p_agreed:true});
+  expect(api.profileApi.signatures[0]).toEqual({p_version:'2026-09-16',p_name:'Synthetic signer',p_capacity:'self',p_agreed:true,p_signature:expect.stringMatching(/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/)});
+  expect(api.profileApi.signatures[0].p_signature.length).toBeGreaterThan(200);
   expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toContain('Synthetic client preference');
   const context=await browser.newContext();const admin=await context.newPage();
   const adminApi=await setup(admin,{role:'admin'});
@@ -943,6 +952,7 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   await expect(admin.locator('tbody')).toContainText('Submitted');await expect(admin.locator('tbody')).toContainText('Signed');
   await admin.getByRole('button',{name:'Updated client',exact:true}).click();
   for(const text of ['Synthetic client preference','Synthetic signer','Test Instructor','Build strength'])await expect(admin.getByText(text,{exact:true})).toBeVisible();
+  await expect(admin.getByRole('img',{name:'Signature of Synthetic signer'})).toBeVisible();
   await admin.getByText('View signed document · 2026-09-16',{exact:true}).click();
   await expect(admin.getByRole('heading',{name:'Assumption of Risk'})).toBeVisible();
   await context.close();

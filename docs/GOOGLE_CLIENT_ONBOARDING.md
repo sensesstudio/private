@@ -41,8 +41,12 @@ overwriting a more recent submission. Clients cannot change login email, role,
 credits, ownership, or waiver metadata with these forms.
 
 Liability waiver signing requires the displayed document, explicit agreement,
-signer name and participant/guardian capacity. The server stores immutable
-signature records with participant name, server time, document version and hash.
+signer name, participant/guardian capacity and a hand-drawn signature from the
+signature pad. The server stores immutable signature records with participant
+name, server time, document version and hash; the drawing is a PNG data URL in
+`client_waiver_signature_images`, validated by the RPC (PNG header, size limit),
+written only by that RPC and readable by the signing client and admins. The
+client and admin views load it on demand, so directory payloads stay small.
 The versioned document stores the exact existing studio text. Retrying signing
 returns the original signature. Future waiver text changes require a new document
 version; never rewrite an already-signed document or treat older signatures as

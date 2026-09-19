@@ -18,7 +18,7 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   await db.exec(await readFile(new URL('../supabase/seed.sql', import.meta.url), 'utf8'));
   await db.exec(await migration('0004_mindbody_rooms.sql'));
   await db.exec('grant select,insert,update,delete on all tables in schema public to anon,authenticated,service_role;');
-  for (const name of ['0005_live_availability.sql','20260916070412_admin_client_csv.sql','20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql','20260916141227_google_client_onboarding.sql','20260916141926_client_profile_records.sql']) await db.exec(await migration(name));
+  for (const name of ['0005_live_availability.sql','20260916070412_admin_client_csv.sql','20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql','20260916141227_google_client_onboarding.sql','20260916141926_client_profile_records.sql','20260919030000_client_waiver_drawn_signature.sql']) await db.exec(await migration(name));
   const ids = { admin:'11111111-0000-4000-8000-000000000001', one:'11111111-0000-4000-8000-000000000002', two:'11111111-0000-4000-8000-000000000003', teacher:'11111111-0000-4000-8000-000000000004', conflict:'11111111-0000-4000-8000-000000000005' };
   for (const [kind,id] of Object.entries(ids)) {
     await db.query('insert into auth.users values($1,$2,now())', [id,`${kind}@example.test`]);
@@ -84,7 +84,9 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   // Profile fields are session-gated, typed and visible to admins only.
   const details=async()=>(await db.query('select my_client_profile() data')).rows[0].data;
   const save=async(section,input,version)=>(await db.query('select save_my_client_profile($1,$2,$3) data',[section,JSON.stringify(input),version])).rows[0].data;
-  const sign=async(version='2026-09-16',name='Client signer',capacity='self',agreed=true)=>(await db.query('select sign_my_client_waiver($1,$2,$3,$4) data',[version,name,capacity,agreed])).rows[0].data;
+  // A 1x1 PNG stands in for the drawn signature; only its header is inspected server-side.
+  const PNG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const sign=async(version='2026-09-16',name='Client signer',capacity='self',agreed=true,signature=PNG)=>(await db.query('select sign_my_client_waiver($1,$2,$3,$4,$5) data',[version,name,capacity,agreed,signature])).rows[0].data;
   await db.query('insert into teacher_profiles(id) values($1)',[ids.teacher]);
   for(const kind of ['anon','teacher','admin','conflict']) {await as(kind);await assert.rejects(details(),/permission denied|client_account_required|active_client_account_required/);}
   await as('one','password');await assert.rejects(details(),/active_client_account_required/);
@@ -107,9 +109,19 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   await assert.rejects(sign('2026-09-16','Client signer','self',false),/waiver_consent_required/);
   await assert.rejects(sign('wrong'),/waiver_changed_reload/);
   await assert.rejects(sign('2026-09-16','Client signer','invalid'),/waiver_consent_required/);
+  for(const bad of [null,'','data:image/jpeg;base64,'+PNG.slice(22),'data:image/png;base64,'+'AAAA'.repeat(30),'data:image/png;base64,'+'not base64!'.repeat(12),'data:image/png;base64,'+'A'.repeat(200001)]) await assert.rejects(sign('2026-09-16','Client signer','self',true,bad),/waiver_signature_required/);
+  assert.deepEqual((await db.query('select * from client_waiver_signature_images')).rows,[]);
   portal=await sign();assert.equal(portal.waiver_signatures.length,1);assert.equal(portal.waiver_signatures[0].participant_name,'Client updated');
-  const signature=portal.waiver_signatures[0];portal=await sign('2026-09-16','Overwrite signer');assert.deepEqual(portal.waiver_signatures[0],signature);
+  const signature=portal.waiver_signatures[0];assert.equal(signature.image,undefined);
+  const image=async()=>(await db.query('select image from client_waiver_signature_images where signature_id=$1',[signature.id])).rows;
+  assert.deepEqual(await image(),[{image:PNG}]);
+  const other='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P//PwAF/gL+3MxZ5wAAAABJRU5ErkJggg==';
+  portal=await sign('2026-09-16','Overwrite signer','self',true,other);assert.deepEqual(portal.waiver_signatures[0],signature);
+  assert.deepEqual(await image(),[{image:PNG}]); // a retry never replaces the first drawing
+  await assert.rejects(db.query('update client_waiver_signature_images set image=$1',[other]),/permission denied/);
+  await assert.rejects(db.query('insert into client_waiver_signature_images(signature_id,user_id,image) values($1,$2,$3)',[signature.id,ids.one,other]),/permission denied/);
   await assert.rejects(db.query("update client_waiver_signatures set signed_name='forged'"),/permission denied/);
+  await as('two');assert.deepEqual(await image(),[]); // another client cannot read the drawing
   await as('two');portal=await details();assert.deepEqual(portal.waiver_signatures,[]);assert.equal(portal.profile,null);assert.equal(JSON.stringify(portal).includes('Synthetic personal note'),false);
   await db.exec('reset role');await db.query("update studio_client_accounts set access_not_before=now()+interval '1 minute' where user_id=$1",[ids.one]);
   await as('one');await assert.rejects(details(),/active_client_account_required/);await assert.rejects(sign(),/active_client_account_required/);await assert.rejects(save('about',intake,5),/active_client_account_required/);
@@ -117,6 +129,7 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   const adminRecord=directory.clients.find(c=>c.id===client.id);
   assert.equal(adminRecord.phone,'+85255550099');assert.equal(adminRecord.portal_profile.notes,intake.notes);assert.deepEqual(adminRecord.portal_profile.goals,intake.goals);assert.equal(adminRecord.portal_profile.recent_surgery,true);
   assert.equal(adminRecord.portal_profile.notification_preferences.booking_reminders,true);assert.equal(adminRecord.favourite_teachers[0].name,'Synthetic teacher');assert.equal(adminRecord.waiver_signatures[0].signed_name,'Client signer');
+  assert.deepEqual(await image(),[{image:PNG}]); // admins can
   assert.equal(adminRecord.waiver_signatures[0].document_sha256,portal.waiver_document.sha256);
 
 });
