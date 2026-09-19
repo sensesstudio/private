@@ -98,7 +98,7 @@ async function setup(page, { role = 'teacher', failed = false, stale = false, em
     }
     if(path.endsWith('/sign_my_client_waiver')) {
       const input=route.request().postDataJSON();profileApi.signatures.push(input);
-      profileApi.data.waiver_signatures=[{id:'synthetic-signature',signed_name:input.p_name,participant_name:profileApi.data.contact.name,version:input.p_version,signer_capacity:input.p_capacity,signed_at:now}];
+      profileApi.data.waiver_signatures=[{id:'synthetic-signature',signed_name:input.p_name,participant_name:profileApi.data.contact.name,version:input.p_version,signer_capacity:input.p_capacity,signed_at:now,copy_email_status:'queued'}];
       Object.assign(profileApi.data.profile,{waiver_signed_at:now,waiver_version:input.p_version,waiver_signed_name:input.p_name,profile_version:profileApi.data.profile.profile_version+1});
       return respond(profileApi.data);
     }
@@ -941,6 +941,7 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   await page.mouse.move(box.x+24,box.y+box.height*0.5);await page.mouse.down();await page.mouse.move(box.x+box.width-24,box.y+box.height*0.5,{steps:6});await page.mouse.up();
   await page.getByRole('button',{name:'Agree & sign'}).click();
   await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();await expect(page.getByRole('img',{name:'Your signature'})).toBeVisible();
+  await expect(page.getByText('A copy is on its way to holder@example.test.',{exact:true})).toBeVisible();
   await page.reload();await page.getByRole('button',{name:/^Liability waiver/}).click();await expect(page.getByRole('heading',{name:'Waiver signed'})).toBeVisible();
   expect(api.profileApi.signatures).toHaveLength(1);
   expect(api.profileApi.signatures[0]).toEqual({p_version:'2026-09-16',p_name:'Synthetic signer',p_capacity:'self',p_agreed:true,p_signature:expect.stringMatching(/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/)});

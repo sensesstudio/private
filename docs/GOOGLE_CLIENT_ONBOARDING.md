@@ -47,6 +47,13 @@ name, server time, document version and hash; the drawing is a PNG data URL in
 `client_waiver_signature_images`, validated by the RPC (PNG header, size limit),
 written only by that RPC and readable by the signing client and admins. The
 client and admin views load it on demand, so directory payloads stay small.
+
+Each new signature is emailed back to the client as a copy from the receipt
+sender (`cs@senses-studio.co`) through the `waiver-copies` worker, using the same
+Resend key, outbox lease and per-signature idempotency key as Official Receipts.
+Only signatures made while email delivery is enabled are queued; the client sees
+"A copy is on its way" or "A copy was emailed" on the signed view, and Admin →
+Payments → Email settings counts waiver copies beside receipts.
 The versioned document stores the exact existing studio text. Retrying signing
 returns the original signature. Future waiver text changes require a new document
 version; never rewrite an already-signed document or treat older signatures as

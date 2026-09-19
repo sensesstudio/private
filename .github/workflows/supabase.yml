@@ -71,7 +71,7 @@ jobs:
       - name: Deploy edge functions
         run: |
           set -euo pipefail
-          for fn in mindbody-health mindbody-discover mindbody-sync mindbody-client-sync admin-room-details create-checkout stripe-webhook client-accounts sleekflow-prospect-sync team-accounts official-receipts; do
+          for fn in mindbody-health mindbody-discover mindbody-sync mindbody-client-sync admin-room-details create-checkout stripe-webhook client-accounts sleekflow-prospect-sync team-accounts official-receipts waiver-copies; do
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --no-verify-jwt --use-api
           done
 
@@ -98,6 +98,10 @@ jobs:
           select cron.schedule('official-receipt-email', '* * * * *', format(
             'select net.http_post(url:=%L, headers:=jsonb_build_object(''x-sync-key'', %L, ''Content-Type'', ''application/json''), body:=''{}''::jsonb, timeout_milliseconds:=120000)',
             'https://$PROJECT_REF.supabase.co/functions/v1/official-receipts', '$KEY'));
+          do \$\$ begin perform cron.unschedule('waiver-copy-email'); exception when others then null; end \$\$;
+          select cron.schedule('waiver-copy-email', '* * * * *', format(
+            'select net.http_post(url:=%L, headers:=jsonb_build_object(''x-sync-key'', %L, ''Content-Type'', ''application/json''), body:=''{}''::jsonb, timeout_milliseconds:=120000)',
+            'https://$PROJECT_REF.supabase.co/functions/v1/waiver-copies', '$KEY'));
           EOSQL
           )
           curl -sS --fail-with-body -X POST \

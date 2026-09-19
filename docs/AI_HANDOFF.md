@@ -78,6 +78,10 @@ New checkout orders snapshot the authenticated account email in `package_checkou
 
 References: https://docs.stripe.com/receipts and https://docs.stripe.com/api/checkout/sessions/create .
 
+## Waiver copy emails
+
+Signing the liability waiver queues a copy for the client in `private.waiver_copy_emails` when receipt email delivery is enabled. The `waiver-copies` edge function runs every minute on the same `x-sync-key` cron, reads jobs with `waiver_copy_jobs()` (signature record, login email, the exact document version's text and the drawn signature), claims each under a lease and sends through Resend with idempotency key `senses-waiver-copy/<signature id>`. The email holds the full document text and signature details; the drawing is attached as `signature.png`. Uncertain attempts stop before Resend's 24-hour window. Counts appear in Admin → Payments → Email settings.
+
 ## Senses Official Receipts
 
 `create-checkout` also supports authenticated `official-receipt` requests by order ID. The server checks order ownership and re-verifies the paid Stripe Session before generating a one-page A4 PDF with the supplied Senses logo, Cormorant Garamond title, original paid amount and all nine terms (15 September 2026). The private receipt snapshot is immutable; a unique sequential receipt number is assigned once. Historical purchases retain their actual amount and can be downloaded without triggering email. The shared template contains no customer data.

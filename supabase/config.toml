@@ -39,3 +39,7 @@ verify_jwt = false
 # Internal receipt email worker authenticates x-sync-key; downloads use create-checkout Auth.
 [functions.official-receipts]
 verify_jwt = false
+
+# Internal waiver copy email worker; authenticates with x-sync-key only.
+[functions.waiver-copies]
+verify_jwt = false

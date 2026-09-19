@@ -19,6 +19,9 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   await db.exec(await migration('0004_mindbody_rooms.sql'));
   await db.exec('grant select,insert,update,delete on all tables in schema public to anon,authenticated,service_role;');
   for (const name of ['0005_live_availability.sql','20260916070412_admin_client_csv.sql','20260916081040_admin_client_editing.sql','20260916081703_mindbody_client_packages.sql','20260916091926_admin_client_last_visit.sql','20260916094547_admin_client_next_visit.sql','20260916101325_client_account_access.sql','20260916102320_admin_client_private_lifetime.sql','20260916105918_client_password_reset.sql','20260916114203_client_google_access.sql','20260916141227_google_client_onboarding.sql','20260916141926_client_profile_records.sql','20260919030000_client_waiver_drawn_signature.sql']) await db.exec(await migration(name));
+  // Mail settings normally come from the receipts migration; a stand-in decides whether copies are queued.
+  await db.exec(`create table private.receipt_email_settings(id boolean primary key default true check(id),secret_id uuid,sender text not null default 'cs@senses-studio.co',enabled boolean not null default false,activated_at timestamptz not null default now());insert into private.receipt_email_settings(id) values(true);`);
+  await db.exec(await migration('20260919050000_waiver_copy_emails.sql'));
   const ids = { admin:'11111111-0000-4000-8000-000000000001', one:'11111111-0000-4000-8000-000000000002', two:'11111111-0000-4000-8000-000000000003', teacher:'11111111-0000-4000-8000-000000000004', conflict:'11111111-0000-4000-8000-000000000005' };
   for (const [kind,id] of Object.entries(ids)) {
     await db.query('insert into auth.users values($1,$2,now())', [id,`${kind}@example.test`]);
@@ -112,6 +115,10 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   for(const bad of [null,'','data:image/jpeg;base64,'+PNG.slice(22),'data:image/png;base64,'+'AAAA'.repeat(30),'data:image/png;base64,'+'not base64!'.repeat(12),'data:image/png;base64,'+'A'.repeat(200001)]) await assert.rejects(sign('2026-09-16','Client signer','self',true,bad),/waiver_signature_required/);
   assert.deepEqual((await db.query('select * from client_waiver_signature_images')).rows,[]);
   portal=await sign();assert.equal(portal.waiver_signatures.length,1);assert.equal(portal.waiver_signatures[0].participant_name,'Client updated');
+  assert.equal(portal.waiver_signatures[0].copy_email_status,'not_requested'); // email delivery is not switched on
+  await db.exec('reset role');await db.exec(`delete from private.waiver_copy_emails;delete from client_waiver_signature_images;delete from client_waiver_signatures;update client_profiles set waiver_version=null,waiver_signed_at=null,waiver_signed_name=null;update private.receipt_email_settings set enabled=true,secret_id=gen_random_uuid()`);
+  await as('one');portal=await sign();assert.equal(portal.waiver_signatures.length,1);assert.equal(portal.waiver_signatures[0].copy_email_status,'queued');
+  await db.exec('reset role');assert.deepEqual((await db.query('select email_status,attempts from private.waiver_copy_emails')).rows,[{email_status:'queued',attempts:0}]);await as('one');
   const signature=portal.waiver_signatures[0];assert.equal(signature.image,undefined);
   const image=async()=>(await db.query('select image from client_waiver_signature_images where signature_id=$1',[signature.id])).rows;
   assert.deepEqual(await image(),[{image:PNG}]);
