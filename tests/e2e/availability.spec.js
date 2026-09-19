@@ -950,13 +950,16 @@ test('client intake, preferences, favourites and signed waiver persist and are v
   const context=await browser.newContext();const admin=await context.newPage();
   const adminApi=await setup(admin,{role:'admin'});
   adminApi.clientDirectory.clients=[{id:'synthetic-submitted',client_name:'Updated client',email:'holder@example.test',phone:'+85255550099',version:1,portal_profile:api.profileApi.data.profile,waiver_signatures:api.profileApi.data.waiver_signatures,favourite_teachers:[{id:teacherId,name:'Test Instructor'}]}];
-  adminApi.clientDirectory.rows=[];
+  adminApi.clientDirectory.rows=[{id:'website:synthetic-order',source:'website',client_id:'synthetic-submitted',client_name:'Updated client',phone:'+85255550099',email:'holder@example.test',package_name:'10-class pack - 1:1',credits_left:10,total_credits:10,purchase_amount_hkd:9000,remaining_value_hkd:null,purchase_date:'2026-09-18',expiry_date:null,days_to_expiry:null,validity_months:6,payment_status:'paid',source_row:null,duplicate_of_row:null,mindbody:null}];
   await admin.goto('/#admin');await admin.getByLabel('Email',{exact:true}).fill('admin@example.test');await admin.getByLabel('Password',{exact:true}).fill('synthetic');await admin.getByRole('button',{name:'Sign in',exact:true}).click();
   await admin.getByRole('navigation',{name:'Admin navigation'}).getByRole('button',{name:'Clients',exact:true}).click();
   await expect(admin.locator('tbody')).toContainText('Submitted');await expect(admin.locator('tbody')).toContainText('Signed');
   await admin.getByRole('button',{name:'Updated client',exact:true}).click();
   for(const text of ['Synthetic client preference','Synthetic signer','Test Instructor','Build strength'])await expect(admin.getByText(text,{exact:true})).toBeVisible();
   await expect(admin.getByRole('img',{name:'Signature of Synthetic signer'})).toBeVisible();
+  await expect(admin.getByText('10 / 10',{exact:true})).toBeVisible(); // the website purchase counts as credits
+  await expect(admin.getByText('Website purchase',{exact:true})).toBeVisible();await expect(admin.getByText('6 months from the first booked class',{exact:true})).toBeVisible();
+  await expect(admin.getByRole('button',{name:'Edit package'})).toHaveCount(0); // Stripe orders are not editable studio rows
   await admin.getByText('View signed document · 2026-09-16',{exact:true}).click();
   await expect(admin.getByRole('heading',{name:'Assumption of Risk'})).toBeVisible();
   await context.close();

@@ -22,6 +22,8 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   // Mail settings normally come from the receipts migration; a stand-in decides whether copies are queued.
   await db.exec(`create table private.receipt_email_settings(id boolean primary key default true check(id),secret_id uuid,sender text not null default 'cs@senses-studio.co',enabled boolean not null default false,activated_at timestamptz not null default now());insert into private.receipt_email_settings(id) values(true);`);
   await db.exec(await migration('20260919050000_waiver_copy_emails.sql'));
+  await db.exec(await migration('20260916072203_package_checkout.sql'));
+  await db.exec(await migration('20260919060000_admin_directory_website_packages.sql'));
   const ids = { admin:'11111111-0000-4000-8000-000000000001', one:'11111111-0000-4000-8000-000000000002', two:'11111111-0000-4000-8000-000000000003', teacher:'11111111-0000-4000-8000-000000000004', conflict:'11111111-0000-4000-8000-000000000005' };
   for (const [kind,id] of Object.entries(ids)) {
     await db.query('insert into auth.users values($1,$2,now())', [id,`${kind}@example.test`]);
@@ -137,6 +139,21 @@ test('Google onboarding creates one owned, empty client; validates contact detai
   assert.equal(adminRecord.phone,'+85255550099');assert.equal(adminRecord.portal_profile.notes,intake.notes);assert.deepEqual(adminRecord.portal_profile.goals,intake.goals);assert.equal(adminRecord.portal_profile.recent_surgery,true);
   assert.equal(adminRecord.portal_profile.notification_preferences.booking_reminders,true);assert.equal(adminRecord.favourite_teachers[0].name,'Synthetic teacher');assert.equal(adminRecord.waiver_signatures[0].signed_name,'Client signer');
   assert.deepEqual(await image(),[{image:PNG}]); // admins can
+  // A paid website package shows in Admin Clients beside studio records; test-mode and unpaid orders never do.
+  await db.exec('reset role');
+  const payment='44444444-0000-4000-8000-000000000001',order='44444444-0000-4000-8000-000000000002',testOrder='44444444-0000-4000-8000-000000000003';
+  await db.query(`insert into payments(id,client_id,package_id,amount_hkd,method,status,stripe_ref) values($1,$2,'studio',9000,'card','paid','pi_synthetic')`,[payment,ids.one]);
+  await db.query(`insert into package_checkout_orders(id,client_id,package_id,package_name,format,is_trial,credits,price_hkd,validity_months,return_origin,livemode,status,stripe_session_id,payment_id,paid_at)
+    values($1,$2,'studio','10-class pack','1:1',false,10,9000,6,'https://sensesprivate.com',true,'paid','cs_synthetic',$3,now()),
+           ($4,$2,'trial','First session','1:1',true,1,900,3,'https://sensesprivate.com',false,'paid','cs_synthetic_test',null,now())`,[order,ids.one,payment,testOrder]);
+  await as('admin');const withWeb=(await db.query('select admin_client_directory() data')).rows[0].data;
+  const webRows=withWeb.rows.filter(r=>r.source==='website');assert.equal(webRows.length,1);
+  const web=webRows[0];assert.equal(web.id,'website:'+order);assert.equal(web.client_id,adminRecord.id);assert.equal(web.client_name,'Client updated');
+  assert.equal(web.package_name,'10-class pack - 1:1');assert.equal(web.credits_left,10);assert.equal(web.total_credits,10);assert.equal(web.purchase_amount_hkd,9000);
+  assert.equal(web.expiry_date,null);assert.equal(web.validity_months,6);assert.equal(web.payment_status,'paid');
+  const webClient=groupClients(withWeb.rows,withWeb.clients).find(c=>c.id===adminRecord.id);assert.equal(webClient.credits,10);assert.equal(webClient.packages.length,1);
+  await db.exec('reset role');await db.query(`insert into credit_ledger(client_id,delta,reason) values($1,-1,'booking')`,[ids.one]);
+  await as('admin');assert.equal((await db.query('select admin_client_directory() data')).rows[0].data.rows.find(r=>r.source==='website').credits_left,null); // usage recorded: balance lives in the ledger
   assert.equal(adminRecord.waiver_signatures[0].document_sha256,portal.waiver_document.sha256);
 
 });

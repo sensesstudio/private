@@ -15,10 +15,10 @@ export function groupClients(rows, records = []) {
       nextVisit: client.record ? client.record.next_visit_at ?? null : values('next_visit_at').sort()[0] || null,
       nextVisitDetails: client.record ? client.record.next_visit_details ?? null : values('next_visit_details').join(' / ') || null,
       noUpcomingBooking: client.record ? client.record.no_upcoming_booking === true : client.packages.length > 0 && client.packages.every(p => p.no_upcoming_booking === true),
-      credits: client.packages.reduce((n, p) => n + p.credits_left, 0),
+      credits: client.packages.reduce((n, p) => n + (p.credits_left ?? 0), 0),
       totalCredits: client.packages.reduce((n, p) => n + p.total_credits, 0),
       duplicates: client.packages.filter(p => p.duplicate_of_row != null).length,
-      nextExpiry: client.packages.filter(p => p.credits_left > 0).map(p => p.expiry_date).sort()[0] || null,
+      nextExpiry: client.packages.filter(p => p.credits_left > 0 && p.expiry_date).map(p => p.expiry_date).sort()[0] || null,
     };
   }).sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.id.localeCompare(b.id));
 }
@@ -26,10 +26,11 @@ export function groupClients(rows, records = []) {
 export function packageStatus(packages, asOf) {
   const available = packages.filter(p => p.credits_left > 0);
   if (!available.length) return 'No credits';
-  const inDate = available.filter(p => p.expiry_date >= asOf);
+  // Website purchases carry no expiry until the first booked class, so they count as in date.
+  const inDate = available.filter(p => p.expiry_date == null || p.expiry_date >= asOf);
   if (!inDate.length) return 'Expired';
   if (inDate.some(p => p.expiry_date === asOf)) return 'Expires today';
-  if (inDate.some(p => p.days_to_expiry <= 30)) return 'Expires within 30 days';
+  if (inDate.some(p => p.days_to_expiry != null && p.days_to_expiry <= 30)) return 'Expires within 30 days';
   return 'In date';
 }
 
@@ -44,7 +45,7 @@ export function filterClients(clients, query, filter, asOf) {
     if (filter === 'google') return c.record?.signup_source === 'google';
     if (filter === 'incomplete') return c.record?.signup_source === 'google' && !c.record.profile_completed_at;
     if (filter === 'duplicates') return c.duplicates > 0;
-    if (filter === 'expiring') return c.packages.some(p => p.credits_left > 0 && p.expiry_date >= asOf && p.days_to_expiry <= 30);
+    if (filter === 'expiring') return c.packages.some(p => p.credits_left > 0 && p.expiry_date != null && p.expiry_date >= asOf && p.days_to_expiry <= 30);
     return true;
   });
 }

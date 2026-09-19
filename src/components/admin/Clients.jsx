@@ -39,6 +39,7 @@ function SyncStatus({ sync }) {
 }
 function PackageSync({ pack }) {
   const mb = pack.mindbody;
+  if (pack.source === 'website') return <p className="admin-muted">Purchased on the website · Stripe payment {pack.payment_status === 'refunded' ? 'refunded' : 'confirmed'} · not in Mindbody</p>;
   if (!pack.source_row) return <p className="admin-muted">Manual studio record · not linked to Mindbody</p>;
   if (mb?.status === 'synced') return <p className="admin-muted">Mindbody · {mb.total - mb.remaining} used / {mb.total} sessions · Last updated {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Hong_Kong' }).format(new Date(mb.last_ok_at))} HKT{mb.current === false ? ' · Not currently usable in Mindbody' : ''}</p>;
   return <p className="admin-client-notice">{mb?.status === 'needs_review' ? 'Multiple possible matches in Mindbody. Needs review.' : 'Not yet matched to a Mindbody purchase.'} {mb?.last_ok_at ? 'Showing last synced values.' : 'Showing studio record values.'}</p>;
@@ -70,17 +71,17 @@ function ClientDetails({ client, batch, asOf, sync, onBack, onEdit }) {
     <ClientSubmittedDetails client={client}/>
     <section id="client-progress" className="admin-client-section"><h2 className="admin-card-title">Progress log</h2><ClientActivity key={`progress:${client.id}`} kind="progress" clientId={client.id}/></section>
     <div className="admin-client-login"><ClientLoginAccess key={client.id} client={client} /></div>
-    <section id="client-packages" className="admin-client-section"><h2 className="admin-card-title">Payment &amp; packages</h2><p className="admin-muted">Studio packages from Mindbody and imported records</p>
+    <section id="client-packages" className="admin-client-section"><h2 className="admin-card-title">Payment &amp; packages</h2><p className="admin-muted">Studio packages from Mindbody, imported records and website purchases</p>
     <div className="admin-client-package-head admin-client-packages-title"><h2 className="admin-card-title">Packages</h2><Button size="sm" onClick={() => onEdit('package', null)}>Add package</Button></div>
     {client.duplicates > 0 && <p className="admin-client-notice">Possible duplicate rows are preserved and included in totals. Check the source before using these balances.</p>}
     <div className="admin-client-packages">{client.packages.map(p => <Card key={p.id || p.source_row} pad={22}>
       <div className="admin-client-package-head"><h3>{p.package_name}</h3><Status packages={[p]} asOf={asOf} /></div>
-      <p className="admin-muted">{p.source_row ? `CSV row ${p.source_row}` : 'Added by admin'}{p.duplicate_of_row != null && ` · Possible duplicate of row ${p.duplicate_of_row} in source CSV`}</p><Button size="sm" variant="soft" onClick={() => onEdit('package', p)}>Edit package</Button>
+      <p className="admin-muted">{p.source === 'website' ? 'Website purchase' : p.source_row ? `CSV row ${p.source_row}` : 'Added by admin'}{p.duplicate_of_row != null && ` · Possible duplicate of row ${p.duplicate_of_row} in source CSV`}</p>{p.source !== 'website' && <Button size="sm" variant="soft" onClick={() => onEdit('package', p)}>Edit package</Button>}
       <PackageSync pack={p} />
       <dl className="admin-client-fields">
-        <Field label="Credits left">{p.credits_left}</Field><Field label="Total credits">{p.total_credits}</Field>
+        <Field label="Credits left">{p.credits_left ?? (p.source === 'website' ? 'See booking ledger' : null)}</Field><Field label="Total credits">{p.total_credits}</Field>
         <Field label="Recorded purchase amount">{money(p.purchase_amount_hkd)}</Field><Field label="Recorded remaining value">{money(p.remaining_value_hkd)}</Field>
-        <Field label="Purchase date">{date(p.purchase_date)}</Field><Field label="Expiry date">{date(p.expiry_date)}</Field>
+        <Field label="Purchase date">{date(p.purchase_date)}</Field><Field label="Expiry date">{p.source === 'website' && !p.expiry_date ? `${p.validity_months} month${p.validity_months === 1 ? '' : 's'} from the first booked class` : date(p.expiry_date)}</Field>
         <Field label="Days to expiry">{p.days_to_expiry}</Field>
       </dl>
     </Card>)}</div>
